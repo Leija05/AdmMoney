@@ -370,7 +370,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 gap: '1.25rem',
                 marginTop: '1.75rem',
                 padding: '1.25rem',
-                background: '#F8F9FA',
+                background: 'var(--bg-tertiary)',
                 borderRadius: 'var(--radius-inner)',
                 border: '1px solid var(--border-subtle)'
               }}

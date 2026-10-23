@@ -66,6 +66,7 @@ app.include_router(analytics_router)
 app.include_router(promotions_router)
 
 @app.get("/api/health", tags=["Health"])
+@app.get("/health", tags=["Health"])
 def health_check():
     return {
         "status": "healthy",

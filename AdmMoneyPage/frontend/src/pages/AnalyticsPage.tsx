@@ -201,7 +201,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ summary, cookies, 
             <div
               key={c.id}
               style={{
-                background: '#F9FAFB',
+                background: 'var(--bg-tertiary)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: '1.25rem',
                 padding: '1.25rem'

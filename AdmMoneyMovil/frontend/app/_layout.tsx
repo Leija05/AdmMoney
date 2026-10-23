@@ -2,11 +2,12 @@ import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
-import { colors } from '../src/theme';
+import { useThemeColors } from '../src/theme';
 import { useAppStore } from '../src/stores/app.store';
 
 export default function RootLayout() {
   const loadAllData = useAppStore((state) => state.loadAllData);
+  const colors = useThemeColors();
 
   useEffect(() => {
     loadAllData();
@@ -14,7 +15,7 @@ export default function RootLayout() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
-      <StatusBar style="light" />
+      <StatusBar style={colors.isDark ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerShown: false,

@@ -1,41 +1,110 @@
-import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
-import { colors, radii } from '../../theme';
+import React, { useRef } from 'react';
+import { View, StyleSheet, ViewStyle, Animated, Pressable } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useThemeColors, radii } from '../../theme';
 
 interface DoubleBezelCardProps {
   children: React.ReactNode;
   style?: ViewStyle;
   innerStyle?: ViewStyle;
+  gradient?: readonly [string, string, ...string[]] | string[];
+  onPress?: () => void;
 }
 
 export const DoubleBezelCard: React.FC<DoubleBezelCardProps> = ({
   children,
   style,
-  innerStyle
+  innerStyle,
+  gradient,
+  onPress,
 }) => {
+  const colors = useThemeColors();
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    if (!onPress) return;
+    Animated.spring(scaleAnim, {
+      toValue: 0.98,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 120,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    if (!onPress) return;
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 120,
+    }).start();
+  };
+
+  const content = gradient ? (
+    <LinearGradient
+      colors={gradient as any}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[styles.innerCore, { backgroundColor: 'transparent' }, innerStyle]}
+    >
+      {children}
+    </LinearGradient>
+  ) : (
+    <View style={[styles.innerCore, { backgroundColor: colors.bgCard }, innerStyle]}>
+      {children}
+    </View>
+  );
+
+  if (onPress) {
+    return (
+      <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, style]}>
+        <Pressable
+          onPress={onPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          style={[
+            styles.outerShell,
+            {
+              backgroundColor: colors.bgCard,
+              borderColor: colors.borderSubtle,
+            },
+          ]}
+        >
+          {content}
+        </Pressable>
+      </Animated.View>
+    );
+  }
+
   return (
-    <View style={[styles.outerShell, style]}>
-      <View style={[styles.innerCore, innerStyle]}>
-        {children}
-      </View>
+    <View
+      style={[
+        styles.outerShell,
+        {
+          backgroundColor: colors.bgCard,
+          borderColor: colors.borderSubtle,
+        },
+        style,
+      ]}
+    >
+      {content}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   outerShell: {
-    backgroundColor: '#FFFFFF',
-    borderColor: colors.borderSubtle,
     borderWidth: 1,
     borderRadius: radii.outer,
-    shadowColor: '#181A1F',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
     elevation: 2,
+    overflow: 'hidden',
   },
   innerCore: {
-    backgroundColor: '#FFFFFF',
     borderRadius: radii.inner,
     padding: 16,
   },

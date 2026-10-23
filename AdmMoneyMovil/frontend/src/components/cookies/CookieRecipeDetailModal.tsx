@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#ffffff',
+    color: colors.textMain,
     marginTop: 2,
   },
   closeBtn: {
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   economicsCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: colors.bgTertiary,
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
@@ -256,25 +256,25 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   schemeBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: colors.bgCard,
     borderRadius: radii.sm,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: colors.borderSubtle,
   },
   schemeHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: colors.borderSubtle,
     paddingBottom: 6,
     marginBottom: 8,
   },
   schemeName: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#ffffff',
+    color: colors.textMain,
   },
   schemePrice: {
     fontSize: 14,
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   schemeKeyBold: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#ffffff',
+    color: colors.textMain,
   },
   schemeValRed: {
     fontSize: 11,
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     color: colors.amberLight,
   },
   ingredientsCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: colors.bgTertiary,
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
@@ -327,12 +327,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 4,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.04)',
+    borderBottomColor: colors.borderSubtle,
   },
   ingName: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#ffffff',
+    color: colors.textMain,
   },
   ingSub: {
     fontSize: 10,

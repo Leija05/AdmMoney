@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
-  TouchableOpacity,
   Text,
   StyleSheet,
   View,
   ViewStyle,
-  TextStyle
+  TextStyle,
+  Animated,
+  Pressable,
 } from 'react-native';
-import { colors, radii } from '../../theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useThemeColors, gradients, radii } from '../../theme';
 
 interface ButtonProps {
   title: string;
@@ -26,87 +28,139 @@ export const Button: React.FC<ButtonProps> = ({
   icon,
   style,
   textStyle,
-  disabled
+  disabled,
 }) => {
-  const getBackgroundColor = () => {
-    switch (variant) {
-      case 'primary':
-        return '#181A1F';
-      case 'amber':
-        return '#FEF3C7';
-      case 'emerald':
-        return '#DCFCE7';
-      case 'danger':
-        return '#FFE4E6';
-      case 'secondary':
-      default:
-        return '#FFFFFF';
-    }
+  const colors = useThemeColors();
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.96,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 100,
+    }).start();
   };
 
-  const getBorderColor = () => {
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 100,
+    }).start();
+  };
+
+  const getGradientColors = (): readonly [string, string, ...string[]] | null => {
     switch (variant) {
       case 'primary':
-        return '#181A1F';
+        return gradients.brand;
       case 'amber':
-        return '#FDE68A';
+        return gradients.amber;
       case 'emerald':
-        return '#BBF7D0';
+        return gradients.emerald;
       case 'danger':
-        return '#FECDD3';
+        return gradients.rose;
       case 'secondary':
       default:
-        return '#E5E7EB';
+        return null;
     }
   };
 
   const getTextColor = () => {
-    if (variant === 'primary') return '#FFFFFF';
-    if (variant === 'amber') return '#92400E';
-    if (variant === 'emerald') return '#15803D';
-    if (variant === 'danger') return '#BE123C';
-    return '#181A1F';
+    if (variant === 'secondary') {
+      return colors.textMain;
+    }
+    return '#FFFFFF';
   };
 
+  const gradientColors = getGradientColors();
+
   return (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={onPress}
-      disabled={disabled}
-      style={[
-        styles.button,
-        {
-          backgroundColor: getBackgroundColor(),
-          borderColor: getBorderColor(),
-          opacity: disabled ? 0.6 : 1,
-        },
-        style,
-      ]}
-    >
-      {icon && <View style={styles.iconContainer}>{icon}</View>}
-      <Text style={[styles.text, { color: getTextColor() }, textStyle]}>
-        {title}
-      </Text>
-    </TouchableOpacity>
+    <Animated.View style={[{ transform: [{ scale: scaleAnim }], opacity: disabled ? 0.6 : 1 }, style]}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled}
+        style={styles.pressable}
+      >
+        {gradientColors ? (
+          <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradientContainer}
+          >
+            {icon && <View style={styles.iconOrb}>{icon}</View>}
+            <Text style={[styles.text, { color: getTextColor() }, textStyle]}>
+              {title}
+            </Text>
+          </LinearGradient>
+        ) : (
+          <View
+            style={[
+              styles.secondaryContainer,
+              {
+                backgroundColor: colors.bgSecondary,
+                borderColor: colors.borderSubtle,
+              },
+            ]}
+          >
+            {icon && (
+              <View style={[styles.iconOrb, { backgroundColor: colors.bgTertiary }]}>
+                {icon}
+              </View>
+            )}
+            <Text style={[styles.text, { color: getTextColor() }, textStyle]}>
+              {title}
+            </Text>
+          </View>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
-  button: {
+  pressable: {
+    borderRadius: radii.pill,
+    overflow: 'hidden',
+  },
+  gradientContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 8,
+    paddingVertical: 11,
+    paddingHorizontal: 16,
+    borderRadius: radii.pill,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  secondaryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: radii.pill,
     borderWidth: 1,
   },
-  iconContainer: {
-    marginRight: 6,
+  iconOrb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
   },
   text: {
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: -0.1,
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
 });

@@ -60,30 +60,8 @@ def init_db():
     db.cookie_sales.create_index([("sale_date", -1), ("id", -1)])
     db.orders.create_index([("delivery_date", 1), ("status", 1)])
 
-    # Comprobar si las colecciones están vacías
-    ingredients_count = db.cookie_ingredients.count_documents({})
-    products_count = db.cookie_products.count_documents({})
-    expenses_count = db.expenses.count_documents({})
-
-    if ingredients_count == 0 and products_count == 0 and expenses_count == 0:
-        # Intentar migrar desde admmoney.db (SQLite) si existe
-        migrated = False
-        if DB_PATH.exists():
-            try:
-                migrated = migrate_from_sqlite(db)
-            except Exception as e:
-                print(f"[Mongo Init] Advertencia al migrar SQLite: {e}. Se usarán datos semilla.")
-
-        if not migrated:
-            seed_initial_data(db)
-
-    # Si la colección de pedidos está vacía, sembrar pedidos de muestra para el pipeline de horneado
-    if db.orders.count_documents({}) == 0:
-        seed_sample_orders(db)
-
-    # Si la colección de promociones está vacía, sembrar promociones por defecto
-    if db.promotions.count_documents({}) == 0:
-        seed_sample_promotions(db)
+    # No re-seeding: Respeta exclusivamente los datos existentes en MongoDB
+    print("[Mongo Init] Conexión establecida. Índices verificados. Sin re-siembra de datos estáticos.")
 
     # Sincronizar contadores a los valores máximos actuales
     for name, coll in [

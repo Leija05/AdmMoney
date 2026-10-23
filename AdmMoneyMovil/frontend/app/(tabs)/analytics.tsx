@@ -8,16 +8,19 @@ import {
   TouchableOpacity
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, radii, spacing } from '../../src/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { colors, useThemeColors, radii, spacing, gradients } from '../../src/theme';
 import { DoubleBezelCard } from '../../src/components/ui/DoubleBezelCard';
 import { Badge } from '../../src/components/ui/Badge';
+import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
 import { useAppStore } from '../../src/stores/app.store';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 export default function AnalyticsScreen() {
   const router = useRouter();
-  const { summary, expenses, sales, loadAllData, isLoading } = useAppStore();
+  const colors = useThemeColors();
+  const { summary, expenses, sales, loadAllData, isLoading, theme, toggleTheme } = useAppStore();
 
   const totalRev = summary?.total_cookie_revenue ?? sales.reduce((acc, s) => acc + s.total_revenue, 0);
   const totalProfit = summary?.net_cookie_profit ?? sales.reduce((acc, s) => acc + s.net_profit, 0);
@@ -51,10 +54,11 @@ export default function AnalyticsScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        refreshControl={
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]}>
+      <SwipeTabWrapper currentRoute="/analytics">
+        <ScrollView
+          contentContainerStyle={styles.container}
+          refreshControl={
           <RefreshControl
             refreshing={isLoading}
             onRefresh={loadAllData}
@@ -63,70 +67,115 @@ export default function AnalyticsScreen() {
         }
       >
         <View style={styles.header}>
-          <Text style={styles.screenEyebrow}>Métricas Visuales & Reportes</Text>
-          <Text style={styles.screenTitle}>Rendimiento Financiero</Text>
-          <Text style={styles.screenSubtitle}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.screenEyebrow, { color: colors.cyan }]}>Métricas Visuales & Reportes</Text>
+              <Text style={[styles.screenTitle, { color: colors.textMain }]}>Rendimiento Financiero</Text>
+            </View>
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={[styles.themeToggleBtn, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}
+            >
+              <Ionicons
+                name={theme === 'dark' ? 'sunny' : 'moon'}
+                size={16}
+                color={theme === 'dark' ? colors.amberLight : colors.textMuted}
+              />
+            </TouchableOpacity>
+          </View>
+          <Text style={[styles.screenSubtitle, { color: colors.textMuted }]}>
             Balance neto, comparativas de rentabilidad por receta y distribución contable.
           </Text>
         </View>
 
-        {/* 4 KPI Summary Grid */}
+        {/* 4 KPI Summary Grid with soft luminous gradient cards */}
         <View style={styles.kpiGrid}>
-          <DoubleBezelCard style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>Ganancia Neta</Text>
+          <DoubleBezelCard
+            style={styles.kpiCard}
+            gradient={
+              theme === 'dark'
+                ? ['rgba(16,185,129,0.12)', 'rgba(28,32,43,0.95)']
+                : ['#F0FDF4', '#FFFFFF']
+            }
+          >
+            <Text style={[styles.kpiLabel, { color: colors.textDim }]}>Ganancia Neta</Text>
             <Text style={[styles.kpiValue, { color: colors.emeraldLight }]}>
               +${totalProfit.toFixed(0)}
             </Text>
-            <Text style={styles.kpiSub}>libre de costos</Text>
+            <Text style={[styles.kpiSub, { color: colors.textDim }]}>libre de costos</Text>
           </DoubleBezelCard>
 
-          <DoubleBezelCard style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>Venta Bruta</Text>
+          <DoubleBezelCard
+            style={styles.kpiCard}
+            gradient={
+              theme === 'dark'
+                ? ['rgba(245,158,11,0.12)', 'rgba(28,32,43,0.95)']
+                : ['#FFFBEB', '#FFFFFF']
+            }
+          >
+            <Text style={[styles.kpiLabel, { color: colors.textDim }]}>Venta Bruta</Text>
             <Text style={[styles.kpiValue, { color: colors.amberLight }]}>
               ${totalRev.toFixed(0)}
             </Text>
-            <Text style={styles.kpiSub}>{sales.length} ventas</Text>
+            <Text style={[styles.kpiSub, { color: colors.textDim }]}>{sales.length} ventas</Text>
           </DoubleBezelCard>
 
-          <DoubleBezelCard style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>Margen Neto</Text>
+          <DoubleBezelCard
+            style={styles.kpiCard}
+            gradient={
+              theme === 'dark'
+                ? ['rgba(6,182,212,0.12)', 'rgba(28,32,43,0.95)']
+                : ['#ECFEFF', '#FFFFFF']
+            }
+          >
+            <Text style={[styles.kpiLabel, { color: colors.textDim }]}>Margen Neto</Text>
             <Text style={[styles.kpiValue, { color: colors.cyan }]}>
               {avgMargin.toFixed(1)}%
             </Text>
-            <Text style={styles.kpiSub}>sobre ingresos</Text>
+            <Text style={[styles.kpiSub, { color: colors.textDim }]}>sobre ingresos</Text>
           </DoubleBezelCard>
 
-          <DoubleBezelCard style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>Galletas</Text>
+          <DoubleBezelCard
+            style={styles.kpiCard}
+            gradient={
+              theme === 'dark'
+                ? ['rgba(59,130,246,0.12)', 'rgba(28,32,43,0.95)']
+                : ['#EFF6FF', '#FFFFFF']
+            }
+          >
+            <Text style={[styles.kpiLabel, { color: colors.textDim }]}>Galletas</Text>
             <Text style={[styles.kpiValue, { color: colors.textMain }]}>
               {totalUnits}
             </Text>
-            <Text style={styles.kpiSub}>piezas vendidas</Text>
+            <Text style={[styles.kpiSub, { color: colors.textDim }]}>piezas vendidas</Text>
           </DoubleBezelCard>
         </View>
 
         {/* Net Health Card */}
-        <DoubleBezelCard style={styles.sectionCard}>
+        <DoubleBezelCard
+          style={styles.sectionCard}
+          gradient={theme === 'dark' ? ['#1C202B', '#14171F'] : ['#FFFFFF', '#F8FAFC']}
+        >
           <View style={styles.cardTitleRow}>
-            <Text style={styles.cardTitle}>Superávit vs Gastos Totales</Text>
+            <Text style={[styles.cardTitle, { color: colors.textMain }]}>Superávit vs Gastos Totales</Text>
             <Badge
               label={netBalance >= 0 ? "Superávit Positivo" : "Déficit Temporal"}
               variant={netBalance >= 0 ? "emerald" : "rose"}
             />
           </View>
-          <Text style={styles.cardSub}>Balance general del negocio y operaciones</Text>
+          <Text style={[styles.cardSub, { color: colors.textMuted }]}>Balance general del negocio y operaciones</Text>
 
-          <View style={styles.healthBarContainer}>
+          <View style={[styles.healthBarContainer, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
             <View style={styles.healthMetricRow}>
-              <Text style={styles.healthKey}>Ingresos Galletas:</Text>
+              <Text style={[styles.healthKey, { color: colors.textDim }]}>Ingresos Galletas:</Text>
               <Text style={styles.healthValGreen}>+${totalRev.toFixed(2)} MXN</Text>
             </View>
             <View style={styles.healthMetricRow}>
-              <Text style={styles.healthKey}>Todos los Gastos:</Text>
+              <Text style={[styles.healthKey, { color: colors.textDim }]}>Todos los Gastos:</Text>
               <Text style={styles.healthValRed}>-${totalExpenses.toFixed(2)} MXN</Text>
             </View>
-            <View style={[styles.healthMetricRow, styles.healthTotalRow]}>
-              <Text style={styles.healthKeyBold}>Balance Neto:</Text>
+            <View style={[styles.healthMetricRow, styles.healthTotalRow, { borderTopColor: colors.borderSubtle }]}>
+              <Text style={[styles.healthKeyBold, { color: colors.textMain }]}>Balance Neto:</Text>
               <Text style={[styles.healthValBold, { color: netBalance >= 0 ? colors.emeraldLight : colors.rose }]}>
                 ${netBalance.toFixed(2)} MXN
               </Text>
@@ -135,12 +184,15 @@ export default function AnalyticsScreen() {
         </DoubleBezelCard>
 
         {/* Ranking & Profitability Bars */}
-        <DoubleBezelCard style={styles.sectionCard}>
+        <DoubleBezelCard
+          style={styles.sectionCard}
+          gradient={theme === 'dark' ? ['#1C202B', '#14171F'] : ['#FFFFFF', '#F8FAFC']}
+        >
           <View style={styles.cardTitleRow}>
-            <Text style={styles.cardTitle}>Ranking de Galletas Más Vendidas</Text>
+            <Text style={[styles.cardTitle, { color: colors.textMain }]}>Ranking de Galletas Más Vendidas</Text>
             <Ionicons name="trophy" size={18} color={colors.amberLight} />
           </View>
-          <Text style={styles.cardSub}>Unidades y ganancia neta generada por receta</Text>
+          <Text style={[styles.cardSub, { color: colors.textMuted }]}>Unidades y ganancia neta generada por receta</Text>
 
           <View style={{ marginTop: 14, gap: 14 }}>
             {performance.map((item, idx) => {
@@ -148,17 +200,26 @@ export default function AnalyticsScreen() {
               return (
                 <View key={idx}>
                   <View style={styles.cookieBarHeader}>
-                    <Text style={styles.cookieBarName}>
+                    <Text style={[styles.cookieBarName, { color: colors.textMain }]}>
                       #{idx + 1} {item.cookie_name}
                     </Text>
-                    <Text style={styles.cookieBarProfit}>
+                    <Text style={[styles.cookieBarProfit, { color: colors.emeraldLight }]}>
                       +${item.profit.toFixed(0)} neta
                     </Text>
                   </View>
 
-                  {/* Horizontal Bar */}
-                  <View style={styles.barTrack}>
-                    <View
+                  {/* Horizontal Bar with Multi-stop Gradient */}
+                  <View style={[styles.barTrack, { backgroundColor: colors.borderSubtle }]}>
+                    <LinearGradient
+                      colors={
+                        idx === 0
+                          ? ['#F59E0B', '#10B981']
+                          : idx === 1
+                          ? ['#10B981', '#06B6D4']
+                          : ['#8B5CF6', '#3B82F6']
+                      }
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
                       style={[
                         styles.barFill,
                         { width: `${barWidth}%` }
@@ -167,7 +228,7 @@ export default function AnalyticsScreen() {
                   </View>
 
                   <View style={styles.barMetaRow}>
-                    <Text style={styles.barMetaText}>{item.units_sold} piezas vendidas</Text>
+                    <Text style={[styles.barMetaText, { color: colors.textDim }]}>{item.units_sold} piezas vendidas</Text>
                     <Badge label={`${item.margin_pct.toFixed(1)}% margen`} variant="emerald" />
                   </View>
                 </View>
@@ -180,19 +241,19 @@ export default function AnalyticsScreen() {
         {Object.keys(payTotals).length > 0 && (
           <DoubleBezelCard style={styles.sectionCard}>
             <View style={styles.cardTitleRow}>
-              <Text style={styles.cardTitle}>Cobros por Método de Pago</Text>
+              <Text style={[styles.cardTitle, { color: colors.textMain }]}>Cobros por Método de Pago</Text>
               <Ionicons name="card" size={18} color={colors.emeraldLight} />
             </View>
-            <Text style={styles.cardSub}>Total recaudado por canal de pago</Text>
+            <Text style={[styles.cardSub, { color: colors.textMuted }]}>Total recaudado por canal de pago</Text>
 
             <View style={{ marginTop: 12, gap: 8 }}>
               {Object.entries(payTotals).map(([method, amt]) => {
                 const pct = totalRev > 0 ? ((amt / totalRev) * 100).toFixed(0) : '0';
                 return (
-                  <View key={method} style={styles.catRow}>
+                  <View key={method} style={[styles.catRow, { borderBottomColor: colors.borderSubtle }]}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.catName}>{method}</Text>
-                      <Text style={styles.catAmount}>${amt.toFixed(2)} MXN</Text>
+                      <Text style={[styles.catName, { color: colors.textMain }]}>{method}</Text>
+                      <Text style={[styles.catAmount, { color: colors.textDim }]}>${amt.toFixed(2)} MXN</Text>
                     </View>
                     <Badge label={`${pct}%`} variant="emerald" />
                   </View>
@@ -205,19 +266,19 @@ export default function AnalyticsScreen() {
         {/* Expense Category Breakdown */}
         <DoubleBezelCard style={styles.sectionCard}>
           <View style={styles.cardTitleRow}>
-            <Text style={styles.cardTitle}>Distribución de Gastos</Text>
+            <Text style={[styles.cardTitle, { color: colors.textMain }]}>Distribución de Gastos</Text>
             <Ionicons name="pie-chart" size={18} color={colors.cyan} />
           </View>
-          <Text style={styles.cardSub}>Porcentaje destinado a cada rubro operativo</Text>
+          <Text style={[styles.cardSub, { color: colors.textMuted }]}>Porcentaje destinado a cada rubro operativo</Text>
 
           <View style={{ marginTop: 14, gap: 10 }}>
             {Object.entries(catTotals).map(([cat, amt]) => {
               const pct = ((amt / totalExp) * 100).toFixed(1);
               return (
-                <View key={cat} style={styles.catRow}>
+                <View key={cat} style={[styles.catRow, { borderBottomColor: colors.borderSubtle }]}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.catName}>{cat}</Text>
-                    <Text style={styles.catAmount}>${amt.toFixed(2)} MXN</Text>
+                    <Text style={[styles.catName, { color: colors.textMain }]}>{cat}</Text>
+                    <Text style={[styles.catAmount, { color: colors.textDim }]}>${amt.toFixed(2)} MXN</Text>
                   </View>
                   <Badge label={`${pct}%`} variant="gray" />
                 </View>
@@ -226,6 +287,7 @@ export default function AnalyticsScreen() {
           </View>
         </DoubleBezelCard>
       </ScrollView>
+      </SwipeTabWrapper>
     </SafeAreaView>
   );
 }
@@ -241,6 +303,16 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 16,
+  },
+  themeToggleBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.bgTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   screenEyebrow: {
     fontSize: 11,
@@ -307,7 +379,7 @@ const styles = StyleSheet.create({
   healthBarContainer: {
     marginTop: 12,
     gap: 6,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.bgTertiary,
     borderRadius: radii.sm,
     padding: 12,
     borderWidth: 1,
@@ -364,14 +436,13 @@ const styles = StyleSheet.create({
   barTrack: {
     height: 8,
     borderRadius: radii.pill,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.borderSubtle,
     overflow: 'hidden',
     marginVertical: 4,
   },
   barFill: {
     height: '100%',
     borderRadius: radii.pill,
-    backgroundColor: colors.emerald,
   },
   barMetaRow: {
     flexDirection: 'row',

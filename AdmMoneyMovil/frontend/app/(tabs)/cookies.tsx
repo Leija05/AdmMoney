@@ -11,7 +11,8 @@ import {
   Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, radii, spacing } from '../../src/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { colors, useThemeColors, radii, spacing, gradients } from '../../src/theme';
 import { CookieCard } from '../../src/components/cookies/CookieCard';
 import { CookieRecipeDetailModal } from '../../src/components/cookies/CookieRecipeDetailModal';
 import { SaleDetailModal } from '../../src/components/cookies/SaleDetailModal';
@@ -23,6 +24,8 @@ import { OrderModal } from '../../src/components/orders/OrderModal';
 import { DoubleBezelCard } from '../../src/components/ui/DoubleBezelCard';
 import { Badge } from '../../src/components/ui/Badge';
 import { Button } from '../../src/components/ui/Button';
+import { BackendHeartbeat } from '../../src/components/ui/BackendHeartbeat';
+import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
 import { useAppStore } from '../../src/stores/app.store';
 import { CookieProduct, CookieSale, Ingredient, Promotion, Order } from '../../src/lib/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,6 +35,7 @@ const PAYMENT_METHODS = ['Efectivo', 'Transferencia', 'Tarjeta Débito'];
 
 export default function CookiesScreen() {
   const router = useRouter();
+  const colors = useThemeColors();
   const {
     cookies,
     sales,
@@ -53,6 +57,8 @@ export default function CookiesScreen() {
     isLoading,
     useMockData,
     isOnline,
+    theme,
+    toggleTheme,
   } = useAppStore();
 
   const [subTab, setSubTab] = useState<'catalog' | 'ingredients' | 'sales' | 'promotions' | 'orders'>('catalog');
@@ -230,164 +236,109 @@ export default function CookiesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]}>
+      <SwipeTabWrapper currentRoute="/cookies">
+        <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.screenEyebrow}>Repostería Artesanal</Text>
-            <Text style={styles.screenTitle}>Negocio de Galletas</Text>
+            <Text style={[styles.screenEyebrow, { color: colors.amberLight }]}>Repostería Artesanal</Text>
+            <Text style={[styles.screenTitle, { color: colors.textMain }]}>Negocio de Galletas</Text>
           </View>
           <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
             <TouchableOpacity
-              onPress={() => router.push('/settings')}
-              style={[
-                styles.modePill,
-                {
-                  borderColor: useMockData
-                    ? 'rgba(245,158,11,0.4)'
-                    : isOnline
-                    ? 'rgba(16,185,129,0.4)'
-                    : 'rgba(244,63,94,0.4)',
-                  backgroundColor: useMockData
-                    ? 'rgba(245,158,11,0.12)'
-                    : isOnline
-                    ? 'rgba(16,185,129,0.12)'
-                    : 'rgba(244,63,94,0.12)',
-                },
-              ]}
+              onPress={toggleTheme}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: radii.pill,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                backgroundColor: colors.bgCard,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
-              <Text
-                style={{
-                  fontSize: 10,
-                  fontWeight: '800',
-                  color: useMockData
-                    ? colors.amberLight
-                    : isOnline
-                    ? colors.emeraldLight
-                    : colors.rose,
-                }}
-              >
-                {useMockData ? 'DEMO' : 'EN VIVO'}
-              </Text>
+              <Ionicons
+                name={theme === 'dark' ? 'sunny' : 'moon'}
+                size={16}
+                color={theme === 'dark' ? colors.amberLight : colors.textMuted}
+              />
             </TouchableOpacity>
+
+            <BackendHeartbeat onPress={() => router.push('/settings')} />
             <Badge label={`${avgMargin.toFixed(1)}% Margen`} variant="emerald" />
           </View>
         </View>
 
         {/* Hero Revenue & Profit Bento Box */}
-        <DoubleBezelCard style={styles.statsCard}>
+        <DoubleBezelCard
+          style={styles.statsCard}
+          gradient={theme === 'dark' ? ['#1C202B', '#14171F'] : ['#FFFFFF', '#F8FAFC']}
+        >
           <View style={styles.statsRow}>
             <View>
-              <Text style={styles.statsLabel}>Ganancia Neta Libre</Text>
-              <Text style={styles.profitValue}>+${totalProfit.toFixed(2)}</Text>
-              <Text style={styles.statsSub}>{totalUnits} galletas vendidas</Text>
+              <Text style={[styles.statsLabel, { color: colors.textDim }]}>Ganancia Neta Libre</Text>
+              <Text style={[styles.profitValue, { color: colors.emeraldLight }]}>+${totalProfit.toFixed(2)}</Text>
+              <Text style={[styles.statsSub, { color: colors.textDim }]}>{totalUnits} galletas vendidas</Text>
             </View>
 
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.statsLabel}>Total Ingresos</Text>
-              <Text style={styles.revenueValue}>${totalRevenue.toFixed(2)}</Text>
-              <Text style={styles.statsSub}>{sales.length} ventas registradas</Text>
+              <Text style={[styles.statsLabel, { color: colors.textDim }]}>Total Ingresos</Text>
+              <Text style={[styles.revenueValue, { color: colors.amberLight }]}>${totalRevenue.toFixed(2)}</Text>
+              <Text style={[styles.statsSub, { color: colors.textDim }]}>{sales.length} ventas registradas</Text>
             </View>
           </View>
 
           {/* Unit Economics Highlights Bar */}
-          <View style={styles.economicsMiniBar}>
-            <Text style={styles.economicsMiniText}>
+          <View style={[styles.economicsMiniBar, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
+            <Text style={[styles.economicsMiniText, { color: colors.textMuted }]}>
               🍪 Tanda: 16 pzas • Insumo: $6.77 • Empaque: $2.90 • Total Lote: $9.67
             </Text>
           </View>
         </DoubleBezelCard>
 
-        {/* 5 Sub-tabs scrollable pills */}
+        {/* 5 Sub-tabs scrollable pills with vibrant gradients */}
         <View style={styles.tabToggleWrapper}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.tabToggleRow}
           >
-            <TouchableOpacity
-              style={[styles.toggleBtn, subTab === 'catalog' && styles.toggleBtnActive]}
-              onPress={() => setSubTab('catalog')}
-            >
-              <Ionicons
-                name="cafe"
-                size={14}
-                color={subTab === 'catalog' ? colors.textMain : colors.textMuted}
-              />
-              <Text
-                style={[styles.toggleBtnText, subTab === 'catalog' && styles.toggleBtnTextActive]}
-              >
-                Recetas ({cookies.length})
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.toggleBtn, subTab === 'ingredients' && styles.toggleBtnActive]}
-              onPress={() => setSubTab('ingredients')}
-            >
-              <Ionicons
-                name="nutrition"
-                size={14}
-                color={subTab === 'ingredients' ? colors.textMain : colors.textMuted}
-              />
-              <Text
-                style={[
-                  styles.toggleBtnText,
-                  subTab === 'ingredients' && styles.toggleBtnTextActive,
-                ]}
-              >
-                Insumos ({ingredients.length})
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.toggleBtn, subTab === 'sales' && styles.toggleBtnActive]}
-              onPress={() => setSubTab('sales')}
-            >
-              <Ionicons
-                name="cart"
-                size={14}
-                color={subTab === 'sales' ? colors.textMain : colors.textMuted}
-              />
-              <Text
-                style={[styles.toggleBtnText, subTab === 'sales' && styles.toggleBtnTextActive]}
-              >
-                Ventas ({sales.length})
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.toggleBtn, subTab === 'promotions' && styles.toggleBtnActive]}
-              onPress={() => setSubTab('promotions')}
-            >
-              <Ionicons
-                name="pricetag"
-                size={14}
-                color={subTab === 'promotions' ? colors.textMain : colors.textMuted}
-              />
-              <Text
-                style={[styles.toggleBtnText, subTab === 'promotions' && styles.toggleBtnTextActive]}
-              >
-                Promos ({promotions.length})
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.toggleBtn, subTab === 'orders' && styles.toggleBtnActive]}
-              onPress={() => setSubTab('orders')}
-            >
-              <Ionicons
-                name="bag-check"
-                size={14}
-                color={subTab === 'orders' ? colors.textMain : colors.textMuted}
-              />
-              <Text
-                style={[styles.toggleBtnText, subTab === 'orders' && styles.toggleBtnTextActive]}
-              >
-                Pedidos ({orders.length})
-              </Text>
-            </TouchableOpacity>
+            {[
+              { key: 'catalog', label: `Recetas (${cookies.length})`, icon: 'cafe', grad: gradients.amber },
+              { key: 'ingredients', label: `Insumos (${ingredients.length})`, icon: 'nutrition', grad: gradients.purple },
+              { key: 'sales', label: `Ventas (${sales.length})`, icon: 'cart', grad: gradients.emerald },
+              { key: 'promotions', label: `Promos (${promotions.length})`, icon: 'pricetag', grad: gradients.rose },
+              { key: 'orders', label: `Pedidos (${orders.length})`, icon: 'bag-check', grad: gradients.brand },
+            ].map((tab) => {
+              const isActive = subTab === tab.key;
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  onPress={() => setSubTab(tab.key as any)}
+                  activeOpacity={0.8}
+                  style={styles.toggleBtnContainer}
+                >
+                  {isActive ? (
+                    <LinearGradient
+                      colors={tab.grad as any}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.toggleBtnActiveGradient}
+                    >
+                      <Ionicons name={tab.icon as any} size={14} color="#FFFFFF" />
+                      <Text style={styles.toggleBtnTextActive}>{tab.label}</Text>
+                    </LinearGradient>
+                  ) : (
+                    <View style={[styles.toggleBtnInactive, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
+                      <Ionicons name={tab.icon as any} size={14} color={colors.textDim} />
+                      <Text style={[styles.toggleBtnText, { color: colors.textMuted }]}>{tab.label}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
 
@@ -395,7 +346,7 @@ export default function CookiesScreen() {
         {subTab === 'catalog' && (
           <View style={{ flex: 1 }}>
             <View style={styles.subtabActionBar}>
-              <Text style={styles.subtabTitle}>Catálogo & Precios de Venta</Text>
+              <Text style={[styles.subtabTitle, { color: colors.textMain }]}>Catálogo & Precios de Venta</Text>
               <Button
                 title="+ Receta"
                 variant="amber"
@@ -426,7 +377,7 @@ export default function CookiesScreen() {
         {subTab === 'ingredients' && (
           <View style={{ flex: 1 }}>
             <View style={styles.subtabActionBar}>
-              <Text style={styles.subtabTitle}>Insumos & Materia Prima</Text>
+              <Text style={[styles.subtabTitle, { color: colors.textMain }]}>Insumos & Materia Prima</Text>
               <Button
                 title="+ Insumo"
                 variant="primary"
@@ -493,7 +444,7 @@ export default function CookiesScreen() {
         {subTab === 'sales' && (
           <View style={{ flex: 1 }}>
             <View style={styles.subtabActionBar}>
-              <Text style={styles.subtabTitle}>Historial de Ventas Cobradas</Text>
+              <Text style={[styles.subtabTitle, { color: colors.textMain }]}>Historial de Ventas Cobradas</Text>
               <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textDim }}>
                 {sales.length} registros
               </Text>
@@ -570,7 +521,7 @@ export default function CookiesScreen() {
         {subTab === 'promotions' && (
           <View style={{ flex: 1 }}>
             <View style={styles.subtabActionBar}>
-              <Text style={styles.subtabTitle}>Promociones & Ofertas Activas</Text>
+              <Text style={[styles.subtabTitle, { color: colors.textMain }]}>Promociones & Ofertas Activas</Text>
               <Button
                 title="+ Oferta"
                 variant="amber"
@@ -652,7 +603,7 @@ export default function CookiesScreen() {
           <View style={{ flex: 1 }}>
             <View style={styles.subtabActionBar}>
               <View>
-                <Text style={styles.subtabTitle}>Pedidos de Clientes</Text>
+                <Text style={[styles.subtabTitle, { color: colors.textMain }]}>Pedidos de Clientes</Text>
                 <Text style={{ fontSize: 11, color: colors.textDim }}>
                   {orders.filter((o) => o.status === 'Pendiente' || o.status === 'En Preparación').length} por hornear / entregar
                 </Text>
@@ -675,13 +626,19 @@ export default function CookiesScreen() {
                     onPress={() => setOrderStatusFilter(statusChip)}
                     style={[
                       styles.filterChip,
-                      orderStatusFilter === statusChip && styles.filterChipActive,
+                      {
+                        backgroundColor: orderStatusFilter === statusChip ? colors.brandBg : colors.bgCard,
+                        borderColor: orderStatusFilter === statusChip ? colors.brandBorder : colors.borderSubtle,
+                      },
                     ]}
                   >
                     <Text
                       style={[
                         styles.filterChipText,
-                        orderStatusFilter === statusChip && styles.filterChipTextActive,
+                        {
+                          color: orderStatusFilter === statusChip ? colors.brandText : colors.textMuted,
+                          fontWeight: orderStatusFilter === statusChip ? '800' : '600',
+                        },
                       ]}
                     >
                       {statusChip === 'En Preparación' ? 'En Horno' : statusChip}
@@ -905,6 +862,7 @@ export default function CookiesScreen() {
           </View>
         </View>
       </Modal>
+      </SwipeTabWrapper>
     </SafeAreaView>
   );
 }
@@ -990,33 +948,42 @@ const styles = StyleSheet.create({
   },
   tabToggleRow: {
     flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
-    borderRadius: radii.pill,
-    padding: 3,
-    gap: 4,
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+    gap: 8,
   },
-  toggleBtn: {
+  toggleBtnContainer: {
+    borderRadius: radii.pill,
+    overflow: 'hidden',
+  },
+  toggleBtnActiveGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
     borderRadius: radii.pill,
   },
-  toggleBtnActive: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    elevation: 2,
+  toggleBtnInactive: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: radii.pill,
   },
   toggleBtnText: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.textMuted,
+    color: colors.textDim,
   },
   toggleBtnTextActive: {
-    color: colors.textMain,
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   filterChip: {
     paddingHorizontal: 12,
@@ -1024,7 +991,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgCard,
   },
   filterChipActive: {
     backgroundColor: colors.brandBg,
@@ -1074,7 +1041,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalDialog: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgCard,
     borderTopLeftRadius: radii.outer,
     borderTopRightRadius: radii.outer,
     borderWidth: 1,
@@ -1110,7 +1077,7 @@ const styles = StyleSheet.create({
   },
   schemeBtn: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     borderRadius: radii.md,
@@ -1146,7 +1113,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.bgTertiary,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -1160,7 +1127,7 @@ const styles = StyleSheet.create({
   saleMetricsBox: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.bgTertiary,
     borderRadius: radii.md,
     padding: 14,
     marginBottom: 14,
@@ -1190,7 +1157,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     alignItems: 'center',
     borderRadius: radii.pill,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
   },
@@ -1214,7 +1181,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     borderRadius: radii.md,

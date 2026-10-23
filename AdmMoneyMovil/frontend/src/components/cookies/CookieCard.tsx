@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { DoubleBezelCard } from '../ui/DoubleBezelCard';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import { colors, radii } from '../../theme';
+import { colors, useThemeColors, radii } from '../../theme';
 import { CookieProduct } from '../../lib/types';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -14,6 +14,8 @@ interface CookieCardProps {
 }
 
 export const CookieCard: React.FC<CookieCardProps> = ({ cookie, onSell, onInspect }) => {
+  const colors = useThemeColors();
+
   return (
     <DoubleBezelCard style={styles.cardWrapper}>
       <TouchableOpacity
@@ -27,17 +29,21 @@ export const CookieCard: React.FC<CookieCardProps> = ({ cookie, onSell, onInspec
 
         <View style={styles.headerInfo}>
           <View style={styles.titleRow}>
-            <Text style={styles.cookieName} numberOfLines={1}>{cookie.name}</Text>
+            <Text style={[styles.cookieName, { color: colors.textMain }]} numberOfLines={1}>
+              {cookie.name}
+            </Text>
             {onInspect && (
-              <Ionicons name="information-circle-outline" size={18} color={colors.amberText} />
+              <Ionicons name="information-circle-outline" size={18} color={colors.amberLight} />
             )}
           </View>
-          <Text style={styles.cookieDesc} numberOfLines={2}>
+          <Text style={[styles.cookieDesc, { color: colors.textMuted }]} numberOfLines={2}>
             {cookie.description || 'Receta artesanal neoyorquina.'}
           </Text>
           <View style={styles.badgeRow}>
             <Badge label={`${cookie.profit_margin_pct.toFixed(1)}% Margen`} variant="emerald" />
-            <Text style={styles.batchText}>Tanda: {cookie.batch_yield || 16} pzas</Text>
+            <Text style={[styles.batchText, { color: colors.textDim }]}>
+              Tanda: {cookie.batch_yield || 16} pzas
+            </Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -46,42 +52,42 @@ export const CookieCard: React.FC<CookieCardProps> = ({ cookie, onSell, onInspec
       <TouchableOpacity
         activeOpacity={onInspect ? 0.75 : 1}
         onPress={() => onInspect && onInspect(cookie)}
-        style={styles.econContainer}
+        style={[styles.econContainer, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
       >
         <View style={styles.econBox}>
-          <Text style={styles.econLabel}>Lo que gasto</Text>
-          <Text style={[styles.econValue, { color: colors.roseText }]}>
+          <Text style={[styles.econLabel, { color: colors.textDim }]}>Lo que gasto</Text>
+          <Text style={[styles.econValue, { color: colors.roseLight }]}>
             ${cookie.recipe_cost.toFixed(2)}
           </Text>
-          <Text style={styles.econSub}>con empaque</Text>
+          <Text style={[styles.econSub, { color: colors.textDim }]}>con empaque</Text>
         </View>
 
         <View style={[styles.econBox, styles.econBorderLeft]}>
-          <Text style={styles.econLabel}>Precio venta</Text>
-          <Text style={[styles.econValue, { color: colors.amberText }]}>
+          <Text style={[styles.econLabel, { color: colors.textDim }]}>Precio venta</Text>
+          <Text style={[styles.econValue, { color: colors.amberLight }]}>
             ${cookie.sale_price.toFixed(2)}
           </Text>
-          <Text style={styles.econSub}>individual</Text>
+          <Text style={[styles.econSub, { color: colors.textDim }]}>individual</Text>
         </View>
 
         <View style={[styles.econBox, styles.econBorderLeft]}>
-          <Text style={styles.econLabel}>Lo que gano</Text>
-          <Text style={[styles.econValue, { color: colors.emeraldText }]}>
+          <Text style={[styles.econLabel, { color: colors.textDim }]}>Lo que gano</Text>
+          <Text style={[styles.econValue, { color: colors.emeraldLight }]}>
             +${cookie.profit_per_unit.toFixed(2)}
           </Text>
-          <Text style={[styles.econSub, { color: colors.emeraldText, fontWeight: '700' }]}>
+          <Text style={[styles.econSub, { color: colors.emeraldLight, fontWeight: '700' }]}>
             neta libre
           </Text>
         </View>
       </TouchableOpacity>
 
       {/* Promo Banner */}
-      <View style={styles.promoBanner}>
+      <View style={[styles.promoBanner, { backgroundColor: colors.purpleBg, borderColor: colors.purpleBorder }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Ionicons name="pricetag" size={12} color={colors.purpleText} />
-          <Text style={styles.promoTitle}>Promoción 3 x $90</Text>
+          <Ionicons name="pricetag" size={12} color={colors.purpleLight} />
+          <Text style={[styles.promoTitle, { color: colors.purpleLight }]}>Promoción 3 x $90</Text>
         </View>
-        <Text style={styles.promoValue}>+$60.99 ganancia neta</Text>
+        <Text style={[styles.promoValue, { color: colors.purpleLight }]}>+$60.99 ganancia neta</Text>
       </View>
 
       <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -98,7 +104,7 @@ export const CookieCard: React.FC<CookieCardProps> = ({ cookie, onSell, onInspec
           title={`Vender ($${cookie.sale_price.toFixed(2)})`}
           variant="amber"
           onPress={() => onSell(cookie)}
-          icon={<Ionicons name="cart" size={17} color={colors.amberText} />}
+          icon={<Ionicons name="cart" size={17} color="#ffffff" />}
           style={{ flex: 2, paddingVertical: 10 }}
         />
       </View>
@@ -163,7 +169,7 @@ const styles = StyleSheet.create({
   econContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.bgTertiary,
     borderRadius: radii.md,
     paddingVertical: 12,
     paddingHorizontal: 8,

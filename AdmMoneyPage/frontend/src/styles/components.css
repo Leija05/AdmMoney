@@ -207,7 +207,7 @@
 }
 
 .badge-gray {
-  background: #F3F4F6;
+  background: var(--bg-tertiary);
   color: var(--text-muted);
   border: 1px solid var(--border-subtle);
 }
@@ -219,7 +219,7 @@
 }
 
 /* Form Controls & Inputs */
-.input, .select, .textarea, .form-input, .input-select, .input-text {
+.input, .select, .textarea, .form-input, .form-select, .form-textarea, .input-select, .input-text, select, textarea {
   width: 100%;
   padding: 0.7rem 1rem;
   background: var(--bg-secondary);
@@ -232,14 +232,19 @@
   outline: none;
 }
 
-.input:focus, .select:focus, .textarea:focus, .form-input:focus, .input-select:focus, .input-text:focus {
+.input:focus, .select:focus, .textarea:focus, .form-input:focus, .form-select:focus, .form-textarea:focus, .input-select:focus, .input-text:focus, select:focus, textarea:focus {
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px var(--border-focus-ring);
   background: var(--bg-secondary);
 }
 
-.input::placeholder, .textarea::placeholder, .form-input::placeholder {
+.input::placeholder, .textarea::placeholder, .form-input::placeholder, .form-textarea::placeholder, textarea::placeholder {
   color: var(--text-dim);
+}
+
+select option {
+  background: var(--bg-secondary);
+  color: var(--text-main);
 }
 
 .label, .form-label {

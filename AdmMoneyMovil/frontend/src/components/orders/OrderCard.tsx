@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Order } from '../../lib/types';
-import { colors, radii, spacing } from '../../theme';
+import { colors, useThemeColors, radii, spacing } from '../../theme';
 import { DoubleBezelCard } from '../ui/DoubleBezelCard';
 
 interface OrderCardProps {
@@ -18,6 +18,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   onDelete,
   onStatusChange,
 }) => {
+  const colors = useThemeColors();
   const getStatusBadge = (status: Order['status']) => {
     switch (status) {
       case 'Completado':
@@ -30,7 +31,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         return { bg: colors.roseBg, text: colors.roseText, border: colors.roseBorder, label: 'Cancelado' };
       case 'Pendiente':
       default:
-        return { bg: '#F1F5F9', text: '#475569', border: '#E2E8F0', label: 'Pendiente' };
+        return { bg: colors.bgTertiary, text: colors.textMuted, border: colors.borderSubtle, label: 'Pendiente' };
     }
   };
 
@@ -71,12 +72,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Ionicons name="person" size={15} color={colors.textMain} />
-            <Text style={styles.customerName} numberOfLines={1}>
+            <Text style={[styles.customerName, { color: colors.textMain }]} numberOfLines={1}>
               {order.customer_name}
             </Text>
           </View>
           {order.customer_phone ? (
-            <Text style={styles.customerPhone}>📞 {order.customer_phone}</Text>
+            <Text style={[styles.customerPhone, { color: colors.textMuted }]}>📞 {order.customer_phone}</Text>
           ) : null}
         </View>
 
@@ -96,10 +97,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({
       </View>
 
       {/* Delivery date & Payment */}
-      <View style={styles.metaRow}>
+      <View style={[styles.metaRow, { borderBottomColor: colors.borderSubtle }]}>
         <View style={styles.metaItem}>
           <Ionicons name="calendar-outline" size={13} color={colors.textDim} />
-          <Text style={styles.metaText}>Entrega: {order.delivery_date}</Text>
+          <Text style={[styles.metaText, { color: colors.textMuted }]}>Entrega: {order.delivery_date}</Text>
         </View>
 
         <View
@@ -111,13 +112,13 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                   ? colors.emeraldBg
                   : order.payment_status === 'Anticipo'
                   ? colors.amberBg
-                  : '#F1F5F9',
+                  : colors.bgTertiary,
               borderColor:
                 order.payment_status === 'Pagado'
                   ? colors.emeraldBorder
                   : order.payment_status === 'Anticipo'
                   ? colors.amberBorder
-                  : '#CBD5E1',
+                  : colors.borderSubtle,
             },
           ]}
         >
@@ -143,23 +144,23 @@ export const OrderCard: React.FC<OrderCardProps> = ({
       </View>
 
       {/* Items List */}
-      <View style={styles.itemsBox}>
+      <View style={[styles.itemsBox, { backgroundColor: colors.bgTertiary }]}>
         {order.items.map((item, idx) => (
           <View key={idx} style={styles.itemRow}>
-            <Text style={styles.itemQuantity}>{item.quantity}x</Text>
-            <Text style={styles.itemName} numberOfLines={1}>
+            <Text style={[styles.itemQuantity, { color: colors.brand }]}>{item.quantity}x</Text>
+            <Text style={[styles.itemName, { color: colors.textMain }]} numberOfLines={1}>
               {item.product_name}
             </Text>
-            <Text style={styles.itemSubtotal}>${item.subtotal.toFixed(2)}</Text>
+            <Text style={[styles.itemSubtotal, { color: colors.textMain }]}>${item.subtotal.toFixed(2)}</Text>
           </View>
         ))}
       </View>
 
       {/* Promotion Tag if applied */}
       {order.promotion_name ? (
-        <View style={styles.promoTag}>
-          <Ionicons name="pricetag" size={12} color="#D97706" />
-          <Text style={styles.promoText} numberOfLines={1}>
+        <View style={[styles.promoTag, { backgroundColor: colors.amberBg }]}>
+          <Ionicons name="pricetag" size={12} color={colors.amberLight} />
+          <Text style={[styles.promoText, { color: colors.amberText }]} numberOfLines={1}>
             {order.promotion_name} (-${Number(order.discount_amount || 0).toFixed(2)})
           </Text>
         </View>
@@ -167,17 +168,17 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
       {/* Notes */}
       {order.notes ? (
-        <Text style={styles.notesText} numberOfLines={2}>
+        <Text style={[styles.notesText, { color: colors.textMuted }]} numberOfLines={2}>
           💬 "{order.notes}"
         </Text>
       ) : null}
 
       {/* Bottom Financial & Action Bar */}
-      <View style={styles.footerRow}>
+      <View style={[styles.footerRow, { borderTopColor: colors.borderSubtle }]}>
         <View>
-          <Text style={styles.totalLabel}>Total a Cobrar</Text>
-          <Text style={styles.totalAmount}>${order.total_amount.toFixed(2)} MXN</Text>
-          <Text style={styles.profitSubtext}>
+          <Text style={[styles.totalLabel, { color: colors.textDim }]}>Total a Cobrar</Text>
+          <Text style={[styles.totalAmount, { color: colors.textMain }]}>${order.total_amount.toFixed(2)} MXN</Text>
+          <Text style={[styles.profitSubtext, { color: colors.emeraldLight }]}>
             Ganancia libre: +${order.net_profit.toFixed(2)}
           </Text>
         </View>
@@ -187,16 +188,16 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           {Boolean(order.customer_phone) && (
             <TouchableOpacity
               onPress={handleOpenWhatsApp}
-              style={[styles.actionBtn, { backgroundColor: '#DCFCE7', borderColor: '#BBF7D0' }]}
+              style={[styles.actionBtn, { backgroundColor: colors.whatsappBg, borderColor: colors.whatsapp }]}
             >
-              <Ionicons name="logo-whatsapp" size={16} color="#15803D" />
+              <Ionicons name="logo-whatsapp" size={16} color={colors.whatsappText} />
             </TouchableOpacity>
           )}
 
           {/* Edit Button */}
           <TouchableOpacity
             onPress={() => onEdit(order)}
-            style={[styles.actionBtn, { backgroundColor: '#F1F5F9', borderColor: '#E2E8F0' }]}
+            style={[styles.actionBtn, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
           >
             <Ionicons name="pencil" size={15} color={colors.textMain} />
           </TouchableOpacity>
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   itemsBox: {
-    backgroundColor: colors.bgSurface,
+    backgroundColor: colors.bgTertiary,
     borderRadius: radii.md,
     padding: 8,
     marginBottom: 8,
@@ -307,7 +308,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: colors.amberBg,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: radii.sm,
@@ -317,7 +318,7 @@ const styles = StyleSheet.create({
   promoText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#92400E',
+    color: colors.amberText,
   },
   notesText: {
     fontSize: 11,

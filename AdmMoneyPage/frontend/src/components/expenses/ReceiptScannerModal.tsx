@@ -163,7 +163,7 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
               {isScanning ? <ScanLine size={32} className="animate-spin" /> : <UploadCloud size={32} />}
             </div>
             <div>
-              <h4 style={{ fontWeight: 800, fontSize: '1.15rem', color: '#fff' }}>
+              <h4 style={{ fontWeight: 800, fontSize: '1.15rem', color: 'var(--text-main)' }}>
                 {selectedFile ? selectedFile.name : 'Haz clic para subir o arrastrar foto de ticket'}
               </h4>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
@@ -197,7 +197,7 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
           )}
 
           {!selectedFile && (
-            <div style={{ marginTop: '1.5rem', textAlign: 'center', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '1rem' }}>
+            <div style={{ marginTop: '1.5rem', textAlign: 'center', background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', padding: '1rem', borderRadius: '1rem' }}>
               <span style={{ fontSize: '0.825rem', color: 'var(--text-dim)' }}>¿Deseas probarlo sin subir foto?</span>{' '}
               <button
                 type="button"

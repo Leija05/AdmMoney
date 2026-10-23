@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: 54,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgCard,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
   },
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgCard,
   },
   cookiePillActive: {
     backgroundColor: colors.brandBg,
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
   qtyControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgCard,
     borderRadius: radii.sm,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
@@ -657,7 +657,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgCard,
   },
   promoPillActive: {
     backgroundColor: '#FEF3C7',

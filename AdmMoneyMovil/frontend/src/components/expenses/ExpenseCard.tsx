@@ -2,17 +2,20 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { DoubleBezelCard } from '../ui/DoubleBezelCard';
 import { Badge } from '../ui/Badge';
-import { colors } from '../../theme';
+import { colors, useThemeColors } from '../../theme';
 import { Expense } from '../../lib/types';
 import { Ionicons } from '@expo/vector-icons';
 
 interface ExpenseCardProps {
   expense: Expense;
   onPress?: (expense: Expense) => void;
+  onLongPress?: (expense: Expense) => void;
   onDelete?: (id: number) => void;
 }
 
-export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onPress, onDelete }) => {
+export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onPress, onLongPress, onDelete }) => {
+  const colors = useThemeColors();
+
   const getBadgeVariant = (cat: string) => {
     if (cat.includes('Galletas')) return 'amber';
     if (cat.includes('Empaques')) return 'purple';
@@ -40,18 +43,24 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onPress, onDe
     <TouchableOpacity
       activeOpacity={onPress ? 0.75 : 1}
       onPress={() => onPress && onPress(expense)}
+      onLongPress={() => onLongPress && onLongPress(expense)}
+      delayLongPress={320}
     >
       <DoubleBezelCard style={styles.cardWrapper}>
         <View style={styles.row}>
           <View style={styles.leftCol}>
-            <Text style={styles.title} numberOfLines={1}>{expense.title}</Text>
+            <Text style={[styles.title, { color: colors.textMain }]} numberOfLines={1}>
+              {expense.title}
+            </Text>
             <View style={styles.metaRow}>
               <Badge label={expense.category} variant={getBadgeVariant(expense.category)} />
-              <Text style={styles.dateText}>{expense.date}</Text>
-              <Text style={styles.payText}>• {expense.payment_method}</Text>
+              <Text style={[styles.dateText, { color: colors.textDim }]}>{expense.date}</Text>
+              <Text style={[styles.payText, { color: colors.textDim }]}>• {expense.payment_method}</Text>
             </View>
             {expense.notes ? (
-              <Text style={styles.notesText} numberOfLines={1}>{expense.notes}</Text>
+              <Text style={[styles.notesText, { color: colors.textMuted }]} numberOfLines={1}>
+                {expense.notes}
+              </Text>
             ) : null}
           </View>
 

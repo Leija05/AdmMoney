@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#ffffff',
+    color: colors.textMain,
     marginTop: 2,
   },
   closeBtn: {

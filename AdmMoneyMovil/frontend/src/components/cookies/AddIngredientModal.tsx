@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#ffffff',
+    color: colors.textMain,
     marginTop: 2,
   },
   closeBtn: {
@@ -243,12 +243,12 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     borderRadius: radii.md,
     padding: 12,
-    color: '#fff',
+    color: colors.textMain,
     fontSize: 13,
     marginBottom: 12,
   },

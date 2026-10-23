@@ -10,10 +10,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { colors, radii, spacing } from '../../src/theme';
+import { colors, useThemeColors, radii, spacing } from '../../src/theme';
 import { Button } from '../../src/components/ui/Button';
 import { DoubleBezelCard } from '../../src/components/ui/DoubleBezelCard';
 import { ReceiptPreviewModal } from '../../src/components/scanner/ReceiptPreviewModal';
+import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
 import { MobileApiService } from '../../src/services/api';
 import { useAppStore } from '../../src/stores/app.store';
 import { ReceiptScanResult, Expense } from '../../src/lib/types';
@@ -23,6 +24,7 @@ import { useRouter } from 'expo-router';
 
 export default function ScannerScreen() {
   const router = useRouter();
+  const colors = useThemeColors();
   const { addExpense, useMockData } = useAppStore();
 
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -152,13 +154,14 @@ export default function ScannerScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]}>
+      <SwipeTabWrapper currentRoute="/scanner">
+        <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.screenEyebrow}>OCR Inteligente</Text>
-          <Text style={styles.screenTitle}>Escáner de Tickets</Text>
-          <Text style={styles.screenSubtitle}>
+          <Text style={[styles.screenEyebrow, { color: colors.brandLight }]}>OCR Inteligente</Text>
+          <Text style={[styles.screenTitle, { color: colors.textMain }]}>Escáner de Tickets</Text>
+          <Text style={[styles.screenSubtitle, { color: colors.textMuted }]}>
             Toma foto a tu ticket de compra para extraer automáticamente los productos y sumarlos a tus gastos.
           </Text>
         </View>
@@ -178,16 +181,16 @@ export default function ScannerScreen() {
           ) : (
             <View style={styles.placeholderContainer}>
               {/* HUD Target Brackets */}
-              <View style={styles.hudBracketTopLeft} />
-              <View style={styles.hudBracketTopRight} />
-              <View style={styles.hudBracketBottomLeft} />
-              <View style={styles.hudBracketBottomRight} />
+              <View style={[styles.hudBracketTopLeft, { borderColor: colors.brand }]} />
+              <View style={[styles.hudBracketTopRight, { borderColor: colors.brand }]} />
+              <View style={[styles.hudBracketBottomLeft, { borderColor: colors.brand }]} />
+              <View style={[styles.hudBracketBottomRight, { borderColor: colors.brand }]} />
 
-              <View style={styles.cameraIconCircle}>
-                <Ionicons name="scan" size={44} color={colors.emeraldLight} />
+              <View style={[styles.cameraIconCircle, { backgroundColor: colors.brandBg, borderColor: colors.brandBorder }]}>
+                <Ionicons name="scan" size={44} color={colors.brand} />
               </View>
-              <Text style={styles.placeholderTitle}>Listo para Capturar</Text>
-              <Text style={styles.placeholderDesc}>
+              <Text style={[styles.placeholderTitle, { color: colors.textMain }]}>Listo para Capturar</Text>
+              <Text style={[styles.placeholderDesc, { color: colors.textMuted }]}>
                 Apunta al ticket con buena luz y presiona tomar foto
               </Text>
             </View>
@@ -207,40 +210,40 @@ export default function ScannerScreen() {
           <Button
             title="Elegir Foto de Galería"
             variant="secondary"
-            icon={<Ionicons name="images-outline" size={20} color="#fff" />}
+            icon={<Ionicons name="images-outline" size={20} color={colors.textMain} />}
             onPress={handlePickGallery}
             disabled={isScanning}
           />
 
           {/* Quick Demo Tickets Bar */}
-          <View style={styles.demoTicketsBox}>
-            <Text style={styles.demoTicketsTitle}>Tickets de Muestra (1 toque):</Text>
+          <View style={[styles.demoTicketsBox, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
+            <Text style={[styles.demoTicketsTitle, { color: colors.textMuted }]}>Tickets de Muestra (1 toque):</Text>
             <View style={styles.demoButtonsRow}>
               <TouchableOpacity
                 onPress={() => handleDemoTicket('costco')}
-                style={styles.demoTicketChip}
+                style={[styles.demoTicketChip, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}
                 disabled={isScanning}
               >
                 <Ionicons name="receipt" size={12} color={colors.amberLight} />
-                <Text style={styles.demoTicketText}>Costco ($1,687)</Text>
+                <Text style={[styles.demoTicketText, { color: colors.textMain }]}>Costco ($1,687)</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={() => handleDemoTicket('walmart')}
-                style={styles.demoTicketChip}
+                style={[styles.demoTicketChip, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}
                 disabled={isScanning}
               >
                 <Ionicons name="cart" size={12} color={colors.emeraldLight} />
-                <Text style={styles.demoTicketText}>Walmart ($540)</Text>
+                <Text style={[styles.demoTicketText, { color: colors.textMain }]}>Walmart ($540)</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={() => handleDemoTicket('oxxo')}
-                style={styles.demoTicketChip}
+                style={[styles.demoTicketChip, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}
                 disabled={isScanning}
               >
                 <Ionicons name="flash" size={12} color={colors.roseLight} />
-                <Text style={styles.demoTicketText}>OXXO ($145)</Text>
+                <Text style={[styles.demoTicketText, { color: colors.textMain }]}>OXXO ($145)</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -254,7 +257,8 @@ export default function ScannerScreen() {
           imageUri={imageUri}
           onConfirm={handleConfirmExpense}
         />
-      </View>
+        </View>
+      </SwipeTabWrapper>
     </SafeAreaView>
   );
 }

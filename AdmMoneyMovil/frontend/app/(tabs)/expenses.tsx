@@ -11,13 +11,19 @@ import {
   Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, radii, spacing } from '../../src/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { colors, useThemeColors, radii, spacing, gradients } from '../../src/theme';
 import { ExpenseCard } from '../../src/components/expenses/ExpenseCard';
 import { ExpenseDetailModal } from '../../src/components/expenses/ExpenseDetailModal';
+import { DoubleBezelCard } from '../../src/components/ui/DoubleBezelCard';
 import { Button } from '../../src/components/ui/Button';
+import { BackendHeartbeat } from '../../src/components/ui/BackendHeartbeat';
+import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
+import { ExpenseActionModal } from '../../src/components/expenses/ExpenseActionModal';
 import { useAppStore } from '../../src/stores/app.store';
 import { Expense } from '../../src/lib/types';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 const CATEGORIES = [
   'Todas',
@@ -38,11 +44,14 @@ const PAYMENT_METHODS = [
 ];
 
 export default function ExpensesScreen() {
-  const { expenses, addExpense, updateExpense, deleteExpense, loadAllData, isLoading } = useAppStore();
+  const router = useRouter();
+  const colors = useThemeColors();
+  const { expenses, addExpense, updateExpense, deleteExpense, loadAllData, isLoading, theme, toggleTheme } = useAppStore();
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+  const [longPressedExpense, setLongPressedExpense] = useState<Expense | null>(null);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -62,6 +71,22 @@ export default function ExpensesScreen() {
   });
 
   const totalSum = filtered.reduce((acc, curr) => acc + curr.amount, 0);
+
+  const handleDuplicateExpense = async (exp: Expense) => {
+    try {
+      await addExpense({
+        title: `${exp.title} (Copia)`,
+        amount: exp.amount,
+        category: exp.category,
+        date: new Date().toISOString().split('T')[0],
+        payment_method: exp.payment_method,
+        notes: exp.notes ? `Copia: ${exp.notes}` : 'Gasto duplicado',
+      });
+      Alert.alert('¡Gasto Duplicado! 📋', `Se creó una copia de "${exp.title}" por $${exp.amount.toFixed(2)}.`);
+    } catch {
+      Alert.alert('Error', 'No se pudo duplicar el gasto.');
+    }
+  };
 
   const handleCreate = async () => {
     const val = parseFloat(amount);
@@ -88,29 +113,62 @@ export default function ExpensesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.screenEyebrow}>Control Financiero</Text>
-            <Text style={styles.totalAmount}>-${totalSum.toFixed(2)}</Text>
-            <Text style={styles.subText}>{filtered.length} gastos encontrados</Text>
-          </View>
-          <Button
-            title="+ Gasto"
-            variant="primary"
-            icon={<Ionicons name="add" size={18} color="#fff" />}
-            onPress={() => setIsModalOpen(true)}
-            style={{ paddingVertical: 9, paddingHorizontal: 16 }}
-          />
-        </View>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]}>
+      <SwipeTabWrapper currentRoute="/expenses">
+        <View style={styles.container}>
+          {/* Header Hero Card */}
+          <DoubleBezelCard
+            style={styles.headerCard}
+            gradient={theme === 'dark' ? ['#1C202B', '#14171F'] : ['#FFFFFF', '#F8FAFC']}
+          >
+            {/* Top Row: Eyebrow + Controls */}
+            <View style={styles.headerTopRow}>
+              <Text style={[styles.screenEyebrow, { color: colors.rose }]}>Control Financiero</Text>
+              <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                <TouchableOpacity
+                  onPress={toggleTheme}
+                  style={[
+                    styles.themeToggleBtn,
+                    {
+                      backgroundColor: colors.bgTertiary,
+                      borderColor: colors.borderSubtle,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={theme === 'dark' ? 'sunny' : 'moon'}
+                    size={15}
+                    color={theme === 'dark' ? colors.amberLight : colors.textMuted}
+                  />
+                </TouchableOpacity>
+                <BackendHeartbeat onPress={() => router.push('/settings')} compact />
+              </View>
+            </View>
+
+            {/* Main Financial Amount & + Gasto Button Row */}
+            <View style={styles.headerMainRow}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={[styles.totalAmount, { color: colors.rose }]} numberOfLines={1}>
+                  -${totalSum.toFixed(2)}
+                </Text>
+                <Text style={[styles.subText, { color: colors.textMuted }]}>{filtered.length} gastos encontrados</Text>
+              </View>
+
+              <Button
+                title="+ Gasto"
+                variant="danger"
+                icon={<Ionicons name="add" size={18} color="#fff" />}
+                onPress={() => setIsModalOpen(true)}
+                style={{ paddingVertical: 8, paddingHorizontal: 16 }}
+              />
+            </View>
+          </DoubleBezelCard>
 
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={16} color={colors.textDim} style={{ marginLeft: 10 }} />
+        <View style={[styles.searchContainer, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
+          <Ionicons name="search" size={16} color={colors.textDim} style={{ marginLeft: 12 }} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.textMain }]}
             placeholder="Buscar por concepto o proveedor..."
             placeholderTextColor={colors.textDim}
             value={searchQuery}
@@ -128,27 +186,40 @@ export default function ExpensesScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.categoryScroll}
-          contentContainerStyle={{ paddingRight: 16, gap: 8 }}
+          contentContainerStyle={{ paddingHorizontal: 2, paddingVertical: 4, gap: 8, alignItems: 'center' }}
         >
-          {CATEGORIES.map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              onPress={() => setSelectedCategory(cat)}
-              style={[
-                styles.catPill,
-                selectedCategory === cat && styles.catPillActive
-              ]}
-            >
-              <Text
-                style={[
-                  styles.catPillText,
-                  selectedCategory === cat && styles.catPillTextActive
-                ]}
+          {CATEGORIES.map((cat) => {
+            const isActive = selectedCategory === cat;
+            return (
+              <TouchableOpacity
+                key={cat}
+                onPress={() => setSelectedCategory(cat)}
+                activeOpacity={0.8}
+                style={styles.catPillContainer}
               >
-                {cat}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                {isActive ? (
+                  <LinearGradient
+                    colors={
+                      cat.includes('Galletas')
+                        ? (gradients.amber as any)
+                        : cat.includes('Empaques')
+                        ? (gradients.purple as any)
+                        : (gradients.rose as any)
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.catPillActiveGradient}
+                  >
+                    <Text style={styles.catPillTextActive}>{cat}</Text>
+                  </LinearGradient>
+                ) : (
+                  <View style={[styles.catPillInactive, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
+                    <Text style={[styles.catPillText, { color: colors.textMuted }]}>{cat}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
         {/* Expense List */}
@@ -159,6 +230,7 @@ export default function ExpensesScreen() {
             <ExpenseCard
               expense={item}
               onPress={(exp) => setSelectedExpense(exp)}
+              onLongPress={(exp) => setLongPressedExpense(exp)}
               onDelete={deleteExpense}
             />
           )}
@@ -292,6 +364,22 @@ export default function ExpensesScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Quick Action Sheet on Long Press */}
+      <ExpenseActionModal
+        visible={!!longPressedExpense}
+        expense={longPressedExpense}
+        onClose={() => setLongPressedExpense(null)}
+        onEdit={(exp) => {
+          setSelectedExpense(exp);
+        }}
+        onDuplicate={handleDuplicateExpense}
+        onViewDetails={(exp) => {
+          setSelectedExpense(exp);
+        }}
+        onDelete={deleteExpense}
+      />
+      </SwipeTabWrapper>
     </SafeAreaView>
   );
 }
@@ -305,17 +393,41 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: spacing.md,
   },
-  header: {
+  headerCard: {
+    marginBottom: 16,
+  },
+  headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
+  },
+  headerMainRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  themeToggleBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.bgTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   screenEyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textDim,
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.rose,
     textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   totalAmount: {
     fontSize: 26,
@@ -324,14 +436,30 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   categoryScroll: {
-    maxHeight: 40,
-    marginBottom: 16,
+    marginBottom: 12,
+  },
+  catPillContainer: {
+    borderRadius: radii.pill,
+    overflow: 'hidden',
+  },
+  catPillActiveGradient: {
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: radii.pill,
+  },
+  catPillInactive: {
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: radii.pill,
+    backgroundColor: colors.bgCard,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
   },
   catPill: {
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: radii.pill,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
   },
@@ -342,11 +470,12 @@ const styles = StyleSheet.create({
   catPillText: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.textMuted,
+    color: colors.textDim,
   },
   catPillTextActive: {
+    fontSize: 12,
+    fontWeight: '800',
     color: colors.brandText,
-    fontWeight: '700',
   },
   emptyBox: {
     alignItems: 'center',
@@ -365,7 +494,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalDialog: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgCard,
     borderTopLeftRadius: radii.outer,
     borderTopRightRadius: radii.outer,
     borderWidth: 1,
@@ -393,7 +522,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgCard,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     borderRadius: radii.md,
@@ -441,7 +570,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     borderRadius: radii.md,

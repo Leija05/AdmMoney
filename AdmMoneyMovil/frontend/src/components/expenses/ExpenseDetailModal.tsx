@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { colors, radii, spacing } from '../../theme';
+import { colors, useThemeColors, radii, spacing } from '../../theme';
 import { Expense } from '../../lib/types';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -47,6 +47,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
   onUpdate,
   onDelete,
 }) => {
+  const colors = useThemeColors();
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
@@ -122,14 +123,14 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <View style={styles.dialog}>
+        <View style={[styles.dialog, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { borderBottomColor: colors.borderSubtle }]}>
             <View style={{ flex: 1, paddingRight: 8 }}>
-              <Text style={styles.headerEyebrow}>
+              <Text style={[styles.headerEyebrow, { color: colors.emeraldLight }]}>
                 {isEditing ? 'Editar Registro' : 'Detalle del Gasto'}
               </Text>
-              <Text style={styles.headerTitle} numberOfLines={1}>
+              <Text style={[styles.headerTitle, { color: colors.textMain }]} numberOfLines={1}>
                 {expense.title}
               </Text>
             </View>
@@ -143,9 +144,9 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
               /* VIEW MODE */
               <View>
                 {/* Amount Hero Box */}
-                <View style={styles.amountBox}>
-                  <Text style={styles.amountLabel}>Monto Registrado</Text>
-                  <Text style={styles.amountValue}>-${expense.amount.toFixed(2)} MXN</Text>
+                <View style={[styles.amountBox, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
+                  <Text style={[styles.amountLabel, { color: colors.textDim }]}>Monto Registrado</Text>
+                  <Text style={[styles.amountValue, { color: colors.rose }]}>-${expense.amount.toFixed(2)} MXN</Text>
                   <View style={styles.badgeRow}>
                     <Badge label={expense.category} variant={getBadgeVariant(expense.category)} />
                     <Badge label={expense.payment_method || 'Efectivo'} variant="gray" />
@@ -153,25 +154,25 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                 </View>
 
                 {/* Details List */}
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoKey}>Fecha de Registro</Text>
-                  <Text style={styles.infoVal}>{expense.date}</Text>
+                <View style={[styles.infoRow, { borderBottomColor: colors.borderSubtle }]}>
+                  <Text style={[styles.infoKey, { color: colors.textDim }]}>Fecha de Registro</Text>
+                  <Text style={[styles.infoVal, { color: colors.textMain }]}>{expense.date}</Text>
                 </View>
 
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoKey}>Método de Pago</Text>
-                  <Text style={styles.infoVal}>{expense.payment_method || 'Efectivo'}</Text>
+                <View style={[styles.infoRow, { borderBottomColor: colors.borderSubtle }]}>
+                  <Text style={[styles.infoKey, { color: colors.textDim }]}>Método de Pago</Text>
+                  <Text style={[styles.infoVal, { color: colors.textMain }]}>{expense.payment_method || 'Efectivo'}</Text>
                 </View>
 
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoKey}>Categoría Contable</Text>
-                  <Text style={styles.infoVal}>{expense.category}</Text>
+                <View style={[styles.infoRow, { borderBottomColor: colors.borderSubtle }]}>
+                  <Text style={[styles.infoKey, { color: colors.textDim }]}>Categoría Contable</Text>
+                  <Text style={[styles.infoVal, { color: colors.textMain }]}>{expense.category}</Text>
                 </View>
 
                 {expense.notes ? (
-                  <View style={styles.notesBox}>
-                    <Text style={styles.notesKey}>Notas / Comprobante:</Text>
-                    <Text style={styles.notesVal}>{expense.notes}</Text>
+                  <View style={[styles.notesBox, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
+                    <Text style={[styles.notesKey, { color: colors.textDim }]}>Notas / Comprobante:</Text>
+                    <Text style={[styles.notesVal, { color: colors.textMain }]}>{expense.notes}</Text>
                   </View>
                 ) : null}
 
@@ -180,7 +181,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                   <Button
                     title="Editar Gasto"
                     variant="secondary"
-                    icon={<Ionicons name="pencil" size={16} color="#fff" />}
+                    icon={<Ionicons name="pencil" size={16} color={colors.textMain} />}
                     onPress={() => setIsEditing(true)}
                     style={{ flex: 1 }}
                   />
@@ -196,18 +197,18 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
             ) : (
               /* EDIT MODE */
               <View>
-                <Text style={styles.formLabel}>Concepto del Gasto</Text>
+                <Text style={[styles.formLabel, { color: colors.textMuted }]}>Concepto del Gasto</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
                   value={title}
                   onChangeText={setTitle}
                   placeholder="Ej. Harina, Mantequilla, CFE"
                   placeholderTextColor={colors.textDim}
                 />
 
-                <Text style={styles.formLabel}>Monto ($ MXN)</Text>
+                <Text style={[styles.formLabel, { color: colors.textMuted }]}>Monto ($ MXN)</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
                   value={amount}
                   onChangeText={setAmount}
                   keyboardType="numeric"
@@ -289,7 +290,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   dialog: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgCard,
     borderTopLeftRadius: radii.outer,
     borderTopRightRadius: radii.outer,
     borderWidth: 1,
@@ -325,7 +326,7 @@ const styles = StyleSheet.create({
   },
   amountBox: {
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.bgTertiary,
     borderRadius: radii.md,
     padding: 16,
     borderWidth: 1,
@@ -368,7 +369,7 @@ const styles = StyleSheet.create({
   },
   notesBox: {
     marginTop: 14,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.bgTertiary,
     borderRadius: radii.sm,
     padding: 12,
     borderWidth: 1,
@@ -399,7 +400,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     borderRadius: radii.md,
@@ -412,7 +413,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: radii.pill,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
   },

@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   dialog: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgCard,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '90%',
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     borderRadius: 12,
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
   },
   typeBtn: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     borderRadius: 12,
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
   },
   productListContainer: {
     marginTop: 8,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.bgTertiary,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   productCheckRowActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgCard,
   },
   footer: {
     flexDirection: 'row',

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { colors, radii } from '../../theme';
+import { colors, useThemeColors, radii } from '../../theme';
 import { ReceiptScanResult, Expense } from '../../lib/types';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -47,6 +47,7 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
   imageUri,
   onConfirm
 }) => {
+  const colors = useThemeColors();
   const [isSaving, setIsSaving] = useState(false);
   const [merchant, setMerchant] = useState('');
   const [amount, setAmount] = useState('');
@@ -100,11 +101,11 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.backdrop}>
-        <View style={styles.dialog}>
-          <View style={styles.header}>
+        <View style={[styles.dialog, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
+          <View style={[styles.header, { borderBottomColor: colors.borderSubtle }]}>
             <View>
-              <Text style={styles.headerEyebrow}>OCR Inteligente</Text>
-              <Text style={styles.headerTitle}>Verificar Ticket Escaneado</Text>
+              <Text style={[styles.headerEyebrow, { color: colors.emeraldLight }]}>OCR Inteligente</Text>
+              <Text style={[styles.headerTitle, { color: colors.textMain }]}>Verificar Ticket Escaneado</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <Ionicons name="close" size={22} color={colors.textMuted} />
@@ -120,18 +121,18 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
 
             {/* Editable Merchant & Amount */}
             <View style={styles.editSection}>
-              <Text style={styles.formLabel}>Nombre del Comercio</Text>
+              <Text style={[styles.formLabel, { color: colors.textMuted }]}>Nombre del Comercio</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
                 value={merchant}
                 onChangeText={setMerchant}
                 placeholder="Costco, Walmart, OXXO"
                 placeholderTextColor={colors.textDim}
               />
 
-              <Text style={styles.formLabel}>Total Extraído ($ MXN)</Text>
+              <Text style={[styles.formLabel, { color: colors.textMuted }]}>Total Extraído ($ MXN)</Text>
               <TextInput
-                style={[styles.input, styles.amountInput]}
+                style={[styles.input, styles.amountInput, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.rose }]}
                 value={amount}
                 onChangeText={setAmount}
                 keyboardType="numeric"
@@ -139,16 +140,20 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
                 placeholderTextColor={colors.textDim}
               />
 
-              <Text style={styles.formLabel}>Categoría del Gasto</Text>
+              <Text style={[styles.formLabel, { color: colors.textMuted }]}>Categoría del Gasto</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
                 <View style={{ flexDirection: 'row', gap: 6 }}>
                   {CATEGORIES.map((c) => (
                     <TouchableOpacity
                       key={c}
                       onPress={() => setCategory(c)}
-                      style={[styles.pill, category === c && styles.pillActive]}
+                      style={[
+                        styles.pill,
+                        { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle },
+                        category === c && styles.pillActive,
+                      ]}
                     >
-                      <Text style={[styles.pillText, category === c && styles.pillTextActive]}>
+                      <Text style={[styles.pillText, { color: colors.textMuted }, category === c && styles.pillTextActive]}>
                         {c}
                       </Text>
                     </TouchableOpacity>
@@ -156,15 +161,19 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
                 </View>
               </ScrollView>
 
-              <Text style={styles.formLabel}>Método de Pago</Text>
+              <Text style={[styles.formLabel, { color: colors.textMuted }]}>Método de Pago</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
                 {PAYMENT_METHODS.map((m) => (
                   <TouchableOpacity
                     key={m}
                     onPress={() => setPaymentMethod(m)}
-                    style={[styles.pill, paymentMethod === m && styles.pillActiveGreen]}
+                    style={[
+                      styles.pill,
+                      { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle },
+                      paymentMethod === m && styles.pillActiveGreen,
+                    ]}
                   >
-                    <Text style={[styles.pillText, paymentMethod === m && styles.pillTextActive]}>
+                    <Text style={[styles.pillText, { color: colors.textMuted }, paymentMethod === m && styles.pillTextActive]}>
                       {m}
                     </Text>
                   </TouchableOpacity>
@@ -174,30 +183,30 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
 
             {/* Receipt Items Breakdown Paper Card */}
             {scanResult.items && scanResult.items.length > 0 && (
-              <View style={styles.paperCard}>
-                <Text style={styles.paperTitle}>DESGLOSE DE ARTÍCULOS DETECTADOS</Text>
-                <View style={styles.divider} />
+              <View style={[styles.paperCard, { backgroundColor: colors.bgTertiary, borderWidth: 1, borderColor: colors.borderSubtle }]}>
+                <Text style={[styles.paperTitle, { color: colors.textDim }]}>DESGLOSE DE ARTÍCULOS DETECTADOS</Text>
+                <View style={[styles.divider, { borderColor: colors.borderSubtle }]} />
 
                 {scanResult.items.map((item, idx) => (
                   <View key={idx} style={styles.itemRow}>
-                    <Text style={styles.itemName} numberOfLines={1}>
+                    <Text style={[styles.itemName, { color: colors.textMain }]} numberOfLines={1}>
                       {item.quantity}x {item.name}
                     </Text>
-                    <Text style={styles.itemPrice}>${item.price.toFixed(2)}</Text>
+                    <Text style={[styles.itemPrice, { color: colors.textMain }]}>${item.price.toFixed(2)}</Text>
                   </View>
                 ))}
 
-                <View style={styles.thickDivider} />
+                <View style={[styles.thickDivider, { backgroundColor: colors.borderSubtle }]} />
                 <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>TOTAL TICKET:</Text>
-                  <Text style={styles.totalAmount}>${parseFloat(amount || '0').toFixed(2)} MXN</Text>
+                  <Text style={[styles.totalLabel, { color: colors.textMain }]}>TOTAL TICKET:</Text>
+                  <Text style={[styles.totalAmount, { color: colors.emeraldLight }]}>${parseFloat(amount || '0').toFixed(2)} MXN</Text>
                 </View>
               </View>
             )}
 
-            <Text style={styles.formLabel}>Notas u Observación</Text>
+            <Text style={[styles.formLabel, { color: colors.textMuted }]}>Notas u Observación</Text>
             <TextInput
-              style={[styles.input, { height: 55 }]}
+              style={[styles.input, { height: 55, backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
               value={notes}
               onChangeText={setNotes}
               multiline
