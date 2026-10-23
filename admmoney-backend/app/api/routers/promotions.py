@@ -12,6 +12,73 @@ from ...models.schemas import (
 
 router = APIRouter(prefix="/api/promotions", tags=["Promociones"])
 
+def normalize_promo_doc(promo: dict) -> dict:
+    if not promo:
+        return promo
+
+    # Harmonize min units / quantity
+    min_units = promo.get("min_quantity") or promo.get("min_units") or 1
+    promo["min_quantity"] = int(min_units)
+    promo["min_units"] = int(min_units)
+
+    # Harmonize discount value / promo price / amount / pct
+    val = None
+    for field in ("discount_value", "promo_price", "discount_amount", "discount_pct"):
+        if promo.get(field) is not None:
+            try:
+                val = float(promo[field])
+                break
+            except Exception:
+                pass
+    if val is None:
+        name_lower = str(promo.get("name", "")).lower()
+        if "90" in name_lower:
+            val = 90.0
+        elif "30" in name_lower:
+            val = 30.0
+        elif "15" in name_lower:
+            val = 15.0
+        else:
+            val = 0.0
+
+    promo["discount_value"] = val
+    if promo.get("promo_price") is None:
+        promo["promo_price"] = val
+    if promo.get("discount_amount") is None:
+        promo["discount_amount"] = val
+    if promo.get("discount_pct") is None:
+        promo["discount_pct"] = val
+
+    # Harmonize target_type / scope
+    target_type = promo.get("target_type") or promo.get("scope") or "all_products"
+    promo["target_type"] = target_type
+    promo["scope"] = target_type
+
+    # Harmonize product ids
+    prods = promo.get("target_product_ids") or promo.get("applicable_product_ids") or []
+    promo["target_product_ids"] = prods
+    promo["applicable_product_ids"] = prods
+
+    # Harmonize badge_text
+    if not promo.get("badge_text"):
+        name_str = str(promo.get("name", ""))
+        if "3 x $90" in name_str or "90" in name_str:
+            promo["badge_text"] = "3 x $90"
+        elif "15%" in name_str:
+            promo["badge_text"] = "15% OFF"
+        elif "30" in name_str:
+            promo["badge_text"] = "-$30 MXN"
+        elif "2x1" in name_str:
+            promo["badge_text"] = "2x1"
+        else:
+            promo["badge_text"] = "PROMO"
+
+    # Color tag
+    if not promo.get("color_tag"):
+        promo["color_tag"] = "#F59E0B"
+
+    return promo
+
 @router.get("", response_model=List[PromotionResponse])
 def get_promotions(active_only: bool = False):
     """
@@ -21,7 +88,7 @@ def get_promotions(active_only: bool = False):
     db = get_db()
     query = {"is_active": True} if active_only else {}
     cursor = db.promotions.find(query, {"_id": 0}).sort("id", -1)
-    return list(cursor)
+    return [normalize_promo_doc(doc) for doc in cursor]
 
 @router.get("/{promo_id}", response_model=PromotionResponse)
 def get_promotion(promo_id: int):
@@ -29,7 +96,7 @@ def get_promotion(promo_id: int):
     promo = db.promotions.find_one({"id": promo_id}, {"_id": 0})
     if not promo:
         raise HTTPException(status_code=404, detail="Promoción no encontrada")
-    return promo
+    return normalize_promo_doc(promo)
 
 @router.post("", response_model=PromotionResponse, status_code=201)
 def create_promotion(data: PromotionCreate):
@@ -41,6 +108,7 @@ def create_promotion(data: PromotionCreate):
     now_str = datetime.utcnow().isoformat()
     
     doc = data.model_dump()
+    normalize_promo_doc(doc)
     doc["id"] = promo_id
     doc["created_at"] = now_str
     
@@ -58,12 +126,17 @@ def update_promotion(promo_id: int, data: PromotionUpdate):
     if not update_data:
         raise HTTPException(status_code=400, detail="No se enviaron datos para actualizar")
     
-    res = db.promotions.update_one({"id": promo_id}, {"$set": update_data})
+    normalize_promo_doc(update_data)
+    try:
+        int_id = int(promo_id)
+    except Exception:
+        int_id = promo_id
+    res = db.promotions.update_one({"$or": [{"id": int_id}, {"id": str(promo_id)}]}, {"$set": update_data})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Promoción no encontrada")
     
-    updated = db.promotions.find_one({"id": promo_id}, {"_id": 0})
-    return updated
+    updated = db.promotions.find_one({"$or": [{"id": int_id}, {"id": str(promo_id)}]}, {"_id": 0})
+    return normalize_promo_doc(updated)
 
 @router.patch("/{promo_id}/toggle", response_model=PromotionResponse)
 def toggle_promotion_status(promo_id: int):
@@ -71,15 +144,19 @@ def toggle_promotion_status(promo_id: int):
     Activa o desactiva rápidamente una promoción (Switch on/off).
     """
     db = get_db()
-    promo = db.promotions.find_one({"id": promo_id})
+    try:
+        int_id = int(promo_id)
+    except Exception:
+        int_id = promo_id
+    promo = db.promotions.find_one({"$or": [{"id": int_id}, {"id": str(promo_id)}]})
     if not promo:
         raise HTTPException(status_code=404, detail="Promoción no encontrada")
     
     new_status = not promo.get("is_active", True)
-    db.promotions.update_one({"id": promo_id}, {"$set": {"is_active": new_status}})
+    db.promotions.update_one({"$or": [{"id": int_id}, {"id": str(promo_id)}]}, {"$set": {"is_active": new_status}})
     
-    updated = db.promotions.find_one({"id": promo_id}, {"_id": 0})
-    return updated
+    updated = db.promotions.find_one({"$or": [{"id": int_id}, {"id": str(promo_id)}]}, {"_id": 0})
+    return normalize_promo_doc(updated)
 
 @router.delete("/{promo_id}")
 def delete_promotion(promo_id: int):
@@ -87,7 +164,11 @@ def delete_promotion(promo_id: int):
     Elimina una promoción del catálogo.
     """
     db = get_db()
-    res = db.promotions.delete_one({"id": promo_id})
+    try:
+        int_id = int(promo_id)
+    except Exception:
+        int_id = promo_id
+    res = db.promotions.delete_one({"$or": [{"id": int_id}, {"id": str(promo_id)}]})
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Promoción no encontrada")
     return {"message": "Promoción eliminada correctamente", "id": promo_id}

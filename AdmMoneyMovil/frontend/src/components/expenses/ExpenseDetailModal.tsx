@@ -15,6 +15,7 @@ import { Badge } from '../ui/Badge';
 import { colors, useThemeColors, radii, spacing } from '../../theme';
 import { Expense } from '../../lib/types';
 import { Ionicons } from '@expo/vector-icons';
+import { confirmAction } from '../../stores/confirmation.store';
 
 interface ExpenseDetailModalProps {
   visible: boolean;
@@ -36,8 +37,6 @@ const CATEGORIES = [
 
 const PAYMENT_METHODS = [
   'Efectivo',
-  'Tarjeta Débito',
-  'Tarjeta Crédito',
   'Transferencia'
 ];
 
@@ -97,35 +96,21 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
   };
 
   const handleDeleteConfirm = () => {
-    const doDelete = async () => {
-      try {
-        await onDelete(expense.id);
-        onClose();
-      } catch (err: any) {
-        Alert.alert('Error', err?.message || 'No se pudo eliminar el gasto.');
-      }
-    };
-
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const ok = window.confirm(`¿Se eliminará "${expense.title}" por $${expense.amount.toFixed(2)} MXN de tu historial?`);
-      if (ok) {
-        doDelete();
-      }
-      return;
-    }
-
-    Alert.alert(
-      '¿Eliminar Gasto?',
-      `Se eliminará "${expense.title}" por $${expense.amount.toFixed(2)} MXN de tu historial.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: doDelete,
-        },
-      ]
-    );
+    confirmAction({
+      title: '¿Eliminar Gasto?',
+      message: `¿Deseas eliminar "${expense.title}" por $${expense.amount.toFixed(2)} MXN de tu historial?`,
+      confirmText: 'Sí, Eliminar',
+      cancelText: 'Cancelar',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await onDelete(expense.id);
+          onClose();
+        } catch (err: any) {
+          Alert.alert('Error', err?.message || 'No se pudo eliminar el gasto.');
+        }
+      },
+    });
   };
 
   const getBadgeVariant = (cat: string) => {

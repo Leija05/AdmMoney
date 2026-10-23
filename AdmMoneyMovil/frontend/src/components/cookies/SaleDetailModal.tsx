@@ -16,6 +16,7 @@ import { useThemeColors, radii, spacing } from '../../theme';
 import { CookieSale } from '../../lib/types';
 import { Ionicons } from '@expo/vector-icons';
 import { WhatsAppTicketModal } from '../ui/WhatsAppTicketModal';
+import { confirmAction } from '../../stores/confirmation.store';
 
 interface SaleDetailModalProps {
   visible: boolean;
@@ -40,36 +41,21 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
   const roiPct = sale.total_cost > 0 ? (sale.net_profit / sale.total_cost) * 100 : 0;
 
   const handleDelete = () => {
-    const doDelete = async () => {
-      try {
-        await onDeleteSale(sale.id);
-        onClose();
-        Alert.alert('Venta Eliminada', 'Se ha eliminado la venta y recalculado el balance.');
-      } catch (err: any) {
-        Alert.alert('Error', err?.message || 'No se pudo eliminar la venta.');
-      }
-    };
-
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const ok = window.confirm(`¿Deseas cancelar y eliminar la venta de ${sale.quantity}x "${sale.cookie_name}" ($${sale.total_revenue.toFixed(2)} MXN)?`);
-      if (ok) {
-        doDelete();
-      }
-      return;
-    }
-
-    Alert.alert(
-      '¿Eliminar Venta?',
-      `¿Deseas cancelar y eliminar la venta de ${sale.quantity}x "${sale.cookie_name}" ($${sale.total_revenue.toFixed(2)} MXN)?`,
-      [
-        { text: 'Conservar Venta', style: 'cancel' },
-        {
-          text: 'Eliminar Venta',
-          style: 'destructive',
-          onPress: doDelete,
-        },
-      ]
-    );
+    confirmAction({
+      title: '¿Eliminar Venta?',
+      message: `¿Deseas cancelar y eliminar la venta de ${sale.quantity}x "${sale.cookie_name}" ($${sale.total_revenue.toFixed(2)} MXN)?`,
+      confirmText: 'Sí, Eliminar Venta',
+      cancelText: 'Conservar Venta',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await onDeleteSale(sale.id);
+          onClose();
+        } catch (err: any) {
+          Alert.alert('Error', err?.message || 'No se pudo eliminar la venta.');
+        }
+      },
+    });
   };
 
   return (

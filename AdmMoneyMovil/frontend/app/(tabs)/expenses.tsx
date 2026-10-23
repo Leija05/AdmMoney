@@ -38,8 +38,6 @@ const CATEGORIES = [
 
 const PAYMENT_METHODS = [
   'Efectivo',
-  'Tarjeta Débito',
-  'Tarjeta Crédito',
   'Transferencia'
 ];
 

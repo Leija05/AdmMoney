@@ -6,6 +6,8 @@ import { colors, useThemeColors } from '../../theme';
 import { Expense } from '../../lib/types';
 import { Ionicons } from '@expo/vector-icons';
 
+import { confirmAction } from '../../stores/confirmation.store';
+
 interface ExpenseCardProps {
   expense: Expense;
   onPress?: (expense: Expense) => void;
@@ -25,18 +27,13 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onPress, onLo
 
   const handleDelete = () => {
     if (!onDelete) return;
-    Alert.alert(
-      '¿Eliminar Gasto?',
-      `¿Deseas eliminar "${expense.title}" por $${expense.amount.toFixed(2)} MXN?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () => onDelete(expense.id),
-        },
-      ]
-    );
+    confirmAction({
+      title: '¿Eliminar Gasto?',
+      message: `¿Deseas eliminar "${expense.title}" por $${expense.amount.toFixed(2)} MXN?`,
+      confirmText: 'Sí, Eliminar',
+      type: 'danger',
+      onConfirm: () => onDelete(expense.id),
+    });
   };
 
   return (

@@ -30,8 +30,9 @@ import { useAppStore } from '../../src/stores/app.store';
 import { CookieProduct, CookieSale, Ingredient, Promotion, Order } from '../../src/lib/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { confirmAction } from '../../src/stores/confirmation.store';
 
-const PAYMENT_METHODS = ['Efectivo', 'Transferencia', 'Tarjeta Débito'];
+const PAYMENT_METHODS = ['Efectivo', 'Transferencia'];
 
 export default function CookiesScreen() {
   const router = useRouter();
@@ -177,43 +178,32 @@ export default function CookiesScreen() {
   };
 
   const handleDeleteIngredient = (ing: Ingredient) => {
-    Alert.alert(
-      '¿Eliminar Insumo?',
-      `¿Deseas eliminar "${ing.name}" de la lista de materias primas?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteIngredient(ing.id);
-            Alert.alert('Insumo Eliminado', `"${ing.name}" ha sido eliminado.`);
-          },
-        },
-      ]
-    );
+    confirmAction({
+      title: '¿Eliminar Insumo?',
+      message: `¿Deseas eliminar "${ing.name}" de la lista de materias primas?`,
+      confirmText: 'Sí, Eliminar',
+      type: 'danger',
+      onConfirm: async () => {
+        await deleteIngredient(ing.id);
+      },
+    });
   };
 
   const handleDeletePromotion = (promo: Promotion) => {
-    Alert.alert(
-      '¿Eliminar Promoción?',
-      `¿Deseas eliminar la promoción "${promo.name}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deletePromotion(promo.id);
-              Alert.alert('Promoción Eliminada', `"${promo.name}" ha sido eliminada.`);
-            } catch (err: any) {
-              Alert.alert('Error', err?.message || 'No se pudo eliminar la promoción.');
-            }
-          },
-        },
-      ]
-    );
+    confirmAction({
+      title: '¿Eliminar Promoción?',
+      message: `¿Deseas eliminar la promoción "${promo.name}"? Ya no estará disponible para aplicar en ventas ni pedidos.`,
+      confirmText: 'Sí, Eliminar',
+      cancelText: 'Cancelar',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await deletePromotion(promo.id);
+        } catch (err: any) {
+          Alert.alert('Error', err?.message || 'No se pudo eliminar la promoción.');
+        }
+      },
+    });
   };
 
   const handleOpenAddOrder = () => {
@@ -237,21 +227,16 @@ export default function CookiesScreen() {
   };
 
   const handleDeleteOrder = (id: number) => {
-    Alert.alert(
-      '¿Eliminar Pedido?',
-      '¿Estás seguro de que deseas eliminar este pedido?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteOrder(id);
-            Alert.alert('Pedido Eliminado', 'El pedido se ha eliminado.');
-          },
-        },
-      ]
-    );
+    const ord = orders.find((o) => o.id === id);
+    confirmAction({
+      title: '¿Eliminar Pedido?',
+      message: `¿Deseas eliminar el pedido de "${ord?.customer_name || 'Cliente'}"?`,
+      confirmText: 'Sí, Eliminar',
+      type: 'danger',
+      onConfirm: async () => {
+        await deleteOrder(id);
+      },
+    });
   };
 
   const handleStatusChange = async (id: number, nextStatus: Order['status']) => {
@@ -599,9 +584,14 @@ export default function CookiesScreen() {
 
                       <TouchableOpacity
                         onPress={() => handleDeletePromotion(item)}
-                        style={{ padding: 4 }}
+                        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                        style={{
+                          padding: 6,
+                          borderRadius: 8,
+                          backgroundColor: colors.isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2',
+                        }}
                       >
-                        <Ionicons name="trash-outline" size={16} color={colors.roseLight} />
+                        <Ionicons name="trash-outline" size={17} color="#EF4444" />
                       </TouchableOpacity>
                     </View>
                   </DoubleBezelCard>
@@ -641,34 +631,43 @@ export default function CookiesScreen() {
             </View>
 
             {/* Status Filter Chips */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                {['Todos', 'Pendiente', 'En Preparación', 'Listo', 'Completado'].map((statusChip) => (
-                  <TouchableOpacity
-                    key={statusChip}
-                    onPress={() => setOrderStatusFilter(statusChip)}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ flexGrow: 0, marginBottom: 14 }}
+              contentContainerStyle={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                paddingVertical: 4,
+                paddingHorizontal: 2,
+              }}
+            >
+              {['Todos', 'Pendiente', 'En Preparación', 'Listo', 'Completado'].map((statusChip) => (
+                <TouchableOpacity
+                  key={statusChip}
+                  onPress={() => setOrderStatusFilter(statusChip)}
+                  style={[
+                    styles.filterChip,
+                    {
+                      backgroundColor: orderStatusFilter === statusChip ? colors.brandBg : colors.bgCard,
+                      borderColor: orderStatusFilter === statusChip ? colors.brandBorder : colors.borderSubtle,
+                    },
+                  ]}
+                >
+                  <Text
                     style={[
-                      styles.filterChip,
+                      styles.filterChipText,
                       {
-                        backgroundColor: orderStatusFilter === statusChip ? colors.brandBg : colors.bgCard,
-                        borderColor: orderStatusFilter === statusChip ? colors.brandBorder : colors.borderSubtle,
+                        color: orderStatusFilter === statusChip ? colors.brandText : colors.textMuted,
+                        fontWeight: orderStatusFilter === statusChip ? '800' : '600',
                       },
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.filterChipText,
-                        {
-                          color: orderStatusFilter === statusChip ? colors.brandText : colors.textMuted,
-                          fontWeight: orderStatusFilter === statusChip ? '800' : '600',
-                        },
-                      ]}
-                    >
-                      {statusChip === 'En Preparación' ? 'En Horno' : statusChip}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+                    {statusChip === 'En Preparación' ? 'En Horno' : statusChip}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </ScrollView>
 
             <FlatList
@@ -1025,21 +1024,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    minHeight: 36,
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     backgroundColor: colors.bgCard,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   filterChipActive: {
     backgroundColor: colors.brandBg,
     borderColor: colors.brandBorder,
   },
   filterChipText: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '700',
     color: colors.textMuted,
+    textAlign: 'center',
   },
   filterChipTextActive: {
     color: colors.brandText,

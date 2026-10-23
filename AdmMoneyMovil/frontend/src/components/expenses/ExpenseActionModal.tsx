@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Expense } from '../../lib/types';
 import { useThemeColors, radii } from '../../theme';
 import { DoubleBezelCard } from '../ui/DoubleBezelCard';
+import { confirmAction } from '../../stores/confirmation.store';
 
 interface ExpenseActionModalProps {
   visible: boolean;
@@ -37,18 +38,13 @@ export const ExpenseActionModal: React.FC<ExpenseActionModalProps> = ({
 
   const handleDelete = () => {
     onClose();
-    Alert.alert(
-      '¿Eliminar Gasto?',
-      `¿Deseas eliminar "${expense.title}" por $${expense.amount.toFixed(2)} MXN?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () => onDelete(expense.id),
-        },
-      ]
-    );
+    confirmAction({
+      title: '¿Eliminar Gasto?',
+      message: `¿Deseas eliminar "${expense.title}" por $${expense.amount.toFixed(2)} MXN?`,
+      confirmText: 'Sí, Eliminar',
+      type: 'danger',
+      onConfirm: () => onDelete(expense.id),
+    });
   };
 
   return (

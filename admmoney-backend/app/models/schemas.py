@@ -297,18 +297,28 @@ class CookieSaleResponse(BaseModel):
 class PromotionBase(BaseModel):
     name: str  # Ej. "Paquete Trío (3 x $90)", "Viernes Dulce 15% OFF"
     description: Optional[str] = ""
-    promo_type: str = "fixed_combo"  # "fixed_combo" | "percentage_discount" | "fixed_discount" | "buy_x_get_y"
-    scope: str = "all_products"  # "all_products" | "specific_products" | "specific_category" | "order_total"
+    promo_type: str = "combo_fixed_price"  # "combo_fixed_price" | "percentage" | "fixed_amount" | "two_for_one" | "fixed_combo"
+    scope: Optional[str] = "all_products"  # "all_products" | "specific_products" | "specific_category" | "order_total"
+    target_type: Optional[str] = "all_products"
     target_category: Optional[str] = None
     applicable_product_ids: Optional[List[int]] = []
+    target_product_ids: Optional[List[int]] = []
     min_units: Optional[int] = 1
+    min_quantity: Optional[int] = 1
     min_order_amount: Optional[float] = 0.0
+    discount_value: Optional[float] = None
     promo_price: Optional[float] = None
     discount_pct: Optional[float] = None
     discount_amount: Optional[float] = None
+    badge_text: Optional[str] = None
+    icon: Optional[str] = "pricetag"
+    color_tag: Optional[str] = "#F59E0B"
     is_active: Optional[bool] = True
     start_date: Optional[str] = None
     end_date: Optional[str] = None
+
+    class Config:
+        extra = "allow"
 
 class PromotionCreate(PromotionBase):
     pass
@@ -318,16 +328,26 @@ class PromotionUpdate(BaseModel):
     description: Optional[str] = None
     promo_type: Optional[str] = None
     scope: Optional[str] = None
+    target_type: Optional[str] = None
     target_category: Optional[str] = None
     applicable_product_ids: Optional[List[int]] = None
+    target_product_ids: Optional[List[int]] = None
     min_units: Optional[int] = None
+    min_quantity: Optional[int] = None
     min_order_amount: Optional[float] = None
+    discount_value: Optional[float] = None
     promo_price: Optional[float] = None
     discount_pct: Optional[float] = None
     discount_amount: Optional[float] = None
+    badge_text: Optional[str] = None
+    icon: Optional[str] = None
+    color_tag: Optional[str] = None
     is_active: Optional[bool] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
+
+    class Config:
+        extra = "allow"
 
 class PromotionResponse(PromotionBase):
     id: int
@@ -335,6 +355,7 @@ class PromotionResponse(PromotionBase):
 
     class Config:
         from_attributes = True
+        extra = "allow"
 
 class PromoCalculationItem(BaseModel):
     product_id: int

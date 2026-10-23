@@ -14,6 +14,7 @@ import { colors, useThemeColors, radii, spacing } from '../../theme';
 import { CookieProduct } from '../../lib/types';
 import { Ionicons } from '@expo/vector-icons';
 import { Alert } from 'react-native';
+import { confirmAction } from '../../stores/confirmation.store';
 
 interface CookieRecipeDetailModalProps {
   visible: boolean;
@@ -50,22 +51,16 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
 
   const handleDeleteRecipe = () => {
     if (!onDeleteCookie) return;
-    Alert.alert(
-      '¿Eliminar Receta?',
-      `¿Deseas eliminar la receta "${cookie.name}" del catálogo?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar Receta',
-          style: 'destructive',
-          onPress: async () => {
-            await onDeleteCookie(cookie.id);
-            onClose();
-            Alert.alert('Receta Eliminada', `"${cookie.name}" ha sido eliminada.`);
-          },
-        },
-      ]
-    );
+    confirmAction({
+      title: '¿Eliminar Receta?',
+      message: `¿Deseas eliminar la receta "${cookie.name}" del catálogo?`,
+      confirmText: 'Sí, Eliminar',
+      type: 'danger',
+      onConfirm: async () => {
+        await onDeleteCookie(cookie.id);
+        onClose();
+      },
+    });
   };
 
   return (

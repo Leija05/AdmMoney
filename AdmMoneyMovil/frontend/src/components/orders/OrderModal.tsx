@@ -147,27 +147,49 @@ export const OrderModal: React.FC<OrderModalProps> = ({
   const selectedPromo = promotions.find((p) => p.id === selectedPromoId && p.is_active);
 
   let discountAmount = 0;
+  let promoRequirementMessage = '';
+
   if (selectedPromo) {
+    const minUnits = Number((selectedPromo as any).min_quantity ?? (selectedPromo as any).min_units ?? (selectedPromo.promo_type === 'combo_fixed_price' ? 3 : 1));
+    const promoVal = Number((selectedPromo as any).discount_value ?? (selectedPromo as any).promo_price ?? (selectedPromo as any).discount_amount ?? (selectedPromo as any).discount_pct ?? (selectedPromo.promo_type === 'combo_fixed_price' ? 90 : 0));
+    const minOrderAmt = Number(selectedPromo.min_order_amount || 0);
+
     let eligibleItems = items;
-    if (selectedPromo.target_type === 'specific_products' && selectedPromo.target_product_ids?.length) {
-      eligibleItems = items.filter((i) => selectedPromo.target_product_ids!.includes(i.product_id));
+    const targetType = (selectedPromo as any).target_type || (selectedPromo as any).scope || 'all_products';
+    const targetProductIds = (selectedPromo as any).target_product_ids || (selectedPromo as any).applicable_product_ids;
+    if (targetType === 'specific_products' && targetProductIds?.length) {
+      eligibleItems = items.filter((i) => targetProductIds.includes(i.product_id));
     }
     const eligibleUnits = eligibleItems.reduce((sum, i) => sum + i.quantity, 0);
     const eligibleSubtotal = eligibleItems.reduce((sum, i) => sum + i.subtotal, 0);
 
-    if (rawTotal >= selectedPromo.min_order_amount && eligibleUnits >= selectedPromo.min_quantity) {
-      if (selectedPromo.promo_type === 'combo_fixed_price') {
-        const combos = Math.floor(eligibleUnits / selectedPromo.min_quantity);
-        const avgPrice = eligibleUnits > 0 ? eligibleSubtotal / eligibleUnits : 35;
-        const regularComboVal = avgPrice * selectedPromo.min_quantity;
-        const savingPerCombo = Math.max(0, regularComboVal - selectedPromo.discount_value);
-        discountAmount = combos * savingPerCombo;
-      } else if (selectedPromo.promo_type === 'percentage') {
-        discountAmount = eligibleSubtotal * (selectedPromo.discount_value / 100);
-      } else if (selectedPromo.promo_type === 'fixed_amount') {
-        discountAmount = Math.min(rawTotal, selectedPromo.discount_value);
-      } else if (selectedPromo.promo_type === 'two_for_one') {
-        const freeUnits = Math.floor(eligibleUnits / 2);
+    const type = selectedPromo.promo_type;
+    const meetsUnits = eligibleUnits >= minUnits;
+    const meetsOrderAmt = rawTotal >= minOrderAmt;
+
+    if (!meetsUnits) {
+      promoRequirementMessage = `Faltan ${minUnits - eligibleUnits} galleta(s) para activar esta promoción.`;
+    } else if (!meetsOrderAmt) {
+      promoRequirementMessage = `Requiere un pedido mínimo de $${minOrderAmt.toFixed(2)} MXN (actual: $${rawTotal.toFixed(2)}).`;
+    } else {
+      if (type === 'combo_fixed_price' || type === ('fixed_combo' as any)) {
+        const comboQty = minUnits > 0 ? minUnits : 3;
+        const comboPrice = promoVal > 0 ? promoVal : 90;
+        const combos = Math.floor(eligibleUnits / comboQty);
+        if (combos > 0) {
+          const avgPrice = eligibleUnits > 0 ? eligibleSubtotal / eligibleUnits : 35;
+          const regularComboVal = avgPrice * comboQty;
+          const savingPerCombo = Math.max(0, regularComboVal - comboPrice);
+          discountAmount = combos * savingPerCombo;
+        }
+      } else if (type === 'percentage' || type === ('percentage_discount' as any)) {
+        const pct = promoVal > 0 ? promoVal / 100 : 0.15;
+        discountAmount = eligibleSubtotal * pct;
+      } else if (type === 'fixed_amount' || type === ('fixed_discount' as any)) {
+        const fixedAmt = promoVal > 0 ? promoVal : 30;
+        discountAmount = Math.min(rawTotal, fixedAmt);
+      } else if (type === 'two_for_one' || type === ('buy_x_get_y' as any)) {
+        const freeUnits = Math.floor(eligibleUnits / (minUnits || 2));
         const minPrice = eligibleItems.length > 0 ? Math.min(...eligibleItems.map((i) => i.unit_price)) : 35;
         discountAmount = freeUnits * minPrice;
       }
@@ -379,47 +401,57 @@ export const OrderModal: React.FC<OrderModalProps> = ({
               Aplica promociones configuradas directamente sobre el pedido.
             </Text>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TouchableOpacity
-                  onPress={() => setSelectedPromoId(null)}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ flexGrow: 0, marginTop: 8 }}
+              contentContainerStyle={{ flexDirection: 'row', gap: 8, paddingVertical: 4, paddingHorizontal: 2 }}
+            >
+              <TouchableOpacity
+                onPress={() => setSelectedPromoId(null)}
+                style={[
+                  styles.promoPill,
+                  selectedPromoId === null && styles.promoPillActive,
+                ]}
+              >
+                <Text
                   style={[
-                    styles.promoPill,
-                    selectedPromoId === null && styles.promoPillActive,
+                    styles.promoPillText,
+                    selectedPromoId === null && styles.promoPillTextActive,
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.promoPillText,
-                      selectedPromoId === null && styles.promoPillTextActive,
-                    ]}
-                  >
-                    Sin Promoción
-                  </Text>
-                </TouchableOpacity>
+                  Sin Promoción
+                </Text>
+              </TouchableOpacity>
 
-                {promotions
-                  .filter((p) => p.is_active)
-                  .map((promo) => (
+              {promotions
+                .filter((p) => p.is_active)
+                .map((promo) => {
+                  const badge = promo.badge_text?.trim();
+                  const hasBadgeAlready = badge && promo.name.includes(badge);
+                  const label = badge && !hasBadgeAlready ? `${promo.name} (${badge})` : promo.name;
+                  const isSelected = selectedPromoId === promo.id;
+
+                  return (
                     <TouchableOpacity
                       key={promo.id}
-                      onPress={() => setSelectedPromoId(promo.id)}
+                      onPress={() => setSelectedPromoId(isSelected ? null : promo.id)}
                       style={[
                         styles.promoPill,
-                        selectedPromoId === promo.id && styles.promoPillActive,
+                        isSelected && styles.promoPillActive,
                       ]}
                     >
                       <Text
                         style={[
                           styles.promoPillText,
-                          selectedPromoId === promo.id && styles.promoPillTextActive,
+                          isSelected && styles.promoPillTextActive,
                         ]}
                       >
-                        {promo.name} ({promo.badge_text})
+                        {label}
                       </Text>
                     </TouchableOpacity>
-                  ))}
-              </View>
+                  );
+                })}
             </ScrollView>
 
             {discountAmount > 0 ? (
@@ -429,12 +461,56 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                   ¡Ahorro de -${discountAmount.toFixed(2)} MXN aplicado al pedido!
                 </Text>
               </View>
+            ) : selectedPromo && promoRequirementMessage ? (
+              <View style={[styles.discountAlert, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : '#FEF3C7', borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : '#FDE68A' }]}>
+                <Ionicons name="alert-circle" size={16} color={colors.amberLight || '#D97706'} />
+                <Text style={[styles.discountAlertText, { color: isDark ? '#FCD34D' : '#B45309' }]}>
+                  {promoRequirementMessage}
+                </Text>
+              </View>
             ) : null}
           </DoubleBezelCard>
 
           {/* Payment & notes card */}
           <DoubleBezelCard style={styles.card}>
             <Text style={styles.sectionTitle}>💳 Pago & Notas</Text>
+
+            {/* Payment Method Selector: Efectivo & Transferencia only */}
+            <View style={styles.fieldGroup}>
+              <Text style={[styles.label, { color: colors.textMuted }]}>Método de Pago</Text>
+              <View style={styles.paymentStatusRow}>
+                {(['Efectivo', 'Transferencia'] as const).map((method) => (
+                  <TouchableOpacity
+                    key={method}
+                    onPress={() => setPaymentMethod(method)}
+                    style={[
+                      styles.statusSelectBtn,
+                      {
+                        backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                        borderColor: colors.borderSubtle,
+                      },
+                      paymentMethod === method && {
+                        backgroundColor: colors.emeraldBg,
+                        borderColor: colors.emerald,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.statusSelectText,
+                        { color: colors.textMuted },
+                        paymentMethod === method && {
+                          color: colors.emeraldLight,
+                          fontWeight: '800',
+                        },
+                      ]}
+                    >
+                      {method}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
 
             {/* Payment status selector */}
             <View style={styles.fieldGroup}>
@@ -520,14 +596,16 @@ export const OrderModal: React.FC<OrderModalProps> = ({
 
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Subtotal sin descuento:</Text>
-              <Text style={[styles.summaryVal, { color: colors.textMain }]}>${rawTotal.toFixed(2)}</Text>
+              <Text style={[styles.summaryVal, { color: colors.textMain }]}>${rawTotal.toFixed(2)} MXN</Text>
             </View>
 
             {discountAmount > 0 && (
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: colors.amber }]}>Descuento:</Text>
-                <Text style={[styles.summaryVal, { color: colors.amber }]}>
-                  -${discountAmount.toFixed(2)}
+                <Text style={[styles.summaryLabel, { color: colors.emeraldLight, fontWeight: '700' }]}>
+                  Descuento ({selectedPromo?.name || 'Promoción'}):
+                </Text>
+                <Text style={[styles.summaryVal, { color: colors.emeraldLight, fontWeight: '800' }]}>
+                  -${discountAmount.toFixed(2)} MXN
                 </Text>
               </View>
             )}

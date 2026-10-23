@@ -147,10 +147,17 @@ export const OrderModal: React.FC<OrderModalProps> = ({
   let isPromoEligible = false;
 
   if (selectedPromo) {
+    const minUnits = Number((selectedPromo as any).min_quantity ?? (selectedPromo as any).min_units ?? (selectedPromo.promo_type === 'combo_fixed_price' ? 3 : 1));
+    const promoVal = Number((selectedPromo as any).discount_value ?? (selectedPromo as any).promo_price ?? (selectedPromo as any).discount_amount ?? (selectedPromo as any).discount_pct ?? (selectedPromo.promo_type === 'combo_fixed_price' ? 90 : 0));
+    const minOrderAmt = Number(selectedPromo.min_order_amount || 0);
+
+    const targetType = (selectedPromo as any).target_type || (selectedPromo as any).scope || 'all_products';
+    const targetProductIds = (selectedPromo as any).target_product_ids || (selectedPromo as any).applicable_product_ids || [];
+
     const eligibleItems = items.filter((it) => {
-      if (selectedPromo.target_type === 'all_products' || selectedPromo.target_type === 'order_total') return true;
-      if (selectedPromo.target_type === 'specific_products') {
-        return (selectedPromo.target_product_ids || []).includes(it.product_id);
+      if (targetType === 'all_products' || targetType === 'order_total') return true;
+      if (targetType === 'specific_products') {
+        return targetProductIds.includes(it.product_id);
       }
       return true;
     });
@@ -158,20 +165,27 @@ export const OrderModal: React.FC<OrderModalProps> = ({
     const eligibleUnits = eligibleItems.reduce((acc, it) => acc + it.quantity, 0);
     const eligibleSubtotal = eligibleItems.reduce((acc, it) => acc + it.subtotal, 0);
 
-    if (rawTotal >= selectedPromo.min_order_amount && eligibleUnits >= selectedPromo.min_quantity) {
+    if (rawTotal >= minOrderAmt && eligibleUnits >= minUnits) {
       isPromoEligible = true;
-      if (selectedPromo.promo_type === 'combo_fixed_price') {
-        const combos = Math.floor(eligibleUnits / selectedPromo.min_quantity);
-        const avgEligiblePrice = eligibleUnits > 0 ? eligibleSubtotal / eligibleUnits : 35;
-        const normalComboVal = avgEligiblePrice * selectedPromo.min_quantity;
-        const savingsPerCombo = Math.max(0, normalComboVal - selectedPromo.discount_value);
-        discountAmount = combos * savingsPerCombo;
-      } else if (selectedPromo.promo_type === 'percentage') {
-        discountAmount = eligibleSubtotal * (selectedPromo.discount_value / 100);
-      } else if (selectedPromo.promo_type === 'fixed_amount') {
-        discountAmount = Math.min(rawTotal, selectedPromo.discount_value);
-      } else if (selectedPromo.promo_type === 'two_for_one') {
-        const freeUnits = Math.floor(eligibleUnits / 2);
+      const type = selectedPromo.promo_type;
+      if (type === 'combo_fixed_price' || type === ('fixed_combo' as any)) {
+        const comboQty = minUnits > 0 ? minUnits : 3;
+        const comboPrice = promoVal > 0 ? promoVal : 90;
+        const combos = Math.floor(eligibleUnits / comboQty);
+        if (combos > 0) {
+          const avgEligiblePrice = eligibleUnits > 0 ? eligibleSubtotal / eligibleUnits : 35;
+          const normalComboVal = avgEligiblePrice * comboQty;
+          const savingsPerCombo = Math.max(0, normalComboVal - comboPrice);
+          discountAmount = combos * savingsPerCombo;
+        }
+      } else if (type === 'percentage' || type === ('percentage_discount' as any)) {
+        const pct = promoVal > 0 ? promoVal / 100 : 0.15;
+        discountAmount = eligibleSubtotal * pct;
+      } else if (type === 'fixed_amount' || type === ('fixed_discount' as any)) {
+        const fixedAmt = promoVal > 0 ? promoVal : 30;
+        discountAmount = Math.min(rawTotal, fixedAmt);
+      } else if (type === 'two_for_one' || type === ('buy_x_get_y' as any)) {
+        const freeUnits = Math.floor(eligibleUnits / (minUnits || 2));
         const minPrice = eligibleItems.length > 0 ? Math.min(...eligibleItems.map((i) => i.unit_price)) : 35;
         discountAmount = freeUnits * minPrice;
       }
@@ -310,8 +324,6 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                 >
                   <option value="Transferencia">Transferencia</option>
                   <option value="Efectivo">Efectivo</option>
-                  <option value="Tarjeta">Tarjeta Débito/Crédito</option>
-                  <option value="Pendiente">Pendiente</option>
                 </select>
               </div>
 

@@ -89,7 +89,11 @@ class ExpenseService:
     @staticmethod
     def delete(expense_id: int) -> bool:
         db = get_db()
-        result = db.expenses.delete_one({"id": expense_id})
+        try:
+            int_id = int(expense_id)
+        except Exception:
+            int_id = expense_id
+        result = db.expenses.delete_one({"$or": [{"id": int_id}, {"id": str(expense_id)}]})
         return result.deleted_count > 0
 
     @staticmethod

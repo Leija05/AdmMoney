@@ -11,10 +11,7 @@ export const EXPENSE_CATEGORIES = [
 
 export const PAYMENT_METHODS = [
   "Efectivo",
-  "Tarjeta Débito",
-  "Tarjeta Crédito",
-  "Transferencia SPEI",
-  "Mercado Pago"
+  "Transferencia"
 ];
 
 export const DEFAULT_API_BASE_URL = "http://localhost:8000";

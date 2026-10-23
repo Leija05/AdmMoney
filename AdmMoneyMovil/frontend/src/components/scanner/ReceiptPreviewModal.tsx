@@ -34,10 +34,8 @@ const CATEGORIES = [
 ];
 
 const PAYMENT_METHODS = [
-  'Tarjeta Débito',
   'Efectivo',
-  'Transferencia',
-  'Tarjeta Crédito'
+  'Transferencia'
 ];
 
 export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
@@ -60,7 +58,7 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
       setMerchant(scanResult.merchant || 'Comercio');
       setAmount(scanResult.total_amount ? String(scanResult.total_amount) : '0.00');
       setCategory(scanResult.suggested_category || CATEGORIES[0]);
-      setPaymentMethod('Tarjeta Débito');
+      setPaymentMethod('Efectivo');
       setNotes(`Ticket escaneado (${scanResult.items?.length || 0} productos)`);
     }
   }, [scanResult]);
