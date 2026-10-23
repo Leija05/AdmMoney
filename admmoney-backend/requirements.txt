@@ -1,0 +1,9 @@
+fastapi==0.110.0
+uvicorn==0.29.0
+python-multipart==0.0.9
+pydantic==2.13.4
+pillow==12.3.0
+pymongo==4.7.1
+dnspython>=2.6.1
+python-dotenv==1.0.1
+gunicorn>=21.2.0

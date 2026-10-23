@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Adm Money",
+    "slug": "admmoney-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#07080a"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.admmoney.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#07080a"
+      },
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Adm Money necesita acceso a tu galería para escanear tickets.",
+          "cameraPermission": "Adm Money necesita acceso a tu cámara para tomar fotos a los tickets."
+        }
+      ],
+      "expo-asset",
+      "expo-font"
+    ],
+    "scheme": "admmoney"
+  }
+}

@@ -1,0 +1,301 @@
+:root {
+  /* ==========================================================================
+     Adm Money Design System: Clean Minimalist Editorial with Muted Pastels
+     Inspired by Notion, Linear & Apple Studio Craft (.agents/skills/minimalist-ui)
+     ========================================================================== */
+
+  /* Canvas & Structural Surfaces (Clean, Warm Editorial Porcelain) */
+  --bg-primary: #F8F9FB;        /* Soft airy porcelain canvas */
+  --bg-secondary: #FFFFFF;      /* Pure crisp white card surface */
+  --bg-tertiary: #F1F3F7;       /* Soft neutral shelf */
+  --bg-card: #FFFFFF;           /* Card background */
+  --bg-card-hover: #FAFBFC;     /* Subtle hover lift */
+  --bg-glass: rgba(255, 255, 255, 0.92);
+  --bg-glass-card: rgba(255, 255, 255, 0.85);
+
+  /* Deep Charcoal & Ink Typography */
+  --text-main: #181A1F;         /* Deep obsidian charcoal (never pure black) */
+  --text-muted: #5E6472;        /* Balanced slate gray */
+  --text-dim: #8B92A2;          /* Soft caption gray */
+  --text-inverse: #FFFFFF;
+
+  /* Primary Brand Accent (Clean Indigo / Azure) */
+  --accent-primary: #3B82F6;
+  --accent-primary-light: #60A5FA;
+  --accent-primary-dark: #1D4ED8;
+  --accent-primary-subtle: #EFF6FF;
+
+  /* Muted Pastel Accent Palette (Semantic & Elegant) */
+  /* Pastel Sky / Blue (Ingresos Brutos, Ventas Totales) */
+  --pastel-blue-bg: #E0F2FE;
+  --pastel-blue-text: #0369A1;
+  --pastel-blue-border: #BAE6FD;
+
+  /* Pastel Mint / Sage (Ganancia Neta Limpia, Rendimiento, Completado) */
+  --pastel-mint-bg: #DCFCE7;
+  --pastel-mint-text: #15803D;
+  --pastel-mint-border: #BBF7D0;
+
+  /* Pastel Peach / Apricot (Galletas, Recetas de Panadería) */
+  --pastel-peach-bg: #FFE8D6;
+  --pastel-peach-text: #B05B3B;
+  --pastel-peach-border: #FFD8BE;
+
+  /* Pastel Honey / Butter Cream (Fondo Re-inversión, Pendientes) */
+  --pastel-honey-bg: #FEF3C7;
+  --pastel-honey-text: #92400E;
+  --pastel-honey-border: #FDE68A;
+
+  /* Pastel Rose / Blush (Gastos Generales, Alertas de Inventario) */
+  --pastel-rose-bg: #FFE4E6;
+  --pastel-rose-text: #BE123C;
+  --pastel-rose-border: #FECDD3;
+
+  /* Pastel Lavender / Lilac (Pedidos Listos, Analítica) */
+  --pastel-purple-bg: #EDE9FE;
+  --pastel-purple-text: #6D28D9;
+  --pastel-purple-border: #DDD6FE;
+
+  /* WhatsApp Brand Pastel */
+  --pastel-whatsapp-bg: #D1FAE5;
+  --pastel-whatsapp-text: #047857;
+  --pastel-whatsapp-border: #A7F3D0;
+
+  /* Machined Hairlines & Structural Dividers */
+  --border-subtle: #E5E7EB;
+  --border-highlight: #D1D5DB;
+  --border-focus: #3B82F6;
+  --border-focus-ring: rgba(59, 130, 246, 0.15);
+
+  /* Proportions */
+  --radius-outer: 1rem;         /* 16px crisp */
+  --radius-inner: 0.75rem;      /* 12px clean */
+  --radius-pill: 9999px;
+
+  /* Clean Editorial Shadows (Ultra-diffuse, subtle) */
+  --shadow-ambient: 0 4px 20px -2px rgba(18, 24, 38, 0.05);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-lifted: 0 8px 24px -4px rgba(18, 24, 38, 0.08);
+  --shadow-inner-hairline: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+  /* Fluid Kinetic Motion Curves */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* ==========================================================================
+   Dark Mode ("Medio Apagado" - Warm, Soft Slate Charcoal, Never Harsh OLED)
+   ========================================================================== */
+[data-theme='dark'] {
+  /* Canvas & Structural Surfaces */
+  --bg-primary: #15181E;        /* Warm deep slate, soft and easy on eyes */
+  --bg-secondary: #1E222A;      /* Deep soft card surface */
+  --bg-tertiary: #262B35;       /* Elevated shelf, input & table header */
+  --bg-card: #1E222A;           /* Card background */
+  --bg-card-hover: #252A34;     /* Card hover */
+  --bg-glass: rgba(30, 34, 42, 0.92);
+  --bg-glass-card: rgba(30, 34, 42, 0.85);
+
+  /* Typography */
+  --text-main: #F1F3F7;         /* Soft warm white, comfortable reading */
+  --text-muted: #9BA3AF;        /* Legible secondary slate */
+  --text-dim: #64748B;          /* Subtle caption gray */
+  --text-inverse: #15181E;
+
+  /* Primary Brand Accent */
+  --accent-primary: #60A5FA;
+  --accent-primary-light: #93C5FD;
+  --accent-primary-dark: #3B82F6;
+  --accent-primary-subtle: rgba(96, 165, 250, 0.15);
+
+  /* Calibrated Muted Pastels for Dark Mode (Warm, luminous & comfortable) */
+  --pastel-blue-bg: rgba(56, 189, 248, 0.14);
+  --pastel-blue-text: #7DD3FC;
+  --pastel-blue-border: rgba(56, 189, 248, 0.28);
+
+  --pastel-mint-bg: rgba(52, 211, 153, 0.14);
+  --pastel-mint-text: #6EE7B7;
+  --pastel-mint-border: rgba(52, 211, 153, 0.28);
+
+  --pastel-peach-bg: rgba(251, 146, 60, 0.14);
+  --pastel-peach-text: #FDBA74;
+  --pastel-peach-border: rgba(251, 146, 60, 0.28);
+
+  --pastel-honey-bg: rgba(251, 191, 36, 0.14);
+  --pastel-honey-text: #FDE047;
+  --pastel-honey-border: rgba(251, 191, 36, 0.28);
+
+  --pastel-rose-bg: rgba(244, 63, 94, 0.14);
+  --pastel-rose-text: #FDA4AF;
+  --pastel-rose-border: rgba(244, 63, 94, 0.28);
+
+  --pastel-purple-bg: rgba(168, 85, 247, 0.14);
+  --pastel-purple-text: #D8B4FE;
+  --pastel-purple-border: rgba(168, 85, 247, 0.28);
+
+  --pastel-whatsapp-bg: rgba(16, 185, 129, 0.14);
+  --pastel-whatsapp-text: #6EE7B7;
+  --pastel-whatsapp-border: rgba(16, 185, 129, 0.28);
+
+  /* Machined Dividers */
+  --border-subtle: #2C323D;
+  --border-highlight: #3F4756;
+  --border-focus: #60A5FA;
+  --border-focus-ring: rgba(96, 165, 250, 0.25);
+
+  /* Diffuse Dark Shadows */
+  --shadow-ambient: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.15);
+  --shadow-lifted: 0 12px 30px -4px rgba(0, 0, 0, 0.45);
+  --shadow-inner-hairline: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', 'Outfit', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-image: 
+    radial-gradient(circle 800px at 50% -120px, rgba(224, 242, 254, 0.6), transparent 75%),
+    radial-gradient(circle 700px at 95% 30%, rgba(254, 243, 199, 0.45), transparent 70%),
+    radial-gradient(circle 600px at 5% 75%, rgba(255, 228, 230, 0.4), transparent 65%);
+  background-attachment: fixed;
+}
+
+[data-theme='dark'] body,
+body[data-theme='dark'] {
+  background-color: #15181E;
+  background-image: 
+    radial-gradient(circle 800px at 50% -120px, rgba(56, 189, 248, 0.07), transparent 75%),
+    radial-gradient(circle 700px at 95% 30%, rgba(251, 191, 36, 0.05), transparent 70%),
+    radial-gradient(circle 600px at 5% 75%, rgba(244, 63, 94, 0.04), transparent 65%);
+}
+
+/* Ambient Radial Soft Glow Layer */
+.ambient-glow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.ambient-glow::before {
+  content: '';
+  position: absolute;
+  top: -15%;
+  left: 20%;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, rgba(224, 242, 254, 0.45) 0%, rgba(248, 249, 251, 0) 70%);
+  filter: blur(80px);
+}
+
+.ambient-glow::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -5%;
+  width: 45vw;
+  height: 45vw;
+  background: radial-gradient(circle, rgba(254, 243, 199, 0.35) 0%, rgba(248, 249, 251, 0) 70%);
+  filter: blur(90px);
+}
+
+/* Tabular Numerics for Currency, Percentages and Order IDs */
+.tabular-nums {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Sleek Minimalist Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: var(--radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Scanner Laser Animation */
+@keyframes scanLaser {
+  0% { top: 0%; opacity: 0.8; }
+  50% { top: 96%; opacity: 1; }
+  100% { top: 0%; opacity: 0.8; }
+}
+
+@keyframes pulseSubtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.98); }
+}
+
+@keyframes pulseRing {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 0.2; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+/* Fluid Motion Choreography & Kinetic Springs */
+.animate-fade-up {
+  animation: fadeUpSpring 0.45s var(--ease-spring) both;
+}
+
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+
+@keyframes fadeUpSpring {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes ambientDrift {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(25px, 15px) scale(1.05);
+  }
+}
+
+.ambient-glow::before {
+  animation: ambientDrift 18s ease-in-out infinite alternate;
+}
+
+.ambient-glow::after {
+  animation: ambientDrift 22s ease-in-out infinite alternate-reverse;
+}
+

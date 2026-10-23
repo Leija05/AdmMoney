@@ -1,0 +1,269 @@
+/* ==========================================================================
+   Adm Money: Floating Island Architecture & Asymmetrical Bento Layout
+   Clean Editorial Minimalist with Pastel Touches
+   ========================================================================== */
+
+/* Detached Floating Island Navbar */
+.nav-island-wrapper {
+  position: sticky;
+  top: 1rem;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  padding: 0 1.25rem;
+  margin-bottom: 2.25rem;
+}
+
+.nav-island {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 1360px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  padding: 0.5rem 1.25rem;
+  box-shadow: var(--shadow-ambient);
+  transition: all 0.25s var(--ease-spring);
+}
+
+.nav-island:hover {
+  border-color: var(--border-highlight);
+  box-shadow: var(--shadow-lifted);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.brand-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  background: var(--pastel-peach-bg);
+  border: 1px solid var(--pastel-peach-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pastel-peach-text);
+  box-shadow: 0 2px 8px rgba(176, 91, 59, 0.12);
+  transition: transform 0.2s var(--ease-spring);
+}
+
+.nav-brand:hover .brand-icon-wrapper {
+  transform: scale(1.05);
+}
+
+.brand-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.brand-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.2rem 0.65rem;
+  border-radius: var(--radius-pill);
+  background: var(--pastel-blue-bg);
+  color: var(--pastel-blue-text);
+  border: 1px solid var(--pastel-blue-border);
+}
+
+/* Nav Tab Pill Switcher */
+.nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--bg-tertiary);
+  padding: 0.3rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-subtle);
+}
+
+.nav-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 1.05rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-spring);
+}
+
+.nav-tab-btn:hover {
+  color: var(--text-main);
+  background: var(--bg-card-hover);
+}
+
+.nav-tab-btn.active {
+  background: var(--bg-card);
+  color: var(--text-main);
+  border-color: var(--border-subtle);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Main Container Constraint */
+.main-container {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem 1.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Cinematic Page Header */
+.page-header {
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.page-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.725rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--pastel-blue-text);
+  margin-bottom: 0.5rem;
+  background: var(--pastel-blue-bg);
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--pastel-blue-border);
+}
+
+.page-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(1.85rem, 3vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--text-main);
+}
+
+.page-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  max-width: 720px;
+  margin-top: 0.5rem;
+  line-height: 1.6;
+}
+
+/* ==========================================================================
+   Asymmetrical Bento Grid Architecture
+   ========================================================================== */
+.grid-bento-hero {
+  display: grid;
+  grid-template-columns: 8fr 4fr;
+  gap: 1.5rem;
+  margin-bottom: 1.75rem;
+  align-items: stretch;
+}
+
+.grid-bento-secondary {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: 1.5rem;
+  margin-bottom: 1.75rem;
+  align-items: stretch;
+}
+
+.grid-full-width {
+  width: 100%;
+  margin-bottom: 1.75rem;
+}
+
+/* Stat Label & Value Typographic Standards */
+.stat-label {
+  font-size: 0.725rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+.stat-value {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-main);
+}
+
+/* Fluid Responsive Breakpoints */
+@media (max-width: 1024px) {
+  .grid-bento-hero, .grid-bento-secondary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav-island-wrapper {
+    top: 0.5rem;
+    padding: 0 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .nav-island {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 1.25rem;
+  }
+
+  .nav-tabs {
+    width: 100%;
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+
+  .nav-tab-btn {
+    white-space: nowrap;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.78rem;
+  }
+
+  .main-container {
+    padding: 0 1rem 3rem 1rem;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

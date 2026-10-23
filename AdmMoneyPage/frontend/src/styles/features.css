@@ -1,0 +1,401 @@
+/* ==========================================================================
+   Adm Money: Features & Domain Specific Component Architecture
+   Clean Editorial Minimalist with Muted Pastels
+   ========================================================================== */
+
+/* High-Density Data Table Architecture */
+.table-wrapper, .expenses-table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-inner);
+  border: 1px solid var(--border-subtle);
+  background: #FFFFFF;
+  box-shadow: var(--shadow-card);
+}
+
+.data-table, .expenses-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.data-table th, .expenses-table th {
+  padding: 0.85rem 1.15rem;
+  font-size: 0.725rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  background: #F9FAFB;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.data-table td, .expenses-table td {
+  padding: 0.95rem 1.15rem;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  vertical-align: middle;
+}
+
+.data-table tr:last-child td, .expenses-table tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tr:hover td, .expenses-table tr:hover td {
+  background: #F9FAFB;
+}
+
+.table-amount-expense, .expense-amount-cell {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: var(--pastel-rose-text);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.table-amount-income {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: var(--pastel-mint-text);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Receipt Scanner HUD & Dropzone */
+.scanner-dropzone {
+  position: relative;
+  border: 2px dashed var(--pastel-blue-border);
+  border-radius: var(--radius-outer);
+  padding: 3rem 2rem;
+  text-align: center;
+  background: #F0F9FF;
+  cursor: pointer;
+  transition: all 0.25s var(--ease-spring);
+  overflow: hidden;
+}
+
+.scanner-dropzone:hover, .scanner-dropzone.active {
+  border-color: var(--accent-primary);
+  background: #E0F2FE;
+}
+
+.scanner-laser {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #38BDF8, #0284C7, #38BDF8, transparent);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+  animation: scanLaser 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.scanner-brackets {
+  position: absolute;
+  inset: 16px;
+  pointer-events: none;
+  border: 1px solid rgba(2, 132, 199, 0.15);
+  border-radius: var(--radius-inner);
+}
+
+/* Star Cookie Spotlight Card */
+.cookie-spotlight-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  gap: 1.25rem;
+}
+
+.cookie-spotlight-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cookie-icon-orb {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-pill);
+  background: var(--pastel-peach-bg);
+  border: 1px solid var(--pastel-peach-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pastel-peach-text);
+}
+
+/* Unit Economics Micro Metrics Box */
+.unit-economics-box {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  padding: 0.85rem;
+  background: #F8F9FB;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-inner);
+}
+
+.unit-economics-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.unit-economics-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.unit-economics-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  font-size: 1.1rem;
+  margin-top: 0.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Margin Gauge Bar */
+.margin-gauge-track {
+  width: 100%;
+  height: 8px;
+  background: #E5E7EB;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  margin: 0.5rem 0;
+}
+
+.margin-gauge-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: #86EFAC;
+  transition: width 0.5s var(--ease-spring);
+}
+
+/* Weekly Cashflow Interactive Bar Chart */
+.chart-container {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  height: 175px;
+  padding-top: 1.5rem;
+}
+
+.chart-bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+  justify-content: flex-end;
+  position: relative;
+  cursor: pointer;
+}
+
+.chart-bars-wrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  width: 100%;
+  max-width: 44px;
+  height: 100%;
+  justify-content: center;
+}
+
+.chart-bar-single {
+  flex: 1;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.3s var(--ease-spring), opacity 0.2s ease;
+  min-height: 4px;
+}
+
+.chart-bar-revenue {
+  background: #93C5FD;
+}
+
+.chart-bar-expense {
+  background: #FCA5A5;
+}
+
+.chart-day-label {
+  font-size: 0.725rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin-top: 0.75rem;
+  text-transform: uppercase;
+}
+
+.chart-tooltip-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.725rem;
+  white-space: nowrap;
+  box-shadow: var(--shadow-lifted);
+  z-index: 20;
+  pointer-events: none;
+}
+
+/* Quick Operations Dock */
+.quick-dock-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+.dock-tile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.95rem 1.15rem;
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-inner);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-spring);
+}
+
+.dock-tile:hover {
+  background: #F9FAFB;
+  border-color: var(--border-highlight);
+  transform: translateX(3px);
+}
+
+.dock-tile-left {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.dock-tile-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dock-tile-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--text-main);
+}
+
+.dock-tile-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Orders Pipeline & Baking Sheet Architecture
+   ========================================================================== */
+.pipeline-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.pipeline-col {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-inner);
+  padding: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 250px;
+}
+
+.pipeline-col-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.pipeline-col-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pipeline-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-inner);
+  padding: 1.15rem;
+  transition: all 0.2s var(--ease-spring);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pipeline-card:hover {
+  border-color: var(--border-highlight);
+  box-shadow: var(--shadow-lifted);
+}
+
+.whatsapp-ticket-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-pill);
+  background: var(--pastel-whatsapp-bg);
+  color: var(--pastel-whatsapp-text);
+  border: 1px solid var(--pastel-whatsapp-border);
+  font-size: 0.775rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s var(--ease-spring);
+}
+
+.whatsapp-ticket-btn:hover {
+  background: var(--pastel-whatsapp-bg);
+  filter: brightness(1.08);
+  transform: scale(1.02);
+}
+
+/* Batch Scaler Interactive HUD Card */
+.scaler-interactive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.scaler-ingredient-chip {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-inner);
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.scaler-ingredient-chip.shortage {
+  border-color: var(--pastel-rose-border);
+  background: var(--pastel-rose-bg);
+}
+
+.scaler-ingredient-chip.healthy {
+  border-color: var(--pastel-mint-border);
+  background: var(--pastel-mint-bg);
+}
