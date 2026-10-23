@@ -10,7 +10,7 @@ import {
   Alert
 } from 'react-native';
 import { Button } from '../ui/Button';
-import { colors, radii, spacing } from '../../theme';
+import { colors, useThemeColors, radii, spacing } from '../../theme';
 import { CookieProduct } from '../../lib/types';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -25,6 +25,8 @@ export const AddCookieModal: React.FC<AddCookieModalProps> = ({
   onClose,
   onAddCookie,
 }) => {
+  const colors = useThemeColors();
+  const isDark = colors.isDark;
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [salePrice, setSalePrice] = useState('35.00');
@@ -86,11 +88,21 @@ export const AddCookieModal: React.FC<AddCookieModalProps> = ({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <View style={styles.dialog}>
-          <View style={styles.header}>
+        <View
+          style={[
+            styles.dialog,
+            {
+              backgroundColor: isDark ? '#1C202A' : '#FFFFFF',
+              borderColor: isDark ? '#2E384D' : '#E2E8F0',
+            },
+          ]}
+        >
+          <View style={[styles.header, { borderBottomColor: isDark ? '#2A303C' : '#E5E7EB' }]}>
             <View>
-              <Text style={styles.headerEyebrow}>Nueva Creación</Text>
-              <Text style={styles.headerTitle}>Crear Receta de Galleta</Text>
+              <Text style={[styles.headerEyebrow, { color: colors.amberLight }]}>Nueva Creación</Text>
+              <Text style={[styles.headerTitle, { color: isDark ? '#F1F3F7' : '#181A1F' }]}>
+                Crear Receta de Galleta
+              </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <Ionicons name="close" size={22} color={colors.textMuted} />
@@ -98,9 +110,18 @@ export const AddCookieModal: React.FC<AddCookieModalProps> = ({
           </View>
 
           <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
-            <Text style={styles.formLabel}>Nombre de la Galleta</Text>
+            <Text style={[styles.formLabel, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>
+              Nombre de la Galleta
+            </Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                  borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                  color: isDark ? '#F1F3F7' : '#181A1F',
+                },
+              ]}
               placeholder="Ej. Galleta Oreo Bomb, Nutella Trufa, Pistache"
               placeholderTextColor={colors.textDim}
               value={name}
@@ -109,9 +130,18 @@ export const AddCookieModal: React.FC<AddCookieModalProps> = ({
 
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.formLabel}>Precio Venta ($ MXN)</Text>
+                <Text style={[styles.formLabel, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>
+                  Precio Venta ($ MXN)
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                      borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                      color: isDark ? '#F1F3F7' : '#181A1F',
+                    },
+                  ]}
                   keyboardType="numeric"
                   placeholder="35.00"
                   placeholderTextColor={colors.textDim}
@@ -121,9 +151,18 @@ export const AddCookieModal: React.FC<AddCookieModalProps> = ({
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={styles.formLabel}>Costo Lote c/Empaque ($ MXN)</Text>
+                <Text style={[styles.formLabel, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>
+                  Costo Lote c/Empaque ($ MXN)
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                      borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                      color: isDark ? '#F1F3F7' : '#181A1F',
+                    },
+                  ]}
                   keyboardType="numeric"
                   placeholder="9.67"
                   placeholderTextColor={colors.textDim}
@@ -135,9 +174,18 @@ export const AddCookieModal: React.FC<AddCookieModalProps> = ({
 
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.formLabel}>Rendimiento por Tanda</Text>
+                <Text style={[styles.formLabel, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>
+                  Rendimiento por Tanda
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                      borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                      color: isDark ? '#F1F3F7' : '#181A1F',
+                    },
+                  ]}
                   keyboardType="numeric"
                   placeholder="16"
                   placeholderTextColor={colors.textDim}
@@ -147,9 +195,18 @@ export const AddCookieModal: React.FC<AddCookieModalProps> = ({
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={styles.formLabel}>URL Imagen (Opcional)</Text>
+                <Text style={[styles.formLabel, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>
+                  URL Imagen (Opcional)
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                      borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                      color: isDark ? '#F1F3F7' : '#181A1F',
+                    },
+                  ]}
                   placeholder="https://..."
                   placeholderTextColor={colors.textDim}
                   value={imageUrl}
@@ -158,9 +215,19 @@ export const AddCookieModal: React.FC<AddCookieModalProps> = ({
               </View>
             </View>
 
-            <Text style={styles.formLabel}>Descripción & Notas de Sabor</Text>
+            <Text style={[styles.formLabel, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>
+              Descripción & Notas de Sabor
+            </Text>
             <TextInput
-              style={[styles.input, { height: 65 }]}
+              style={[
+                styles.input,
+                {
+                  height: 65,
+                  backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                  borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                  color: isDark ? '#F1F3F7' : '#181A1F',
+                },
+              ]}
               multiline
               placeholder="Ingredientes clave, peso aproximado (ej. 90g), toque de sal marina..."
               placeholderTextColor={colors.textDim}
@@ -169,17 +236,31 @@ export const AddCookieModal: React.FC<AddCookieModalProps> = ({
             />
 
             {/* Live Profit Preview */}
-            <View style={styles.previewBox}>
+            <View
+              style={[
+                styles.previewBox,
+                {
+                  backgroundColor: isDark ? '#141822' : '#FEF3C7',
+                  borderColor: isDark ? '#2E384D' : '#FDE68A',
+                },
+              ]}
+            >
               <View style={styles.previewCol}>
-                <Text style={styles.previewKey}>Ganancia Neta / pza</Text>
+                <Text style={[styles.previewKey, { color: isDark ? '#9BA3AF' : '#92400E' }]}>
+                  Ganancia Neta / pza
+                </Text>
                 <Text style={styles.previewValGreen}>+${profitNum.toFixed(2)} MXN</Text>
               </View>
               <View style={styles.previewCol}>
-                <Text style={styles.previewKey}>Margen de Utilidad</Text>
+                <Text style={[styles.previewKey, { color: isDark ? '#9BA3AF' : '#92400E' }]}>
+                  Margen de Utilidad
+                </Text>
                 <Text style={styles.previewValGold}>{marginPct.toFixed(1)}%</Text>
               </View>
               <View style={styles.previewCol}>
-                <Text style={styles.previewKey}>Rendimiento (ROI)</Text>
+                <Text style={[styles.previewKey, { color: isDark ? '#9BA3AF' : '#92400E' }]}>
+                  Rendimiento (ROI)
+                </Text>
                 <Text style={styles.previewValGold}>~{roiPct.toFixed(0)}%</Text>
               </View>
             </View>

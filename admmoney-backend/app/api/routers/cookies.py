@@ -109,6 +109,22 @@ def delete_cookie_sale(sale_id: int):
         raise HTTPException(status_code=404, detail="Venta no encontrada")
     return {"message": "Venta eliminada"}
 
+@router.get("/sales/{sale_id}/pdf")
+def get_sale_ticket_pdf(sale_id: int, note: Optional[str] = Query(None)):
+    from fastapi import Response
+    from ...core.database import get_db
+    from ...services.pdf_service import create_sale_ticket_pdf
+    db = get_db()
+    sale = db.cookie_sales.find_one({"id": sale_id}, {"_id": 0})
+    if not sale:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    pdf_bytes = create_sale_ticket_pdf(sale, note=note)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename=ticket_venta_{sale_id}.pdf"}
+    )
+
 # ----------------- ANALÍTICA DE GALLETAS ----------------- #
 @router.get("/analytics")
 def get_cookie_analytics():

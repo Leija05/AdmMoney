@@ -59,3 +59,20 @@ def delete_order(order_id: int):
     if not deleted:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
     return {"message": "Pedido eliminado correctamente"}
+
+@router.get("/{order_id}/pdf")
+def get_order_ticket_pdf(order_id: int, note: Optional[str] = Query(None)):
+    from fastapi import Response
+    from ...core.database import get_db
+    from ...services.pdf_service import create_order_ticket_pdf
+    db = get_db()
+    order = db.orders.find_one({"id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
+    pdf_bytes = create_order_ticket_pdf(order, note=note)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename=ticket_pedido_{order_id}.pdf"}
+    )
+

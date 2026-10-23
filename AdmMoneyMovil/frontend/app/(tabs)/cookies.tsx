@@ -48,6 +48,7 @@ export default function CookiesScreen() {
     addCookieSale,
     deleteCookieSale,
     addCookieProduct,
+    deleteCookieProduct,
     addIngredient,
     deleteIngredient,
     addOrder,
@@ -193,6 +194,28 @@ export default function CookiesScreen() {
     );
   };
 
+  const handleDeletePromotion = (promo: Promotion) => {
+    Alert.alert(
+      '¿Eliminar Promoción?',
+      `¿Deseas eliminar la promoción "${promo.name}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deletePromotion(promo.id);
+              Alert.alert('Promoción Eliminada', `"${promo.name}" ha sido eliminada.`);
+            } catch (err: any) {
+              Alert.alert('Error', err?.message || 'No se pudo eliminar la promoción.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleOpenAddOrder = () => {
     setEditingOrder(null);
     setIsOrderModalOpen(true);
@@ -241,11 +264,11 @@ export default function CookiesScreen() {
         <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={{ flex: 1, minWidth: 140, marginRight: 6 }}>
             <Text style={[styles.screenEyebrow, { color: colors.amberLight }]}>Repostería Artesanal</Text>
-            <Text style={[styles.screenTitle, { color: colors.textMain }]}>Negocio de Galletas</Text>
+            <Text style={[styles.screenTitle, { color: colors.textMain }]} numberOfLines={1}>Negocio de Galletas</Text>
           </View>
-          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center', flexShrink: 0 }}>
             <TouchableOpacity
               onPress={toggleTheme}
               style={{
@@ -266,8 +289,8 @@ export default function CookiesScreen() {
               />
             </TouchableOpacity>
 
-            <BackendHeartbeat onPress={() => router.push('/settings')} />
-            <Badge label={`${avgMargin.toFixed(1)}% Margen`} variant="emerald" />
+            <BackendHeartbeat compact onPress={() => router.push('/settings')} />
+            <Badge label={`${avgMargin.toFixed(0)}%`} variant="emerald" />
           </View>
         </View>
 
@@ -575,7 +598,7 @@ export default function CookiesScreen() {
                       </TouchableOpacity>
 
                       <TouchableOpacity
-                        onPress={() => deletePromotion(item.id)}
+                        onPress={() => handleDeletePromotion(item)}
                         style={{ padding: 4 }}
                       >
                         <Ionicons name="trash-outline" size={16} color={colors.roseLight} />
@@ -684,6 +707,7 @@ export default function CookiesScreen() {
         cookie={inspectedCookie}
         onClose={() => setInspectedCookie(null)}
         onSell={handleOpenSale}
+        onDeleteCookie={deleteCookieProduct}
       />
 
       {/* Sale Detail Receipt Modal */}
@@ -729,11 +753,11 @@ export default function CookiesScreen() {
       {/* Quick Sale Stepper Modal */}
       <Modal visible={isSaleModalOpen} animationType="slide" transparent onRequestClose={() => setIsSaleModalOpen(false)}>
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalDialog}>
-            <View style={styles.modalHeader}>
+          <View style={[styles.modalDialog, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.borderSubtle }]}>
               <View>
-                <Text style={styles.modalEyebrow}>Caja Registradora</Text>
-                <Text style={styles.modalTitle}>Registrar Venta de Galleta</Text>
+                <Text style={[styles.modalEyebrow, { color: colors.amberLight }]}>Caja Registradora</Text>
+                <Text style={[styles.modalTitle, { color: colors.textMain }]}>Registrar Venta de Galleta</Text>
               </View>
               <TouchableOpacity onPress={() => setIsSaleModalOpen(false)}>
                 <Ionicons name="close" size={22} color={colors.textMuted} />
@@ -753,17 +777,21 @@ export default function CookiesScreen() {
                 </Text>
 
                 {/* Selector Dinámico de Promociones en Venta Rápida */}
-                <Text style={styles.formLabel}>Promoción / Oferta</Text>
+                <Text style={[styles.formLabel, { color: colors.textMuted }]}>Promoción / Oferta</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     <TouchableOpacity
-                      style={[styles.schemeBtn, selectedPromoId === null && styles.schemeBtnActive]}
+                      style={[
+                        styles.schemeBtn,
+                        { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle },
+                        selectedPromoId === null && styles.schemeBtnActive,
+                      ]}
                       onPress={() => handleSelectPromo(null)}
                     >
-                      <Text style={[styles.schemeBtnTitle, selectedPromoId === null && { color: colors.amberLight }]}>
+                      <Text style={[styles.schemeBtnTitle, { color: colors.textMain }, selectedPromoId === null && { color: colors.amberLight }]}>
                         Precio Normal
                       </Text>
-                      <Text style={styles.schemeBtnSub}>${standardPrice.toFixed(2)} c/u</Text>
+                      <Text style={[styles.schemeBtnSub, { color: colors.textDim }]}>${standardPrice.toFixed(2)} c/u</Text>
                     </TouchableOpacity>
 
                     {activeCookiePromos.map((p) => {
@@ -772,13 +800,17 @@ export default function CookiesScreen() {
                       return (
                         <TouchableOpacity
                           key={p.id}
-                          style={[styles.schemeBtn, isSelected && { borderColor: color, backgroundColor: `${color}15` }]}
+                          style={[
+                            styles.schemeBtn,
+                            { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle },
+                            isSelected && { borderColor: color, backgroundColor: `${color}20` },
+                          ]}
                           onPress={() => handleSelectPromo(p)}
                         >
-                          <Text style={[styles.schemeBtnTitle, isSelected && { color: color }]}>
+                          <Text style={[styles.schemeBtnTitle, { color: colors.textMain }, isSelected && { color: color }]}>
                             {p.name}
                           </Text>
-                          <Text style={styles.schemeBtnSub}>{p.badge_text}</Text>
+                          <Text style={[styles.schemeBtnSub, { color: colors.textDim }]}>{p.badge_text}</Text>
                         </TouchableOpacity>
                       );
                     })}
@@ -788,14 +820,14 @@ export default function CookiesScreen() {
                 {/* Quantity Stepper */}
                 <View style={styles.stepperContainer}>
                   <TouchableOpacity
-                    style={styles.stepperBtn}
+                    style={[styles.stepperBtn, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
                     onPress={() => setSaleQty(Math.max(1, saleQty - 1))}
                   >
                     <Ionicons name="remove" size={20} color={colors.textMain} />
                   </TouchableOpacity>
-                  <Text style={styles.stepperNum}>{saleQty}</Text>
+                  <Text style={[styles.stepperNum, { color: colors.textMain }]}>{saleQty}</Text>
                   <TouchableOpacity
-                    style={styles.stepperBtn}
+                    style={[styles.stepperBtn, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
                     onPress={() => setSaleQty(saleQty + 1)}
                   >
                     <Ionicons name="add" size={20} color={colors.textMain} />
@@ -803,16 +835,16 @@ export default function CookiesScreen() {
                 </View>
 
                 {/* Live Revenue and Net Profit Preview */}
-                <View style={styles.saleMetricsBox}>
+                <View style={[styles.saleMetricsBox, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
                   <View style={{ alignItems: 'center' }}>
-                    <Text style={styles.saleMetricLabel}>Total a Cobrar</Text>
-                    <Text style={styles.saleMetricValueYellow}>
+                    <Text style={[styles.saleMetricLabel, { color: colors.textDim }]}>Total a Cobrar</Text>
+                    <Text style={[styles.saleMetricValueYellow, { color: colors.amberLight }]}>
                       ${currentTotalRevenue.toFixed(2)} MXN
                     </Text>
                   </View>
                   <View style={{ alignItems: 'center' }}>
-                    <Text style={styles.saleMetricLabel}>Tu Ganancia Libre</Text>
-                    <Text style={styles.saleMetricValueGreen}>
+                    <Text style={[styles.saleMetricLabel, { color: colors.textDim }]}>Tu Ganancia Libre</Text>
+                    <Text style={[styles.saleMetricValueGreen, { color: colors.emeraldLight }]}>
                       +${currentNetProfit.toFixed(2)} MXN
                     </Text>
                     <Text style={{ fontSize: 10, color: colors.emeraldLight, fontWeight: '700' }}>
@@ -821,17 +853,22 @@ export default function CookiesScreen() {
                   </View>
                 </View>
 
-                <Text style={styles.formLabel}>Método de Pago</Text>
+                <Text style={[styles.formLabel, { color: colors.textMuted }]}>Método de Pago</Text>
                 <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12 }}>
                   {PAYMENT_METHODS.map((m) => (
                     <TouchableOpacity
                       key={m}
                       onPress={() => setPaymentMethod(m)}
-                      style={[styles.payMethodPill, paymentMethod === m && styles.payMethodPillActive]}
+                      style={[
+                        styles.payMethodPill,
+                        { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle },
+                        paymentMethod === m && styles.payMethodPillActive,
+                      ]}
                     >
                       <Text
                         style={[
                           styles.payMethodText,
+                          { color: colors.textMuted },
                           paymentMethod === m && styles.payMethodTextActive,
                         ]}
                       >
@@ -841,9 +878,9 @@ export default function CookiesScreen() {
                   ))}
                 </View>
 
-                <Text style={styles.formLabel}>Cliente / Destino</Text>
+                <Text style={[styles.formLabel, { color: colors.textMuted }]}>Cliente / Destino</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
                   value={customerName}
                   onChangeText={setCustomerName}
                   placeholder="Cliente mostrador, Pedido cafetería"
@@ -881,6 +918,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   modePill: {
     paddingHorizontal: 8,

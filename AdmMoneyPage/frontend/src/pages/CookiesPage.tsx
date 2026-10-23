@@ -19,10 +19,12 @@ import {
   PackagePlus,
   Box,
   AlertTriangle,
-  Edit2
+  Edit2,
+  MessageCircle
 } from 'lucide-react';
 import { CookieProduct, CookieSale, Ingredient, Promotion } from '../lib/types';
 import { PromotionsManager } from '../components/promotions/PromotionsManager';
+import { WhatsAppTicketModal } from '../components/orders/WhatsAppTicketModal';
 
 interface CookiesPageProps {
   cookies: CookieProduct[];
@@ -65,6 +67,7 @@ export const CookiesPage: React.FC<CookiesPageProps> = ({
 }) => {
   const [subTab, setSubTab] = useState<'recipes' | 'promotions' | 'sales' | 'ingredients'>('recipes');
   const [ingFilter, setIngFilter] = useState<'all' | 'edible' | 'packaging'>('all');
+  const [selectedSaleForTicket, setSelectedSaleForTicket] = useState<CookieSale | null>(null);
 
   // Aggregates
   const totalUnitsSold = sales.reduce((acc, s) => acc + s.quantity, 0);
@@ -579,6 +582,7 @@ export const CookiesPage: React.FC<CookiesPageProps> = ({
                   <th>Total Cobrado</th>
                   <th>Ganancia Neta</th>
                   <th>Cliente</th>
+                  <th>Ticket</th>
                 </tr>
               </thead>
               <tbody>
@@ -607,6 +611,27 @@ export const CookiesPage: React.FC<CookiesPageProps> = ({
                     <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                       {sale.customer_name || 'Mostrador'}
                     </td>
+                    <td>
+                      <button
+                        onClick={() => setSelectedSaleForTicket(sale)}
+                        title="Enviar Ticket por WhatsApp o Descargar PDF"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '0.35rem 0.65rem',
+                          borderRadius: '6px',
+                          border: '1px solid rgba(16, 185, 129, 0.3)',
+                          background: 'rgba(16, 185, 129, 0.12)',
+                          color: '#34d399',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <MessageCircle size={13} /> Ticket
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -614,6 +639,13 @@ export const CookiesPage: React.FC<CookiesPageProps> = ({
           </div>
         </Card>
       )}
+
+      {/* WhatsApp Ticket & PDF Modal for Sales */}
+      <WhatsAppTicketModal
+        isOpen={!!selectedSaleForTicket}
+        onClose={() => setSelectedSaleForTicket(null)}
+        sale={selectedSaleForTicket}
+      />
     </div>
   );
 };

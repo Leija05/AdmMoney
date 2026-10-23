@@ -20,6 +20,7 @@ import { Order, BakingSheetResponse, CookieProduct } from '../lib/types';
 import ApiService from '../services/api.service';
 import { Button } from '../components/ui/Button';
 import { useNotifications } from '../context/NotificationContext';
+import { WhatsAppTicketModal } from '../components/orders/WhatsAppTicketModal';
 
 interface OrdersPageProps {
   cookies: CookieProduct[];
@@ -43,6 +44,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [whatsAppOrder, setWhatsAppOrder] = useState<Order | null>(null);
 
   const fetchOrdersAndSheet = async () => {
     setIsLoading(true);
@@ -405,39 +407,26 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
                       </div>
                     </div>
 
-                    {/* WhatsApp Action Button */}
-                    {ord.whatsapp_url ? (
-                      <a
-                        href={ord.whatsapp_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="whatsapp-ticket-btn"
-                        style={{
-                          padding: '0.6rem 1.15rem',
-                          borderRadius: 'var(--radius-pill)',
-                          boxShadow: '0 4px 14px rgba(37, 211, 102, 0.28)'
-                        }}
-                      >
-                        <MessageCircle size={16} />
-                        <span>Enviar Ticket WhatsApp</span>
-                        <ExternalLink size={13} />
-                      </a>
-                    ) : (
-                      <button
-                        disabled
-                        style={{
-                          padding: '0.55rem 0.9rem',
-                          borderRadius: '8px',
-                          background: 'rgba(255,255,255,0.05)',
-                          color: 'var(--text-muted)',
-                          border: '1px solid var(--border-color)',
-                          fontSize: '0.8rem',
-                          cursor: 'not-allowed'
-                        }}
-                      >
-                        Sin teléfono registrado
-                      </button>
-                    )}
+                    {/* WhatsApp Action Button with PDF Modal */}
+                    <button
+                      type="button"
+                      onClick={() => setWhatsAppOrder(ord)}
+                      className="whatsapp-ticket-btn"
+                      style={{
+                        padding: '0.6rem 1.15rem',
+                        borderRadius: 'var(--radius-pill)',
+                        boxShadow: '0 4px 14px rgba(37, 211, 102, 0.28)',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        border: 'none',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      <MessageCircle size={16} />
+                      <span>Enviar Ticket WhatsApp</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -575,6 +564,13 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
           </div>
         </div>
       )}
+
+      {/* WhatsApp Ticket & PDF Modal */}
+      <WhatsAppTicketModal
+        isOpen={!!whatsAppOrder}
+        onClose={() => setWhatsAppOrder(null)}
+        order={whatsAppOrder}
+      />
     </div>
   );
 };

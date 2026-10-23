@@ -26,6 +26,7 @@ import {
   Wallet
 } from 'lucide-react';
 import { OverallSummary, Expense, CookieSale } from '../lib/types';
+import { RomanticDedicationCard } from '../components/ui/RomanticDedicationCard';
 
 interface DashboardPageProps {
   summary: OverallSummary | null;
@@ -788,6 +789,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </Card>
         </div>
       </div>
+
+      {/* Dedicatoria Especial de Amor y Apoyo */}
+      <RomanticDedicationCard />
     </div>
   );
 };

@@ -81,7 +81,7 @@ def toggle_promotion_status(promo_id: int):
     updated = db.promotions.find_one({"id": promo_id}, {"_id": 0})
     return updated
 
-@router.delete("/{promo_id}", status_code=204)
+@router.delete("/{promo_id}")
 def delete_promotion(promo_id: int):
     """
     Elimina una promoción del catálogo.
@@ -90,7 +90,7 @@ def delete_promotion(promo_id: int):
     res = db.promotions.delete_one({"id": promo_id})
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Promoción no encontrada")
-    return None
+    return {"message": "Promoción eliminada correctamente", "id": promo_id}
 
 @router.post("/calculate", response_model=PromoCalculationResponse)
 def calculate_promotion(request: PromoCalculationRequest):

@@ -10,7 +10,7 @@ import {
   Alert
 } from 'react-native';
 import { Button } from '../ui/Button';
-import { colors, radii, spacing } from '../../theme';
+import { colors, useThemeColors, radii, spacing } from '../../theme';
 import { Ingredient } from '../../lib/types';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -27,6 +27,8 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
   onClose,
   onAddIngredient,
 }) => {
+  const colors = useThemeColors();
+  const isDark = colors.isDark;
   const [name, setName] = useState('');
   const [unit, setUnit] = useState(UNITS[0]);
   const [packageCost, setPackageCost] = useState('');
@@ -78,11 +80,21 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <View style={styles.dialog}>
-          <View style={styles.header}>
+        <View
+          style={[
+            styles.dialog,
+            {
+              backgroundColor: isDark ? '#1C202A' : '#FFFFFF',
+              borderColor: isDark ? '#2E384D' : '#E2E8F0',
+            },
+          ]}
+        >
+          <View style={[styles.header, { borderBottomColor: isDark ? '#2A303C' : '#E5E7EB' }]}>
             <View>
-              <Text style={styles.headerEyebrow}>Materia Prima</Text>
-              <Text style={styles.headerTitle}>Registrar Nuevo Insumo</Text>
+              <Text style={[styles.headerEyebrow, { color: colors.amberLight }]}>Materia Prima</Text>
+              <Text style={[styles.headerTitle, { color: isDark ? '#F1F3F7' : '#181A1F' }]}>
+                Registrar Nuevo Insumo
+              </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <Ionicons name="close" size={22} color={colors.textMuted} />
@@ -90,24 +102,51 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
           </View>
 
           <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
-            <Text style={styles.formLabel}>Nombre del Insumo / Materia Prima</Text>
+            <Text style={[styles.formLabel, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>
+              Nombre del Insumo / Materia Prima
+            </Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                  borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                  color: isDark ? '#F1F3F7' : '#181A1F',
+                },
+              ]}
               placeholder="Ej. Mantequilla Gloria, Harina Espelta, Nuez"
               placeholderTextColor={colors.textDim}
               value={name}
               onChangeText={setName}
             />
 
-            <Text style={styles.formLabel}>Unidad de Medida</Text>
+            <Text style={[styles.formLabel, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>
+              Unidad de Medida
+            </Text>
             <View style={styles.unitRow}>
               {UNITS.map((u) => (
                 <TouchableOpacity
                   key={u}
                   onPress={() => setUnit(u)}
-                  style={[styles.unitPill, unit === u && styles.unitPillActive]}
+                  style={[
+                    styles.unitPill,
+                    {
+                      backgroundColor: isDark ? '#242936' : '#F1F3F7',
+                      borderColor: colors.borderSubtle,
+                    },
+                    unit === u && {
+                      backgroundColor: colors.brandBg,
+                      borderColor: colors.brandBorder,
+                    },
+                  ]}
                 >
-                  <Text style={[styles.unitPillText, unit === u && styles.unitPillTextActive]}>
+                  <Text
+                    style={[
+                      styles.unitPillText,
+                      { color: colors.textMuted },
+                      unit === u && { color: colors.brandText, fontWeight: '800' },
+                    ]}
+                  >
                     {u}
                   </Text>
                 </TouchableOpacity>
@@ -116,9 +155,18 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
 
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.formLabel}>Costo Paquete ($ MXN)</Text>
+                <Text style={[styles.formLabel, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>
+                  Costo Paquete ($ MXN)
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                      borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                      color: isDark ? '#F1F3F7' : '#181A1F',
+                    },
+                  ]}
                   keyboardType="numeric"
                   placeholder="Ej. 185.00"
                   placeholderTextColor={colors.textDim}
@@ -128,9 +176,18 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={styles.formLabel}>Cantidad del Paquete</Text>
+                <Text style={[styles.formLabel, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>
+                  Cantidad del Paquete
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                      borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                      color: isDark ? '#F1F3F7' : '#181A1F',
+                    },
+                  ]}
                   keyboardType="numeric"
                   placeholder="1.0"
                   placeholderTextColor={colors.textDim}
@@ -142,9 +199,18 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
 
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.formLabel}>Stock Inicial en Taller</Text>
+                <Text style={[styles.formLabel, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>
+                  Stock Inicial en Taller
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                      borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                      color: isDark ? '#F1F3F7' : '#181A1F',
+                    },
+                  ]}
                   keyboardType="numeric"
                   placeholder="1"
                   placeholderTextColor={colors.textDim}
@@ -154,9 +220,18 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={styles.formLabel}>Proveedor / Tienda</Text>
+                <Text style={[styles.formLabel, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>
+                  Proveedor / Tienda
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                      borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                      color: isDark ? '#F1F3F7' : '#181A1F',
+                    },
+                  ]}
                   placeholder="Costco, Sam's, Abastos"
                   placeholderTextColor={colors.textDim}
                   value={supplier}
@@ -166,8 +241,18 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
             </View>
 
             {/* Calculated cost pill */}
-            <View style={styles.calcBox}>
-              <Text style={styles.calcLabel}>Costo Calculado por {unit}:</Text>
+            <View
+              style={[
+                styles.calcBox,
+                {
+                  backgroundColor: isDark ? '#141822' : '#DCFCE7',
+                  borderColor: isDark ? '#2E384D' : '#BBF7D0',
+                },
+              ]}
+            >
+              <Text style={[styles.calcLabel, { color: isDark ? '#9BA3AF' : '#15803D' }]}>
+                Costo Calculado por {unit}:
+              </Text>
               <Text style={styles.calcVal}>${unitCost.toFixed(4)} MXN / {unit}</Text>
             </View>
 

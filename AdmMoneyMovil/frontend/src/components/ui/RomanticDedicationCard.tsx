@@ -1,11 +1,14 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors, radii } from '../../theme';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import { RomanticDedicationModal } from './RomanticDedicationModal';
+
 export const RomanticDedicationCard: React.FC = () => {
   const colors = useThemeColors();
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const heartScale = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.6)).current;
 
@@ -70,17 +73,14 @@ export const RomanticDedicationCard: React.FC = () => {
   }, [heartScale, glowAnim]);
 
   const handleCardPress = () => {
-    Alert.alert(
-      'Para el Amor de Mi Vida 💖',
-      'Eres mi inspiración en cada detalle de este proyecto. ¡Siempre juntos cumpliendo metas y sueños! Te amo demasiado.',
-      [{ text: 'Te Amo 💖', style: 'default' }]
-    );
+    setIsModalOpen(true);
   };
 
   const isDark = colors.isDark;
 
   return (
-    <TouchableOpacity activeOpacity={0.88} onPress={handleCardPress}>
+    <>
+      <TouchableOpacity activeOpacity={0.88} onPress={handleCardPress}>
       <View
         style={[
           styles.container,
@@ -141,8 +141,10 @@ export const RomanticDedicationCard: React.FC = () => {
             <Text style={styles.touchHint}>Toca aquí 💌</Text>
           </View>
         </LinearGradient>
-      </View>
-    </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+      <RomanticDedicationModal visible={isModalOpen} onClose={() => setIsModalOpen(false)} />
+    </>
   );
 };
 

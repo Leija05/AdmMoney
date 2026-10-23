@@ -66,7 +66,14 @@ class ApiService {
         throw err;
       }
 
-      return await response.json();
+      if (response.status === 204) {
+        return null as T;
+      }
+      const text = await response.text();
+      if (!text || text.trim() === '') {
+        return null as T;
+      }
+      return JSON.parse(text);
     } catch (err) {
       console.warn(`Request failed to ${endpoint}:`, err);
       throw err;

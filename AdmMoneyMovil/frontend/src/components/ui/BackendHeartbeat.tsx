@@ -84,9 +84,13 @@ export const BackendHeartbeat: React.FC<BackendHeartbeatProps> = ({
     return () => heartbeat.stop();
   }, [heartScale, glowAnim]);
 
-  // Mensaje a mostrar: prop personalizado o el configurado en APP_CONFIG
+  // Mensaje a mostrar: prop personalizado, versión compacta o el configurado en APP_CONFIG
   const displayText = customMessage
     ? customMessage
+    : compact
+    ? isOnline
+      ? 'Activo'
+      : 'Offline'
     : isOnline
     ? APP_CONFIG.BACKEND_STATUS_MESSAGE_ONLINE
     : APP_CONFIG.BACKEND_STATUS_MESSAGE_OFFLINE;

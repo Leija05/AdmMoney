@@ -217,7 +217,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
 
   return (
     <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal-container" style={{ maxWidth: '640px', background: '#FFFFFF' }}>
+      <div className="modal-container" style={{ maxWidth: '640px' }}>
         <div className="modal-header">
           <div className="modal-title-with-icon">
             <div className="modal-icon-badge" style={{ background: editingOrder ? 'var(--pastel-purple-bg)' : 'var(--pastel-blue-bg)', color: editingOrder ? 'var(--pastel-purple-text)' : 'var(--pastel-blue-text)' }}>
@@ -379,7 +379,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                       value={it.product_id}
                       onChange={(e) => handleItemChange(idx, 'product_id', e.target.value)}
                       className="form-input"
-                      style={{ padding: '0.45rem', fontSize: '0.82rem', background: '#FFFFFF' }}
+                      style={{ padding: '0.45rem', fontSize: '0.82rem', background: 'var(--bg-surface)', color: 'var(--text-main)' }}
                     >
                       {cookies.map((c) => (
                         <option key={c.id} value={c.id}>
@@ -395,7 +395,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                       onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
                       className="form-input"
                       placeholder="Cant"
-                      style={{ padding: '0.45rem', textAlign: 'center', fontSize: '0.82rem', background: '#FFFFFF' }}
+                      style={{ padding: '0.45rem', textAlign: 'center', fontSize: '0.82rem', background: 'var(--bg-surface)', color: 'var(--text-main)' }}
                     />
 
                     <div style={{ position: 'relative' }}>
@@ -407,7 +407,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                         value={it.unit_price}
                         onChange={(e) => handleItemChange(idx, 'unit_price', e.target.value)}
                         className="form-input"
-                        style={{ padding: '0.45rem 0.4rem 0.45rem 1.3rem', fontSize: '0.82rem', background: '#FFFFFF' }}
+                        style={{ padding: '0.45rem 0.4rem 0.45rem 1.3rem', fontSize: '0.82rem', background: 'var(--bg-surface)', color: 'var(--text-main)' }}
                       />
                     </div>
 

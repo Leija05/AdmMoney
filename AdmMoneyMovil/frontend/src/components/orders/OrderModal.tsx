@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Order, OrderItem, CookieProduct, Promotion } from '../../lib/types';
-import { colors, radii, spacing } from '../../theme';
+import { colors, useThemeColors, radii, spacing } from '../../theme';
 import { DoubleBezelCard } from '../ui/DoubleBezelCard';
 
 interface OrderModalProps {
@@ -31,6 +31,8 @@ export const OrderModal: React.FC<OrderModalProps> = ({
   editingOrder,
   onSave,
 }) => {
+  const colors = useThemeColors();
+  const isDark = colors.isDark;
   const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
   const [customerName, setCustomerName] = useState('');
@@ -211,14 +213,14 @@ export const OrderModal: React.FC<OrderModalProps> = ({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
-      <View style={styles.container}>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
         {/* Top Navigation Bar */}
-        <View style={styles.topBar}>
+        <View style={[styles.topBar, { backgroundColor: colors.bgCard, borderBottomColor: colors.borderSubtle }]}>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
             <Ionicons name="close" size={24} color={colors.textMain} />
           </TouchableOpacity>
-          <Text style={styles.topBarTitle}>
+          <Text style={[styles.topBarTitle, { color: colors.textMain }]}>
             {editingOrder ? 'Editar Pedido' : 'Nuevo Pedido Personalizado'}
           </Text>
           <TouchableOpacity
@@ -233,12 +235,12 @@ export const OrderModal: React.FC<OrderModalProps> = ({
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {/* Customer info card */}
           <DoubleBezelCard style={styles.card}>
-            <Text style={styles.sectionTitle}>👤 Datos del Cliente</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textMain }]}>👤 Datos del Cliente</Text>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Nombre completo *</Text>
+              <Text style={[styles.label, { color: colors.textMuted }]}>Nombre completo *</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.bgSurface, borderColor: colors.borderSubtle, color: colors.textMain }]}
                 placeholder="Ej. Valeria Gómez"
                 placeholderTextColor={colors.textDim}
                 value={customerName}
@@ -247,9 +249,9 @@ export const OrderModal: React.FC<OrderModalProps> = ({
             </View>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Teléfono o WhatsApp</Text>
+              <Text style={[styles.label, { color: colors.textMuted }]}>Teléfono o WhatsApp</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.bgSurface, borderColor: colors.borderSubtle, color: colors.textMain }]}
                 placeholder="Ej. 5512345678"
                 placeholderTextColor={colors.textDim}
                 keyboardType="phone-pad"
@@ -259,9 +261,9 @@ export const OrderModal: React.FC<OrderModalProps> = ({
             </View>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Fecha programada de entrega (AAAA-MM-DD)</Text>
+              <Text style={[styles.label, { color: colors.textMuted }]}>Fecha programada de entrega (AAAA-MM-DD)</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.bgSurface, borderColor: colors.borderSubtle, color: colors.textMain }]}
                 placeholder="2026-10-24"
                 placeholderTextColor={colors.textDim}
                 value={deliveryDate}
@@ -281,7 +283,16 @@ export const OrderModal: React.FC<OrderModalProps> = ({
             </View>
 
             {items.map((item, idx) => (
-              <View key={idx} style={styles.itemRow}>
+              <View
+                key={idx}
+                style={[
+                  styles.itemRow,
+                  {
+                    backgroundColor: isDark ? '#1C202A' : '#F8F9FA',
+                    borderColor: isDark ? '#2E384D' : '#E2E8F0',
+                  },
+                ]}
+              >
                 <View style={{ flex: 1 }}>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 6 }}>
                     <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -291,13 +302,24 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                           onPress={() => handleSelectCookieForItem(idx, c.id)}
                           style={[
                             styles.cookiePill,
-                            item.product_id === c.id && styles.cookiePillActive,
+                            {
+                              backgroundColor: isDark ? '#242936' : '#FFFFFF',
+                              borderColor: colors.borderSubtle,
+                            },
+                            item.product_id === c.id && {
+                              backgroundColor: colors.brandBg,
+                              borderColor: colors.brandBorder,
+                            },
                           ]}
                         >
                           <Text
                             style={[
                               styles.cookiePillText,
-                              item.product_id === c.id && styles.cookiePillTextActive,
+                              { color: colors.textMuted },
+                              item.product_id === c.id && {
+                                color: colors.brandText,
+                                fontWeight: '800',
+                              },
                             ]}
                           >
                             {c.name}
@@ -308,14 +330,24 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                   </ScrollView>
 
                   <View style={styles.itemControlsRow}>
-                    <View style={styles.qtyControls}>
+                    <View
+                      style={[
+                        styles.qtyControls,
+                        {
+                          backgroundColor: isDark ? '#242936' : '#FFFFFF',
+                          borderColor: colors.borderSubtle,
+                        },
+                      ]}
+                    >
                       <TouchableOpacity
                         onPress={() => handleUpdateItem(idx, -1)}
                         style={styles.qtyBtn}
                       >
                         <Ionicons name="remove" size={16} color={colors.textMain} />
                       </TouchableOpacity>
-                      <Text style={styles.qtyText}>{item.quantity} pzas</Text>
+                      <Text style={[styles.qtyText, { color: colors.textMain }]}>
+                        {item.quantity} pzas
+                      </Text>
                       <TouchableOpacity
                         onPress={() => handleUpdateItem(idx, 1)}
                         style={styles.qtyBtn}
@@ -324,7 +356,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                       </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.itemPrice}>
+                    <Text style={[styles.itemPrice, { color: colors.textMain }]}>
                       ${item.unit_price} c/u = ${item.subtotal.toFixed(2)}
                     </Text>
 
@@ -406,7 +438,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
 
             {/* Payment status selector */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Estado del pago</Text>
+              <Text style={[styles.label, { color: colors.textMuted }]}>Estado del pago</Text>
               <View style={styles.paymentStatusRow}>
                 {(['Pendiente', 'Anticipo', 'Pagado'] as const).map((st) => (
                   <TouchableOpacity
@@ -414,13 +446,24 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                     onPress={() => setPaymentStatus(st)}
                     style={[
                       styles.statusSelectBtn,
-                      paymentStatus === st && styles.statusSelectBtnActive,
+                      {
+                        backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                        borderColor: colors.borderSubtle,
+                      },
+                      paymentStatus === st && {
+                        backgroundColor: colors.brandBg,
+                        borderColor: colors.brandBorder,
+                      },
                     ]}
                   >
                     <Text
                       style={[
                         styles.statusSelectText,
-                        paymentStatus === st && styles.statusSelectTextActive,
+                        { color: colors.textMuted },
+                        paymentStatus === st && {
+                          color: colors.brandText,
+                          fontWeight: '800',
+                        },
                       ]}
                     >
                       {st}
@@ -432,21 +475,31 @@ export const OrderModal: React.FC<OrderModalProps> = ({
 
             {paymentStatus === 'Anticipo' ? (
               <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Monto del anticipo abonado ($ MXN)</Text>
+                <Text style={[styles.label, { color: colors.textMuted }]}>Monto del anticipo abonado ($ MXN)</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: colors.bgSurface, borderColor: colors.borderSubtle, color: colors.textMain }]}
                   keyboardType="numeric"
                   value={depositAmount}
                   onChangeText={setDepositAmount}
                   placeholder="0.00"
+                  placeholderTextColor={colors.textDim}
                 />
               </View>
             ) : null}
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Notas o especificaciones</Text>
+              <Text style={[styles.label, { color: colors.textMuted }]}>Notas o especificaciones</Text>
               <TextInput
-                style={[styles.input, { height: 60, textAlignVertical: 'top' }]}
+                style={[
+                  styles.input,
+                  {
+                    height: 60,
+                    textAlignVertical: 'top',
+                    backgroundColor: colors.bgSurface,
+                    borderColor: colors.borderSubtle,
+                    color: colors.textMain,
+                  },
+                ]}
                 placeholder="Ej. Decorar con listón verde, entrega después de las 4 PM..."
                 placeholderTextColor={colors.textDim}
                 multiline
@@ -457,17 +510,17 @@ export const OrderModal: React.FC<OrderModalProps> = ({
           </DoubleBezelCard>
 
           {/* Financial summary breakdown */}
-          <DoubleBezelCard style={{ ...styles.card, backgroundColor: colors.bgSurface }}>
-            <Text style={styles.summaryTitle}>Resumen Financiero del Pedido</Text>
+          <DoubleBezelCard style={{ ...styles.card, backgroundColor: colors.bgCard }}>
+            <Text style={[styles.summaryTitle, { color: colors.textMain }]}>Resumen Financiero del Pedido</Text>
 
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Total de Galletas:</Text>
-              <Text style={styles.summaryVal}>{totalUnits} piezas</Text>
+              <Text style={[styles.summaryVal, { color: colors.textMain }]}>{totalUnits} piezas</Text>
             </View>
 
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Subtotal sin descuento:</Text>
-              <Text style={styles.summaryVal}>${rawTotal.toFixed(2)}</Text>
+              <Text style={[styles.summaryVal, { color: colors.textMain }]}>${rawTotal.toFixed(2)}</Text>
             </View>
 
             {discountAmount > 0 && (
@@ -480,8 +533,8 @@ export const OrderModal: React.FC<OrderModalProps> = ({
             )}
 
             <View style={[styles.summaryRow, { paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.borderSubtle }]}>
-              <Text style={styles.summaryTotalLabel}>Total a Cobrar:</Text>
-              <Text style={styles.summaryTotalVal}>${finalTotal.toFixed(2)} MXN</Text>
+              <Text style={[styles.summaryTotalLabel, { color: colors.textMain }]}>Total a Cobrar:</Text>
+              <Text style={[styles.summaryTotalVal, { color: colors.textMain }]}>${finalTotal.toFixed(2)} MXN</Text>
             </View>
 
             <View style={styles.summaryRow}>

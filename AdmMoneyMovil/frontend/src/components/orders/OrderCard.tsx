@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Order } from '../../lib/types';
 import { colors, useThemeColors, radii, spacing } from '../../theme';
 import { DoubleBezelCard } from '../ui/DoubleBezelCard';
+import { WhatsAppTicketModal } from '../ui/WhatsAppTicketModal';
 
 interface OrderCardProps {
   order: Order;
@@ -53,16 +54,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   const statusStyle = getStatusBadge(order.status);
   const totalUnits = order.items.reduce((sum, item) => sum + item.quantity, 0);
 
+  const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
+
   const handleOpenWhatsApp = () => {
-    if (order.whatsapp_url) {
-      Linking.openURL(order.whatsapp_url);
-    } else if (order.customer_phone) {
-      const cleanPhone = order.customer_phone.replace(/\D/g, '');
-      const msg = encodeURIComponent(
-        `¡Hola ${order.customer_name}! Te saludamos de la repostería con respecto a tu pedido de ${totalUnits} galletas (Total: $${order.total_amount.toFixed(2)} MXN) programado para ${order.delivery_date}.`
-      );
-      Linking.openURL(`https://wa.me/${cleanPhone}?text=${msg}`);
-    }
+    setIsWhatsAppOpen(true);
   };
 
   return (
@@ -211,6 +206,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           </TouchableOpacity>
         </View>
       </View>
+      <WhatsAppTicketModal
+        visible={isWhatsAppOpen}
+        onClose={() => setIsWhatsAppOpen(false)}
+        order={order}
+      />
     </DoubleBezelCard>
   );
 };

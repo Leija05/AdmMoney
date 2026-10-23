@@ -9,7 +9,7 @@ import {
   ScrollView,
   Alert
 } from 'react-native';
-import { colors, radii, spacing } from '../../theme';
+import { colors, useThemeColors, radii, spacing } from '../../theme';
 import { Button } from '../ui/Button';
 import { CookieProduct, Promotion, PromoType, PromoScope } from '../../lib/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +27,8 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
   cookies,
   onAddPromotion,
 }) => {
+  const colors = useThemeColors();
+  const isDark = colors.isDark;
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [promoType, setPromoType] = useState<PromoType>('combo_fixed_price');
@@ -102,11 +104,21 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <View style={styles.dialog}>
-          <View style={styles.header}>
+        <View
+          style={[
+            styles.dialog,
+            {
+              backgroundColor: isDark ? '#1C202A' : '#FFFFFF',
+              borderColor: isDark ? '#2E384D' : '#E2E8F0',
+            },
+          ]}
+        >
+          <View style={[styles.header, { borderBottomColor: isDark ? '#2A303C' : '#E5E7EB' }]}>
             <View>
-              <Text style={styles.eyebrow}>Marketing & Ventas</Text>
-              <Text style={styles.title}>Nueva Promoción / Oferta</Text>
+              <Text style={[styles.eyebrow, { color: colors.amberLight }]}>Marketing & Ventas</Text>
+              <Text style={[styles.title, { color: isDark ? '#F1F3F7' : '#181A1F' }]}>
+                Nueva Promoción / Oferta
+              </Text>
             </View>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color={colors.textMuted} />
@@ -117,8 +129,8 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
             {/* Visual Preview */}
             <View style={[styles.previewCard, { backgroundColor: `${colorTag}15`, borderColor: `${colorTag}40` }]}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.previewTitle}>{name || 'Título de la Oferta'}</Text>
-                <Text style={styles.previewDesc}>{description || 'Descripción de la promoción.'}</Text>
+                <Text style={[styles.previewTitle, { color: isDark ? '#F1F3F7' : '#0F172A' }]}>{name || 'Título de la Oferta'}</Text>
+                <Text style={[styles.previewDesc, { color: isDark ? '#94A3B8' : '#475569' }]}>{description || 'Descripción de la promoción.'}</Text>
               </View>
               <View style={[styles.previewBadge, { backgroundColor: colorTag }]}>
                 <Text style={styles.previewBadgeText}>{badgeText || 'PROMO'}</Text>
@@ -127,46 +139,46 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
 
             {/* Nombre */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Nombre de la Promoción *</Text>
+              <Text style={[styles.label, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>Nombre de la Promoción *</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: isDark ? '#242936' : '#F8F9FA', borderColor: isDark ? '#2A303C' : '#E5E7EB', color: isDark ? '#F1F3F7' : '#181A1F' }]}
                 value={name}
                 onChangeText={setName}
                 placeholder="Ej. Trío Dulce, Docena Consentida..."
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={colors.textDim}
               />
             </View>
 
             {/* Texto de Etiqueta (Badge) */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Texto de Etiqueta (Badge) *</Text>
+              <Text style={[styles.label, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>Texto de Etiqueta (Badge) *</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: isDark ? '#242936' : '#F8F9FA', borderColor: isDark ? '#2A303C' : '#E5E7EB', color: isDark ? '#F1F3F7' : '#181A1F' }]}
                 value={badgeText}
                 onChangeText={setBadgeText}
                 placeholder="Ej. 3 x $90, 15% OFF, 2x1..."
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={colors.textDim}
               />
             </View>
 
             {/* Descripción */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Descripción para el Cliente</Text>
+              <Text style={[styles.label, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>Descripción para el Cliente</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: isDark ? '#242936' : '#F8F9FA', borderColor: isDark ? '#2A303C' : '#E5E7EB', color: isDark ? '#F1F3F7' : '#181A1F' }]}
                 value={description}
                 onChangeText={setDescription}
                 placeholder="Ej. Lleva 3 galletas por solo $90 MXN"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={colors.textDim}
               />
             </View>
 
             {/* Tipo de Oferta */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Tipo de Oferta</Text>
+              <Text style={[styles.label, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>Tipo de Oferta</Text>
               <View style={styles.typeRow}>
                 <TouchableOpacity
-                  style={[styles.typeBtn, promoType === 'combo_fixed_price' && styles.typeBtnActive]}
+                  style={[styles.typeBtn, { backgroundColor: isDark ? '#242936' : '#F1F3F7', borderColor: colors.borderSubtle }, promoType === 'combo_fixed_price' && styles.typeBtnActive]}
                   onPress={() => handleTypeSelect('combo_fixed_price')}
                 >
                   <Ionicons name="gift-outline" size={18} color={promoType === 'combo_fixed_price' ? colors.brand : colors.textMuted} />
@@ -174,7 +186,7 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.typeBtn, promoType === 'percentage' && styles.typeBtnActive]}
+                  style={[styles.typeBtn, { backgroundColor: isDark ? '#242936' : '#F1F3F7', borderColor: colors.borderSubtle }, promoType === 'percentage' && styles.typeBtnActive]}
                   onPress={() => handleTypeSelect('percentage')}
                 >
                   <Ionicons name="pricetag-outline" size={18} color={promoType === 'percentage' ? colors.brand : colors.textMuted} />
@@ -182,7 +194,7 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.typeBtn, promoType === 'fixed_amount' && styles.typeBtnActive]}
+                  style={[styles.typeBtn, { backgroundColor: isDark ? '#242936' : '#F1F3F7', borderColor: colors.borderSubtle }, promoType === 'fixed_amount' && styles.typeBtnActive]}
                   onPress={() => handleTypeSelect('fixed_amount')}
                 >
                   <Ionicons name="cash-outline" size={18} color={promoType === 'fixed_amount' ? colors.brand : colors.textMuted} />
@@ -190,7 +202,7 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.typeBtn, promoType === 'two_for_one' && styles.typeBtnActive]}
+                  style={[styles.typeBtn, { backgroundColor: isDark ? '#242936' : '#F1F3F7', borderColor: colors.borderSubtle }, promoType === 'two_for_one' && styles.typeBtnActive]}
                   onPress={() => handleTypeSelect('two_for_one')}
                 >
                   <Ionicons name="flame-outline" size={18} color={promoType === 'two_for_one' ? colors.brand : colors.textMuted} />
@@ -202,11 +214,11 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
             {/* Valores numéricos */}
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>
+                <Text style={[styles.label, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>
                   {promoType === 'combo_fixed_price' ? 'Precio Combo ($)' : promoType === 'percentage' ? '% Descuento' : 'Monto ($)'}
                 </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: isDark ? '#242936' : '#F8F9FA', borderColor: isDark ? '#2A303C' : '#E5E7EB', color: isDark ? '#F1F3F7' : '#181A1F' }]}
                   keyboardType="numeric"
                   value={discountValue}
                   onChangeText={setDiscountValue}

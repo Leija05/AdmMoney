@@ -36,7 +36,14 @@ export class MobileApiService {
     if (!res.ok) {
       throw new Error(`API error: ${res.status}`);
     }
-    return await res.json();
+    if (res.status === 204) {
+      return null as T;
+    }
+    const text = await res.text();
+    if (!text || text.trim() === '') {
+      return null as T;
+    }
+    return JSON.parse(text);
   }
 
   static async checkHealth(): Promise<boolean> {
