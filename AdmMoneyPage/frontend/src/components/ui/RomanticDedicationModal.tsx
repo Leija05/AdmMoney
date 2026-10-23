@@ -60,8 +60,9 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
       <style>{`
         @keyframes floatUp {
           0% { transform: translateY(0) scale(0.6); opacity: 0; }
-          20% { opacity: 1; transform: translateY(-40px) scale(1.2); }
-          100% { transform: translateY(-380px) scale(1); opacity: 0; }
+          15% { opacity: 1; transform: translateY(-10vh) scale(1.2); }
+          85% { opacity: 0.9; }
+          100% { transform: translateY(-115vh) scale(1); opacity: 0; }
         }
         @keyframes pulseGlow {
           0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(244, 63, 94, 0.5); }

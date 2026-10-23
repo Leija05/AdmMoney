@@ -147,29 +147,32 @@ export default function SettingsScreen() {
               />
             </View>
 
-            {/* Currency selector chips */}
+            {/* Currency selector chips (Only MXN and USD allowed) */}
             <View style={{ marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.borderSubtle }}>
-              <Text style={[styles.subLabel, { color: colors.textDim }]}>Moneda Principal</Text>
+              <Text style={[styles.subLabel, { color: colors.textDim }]}>Moneda del Sistema (Solo MXN y USD)</Text>
               <View style={styles.presetsRow}>
-                {['MXN ($)', 'USD ($)', 'EUR (€)'].map((curr) => (
+                {[
+                  { code: 'MXN ($)', label: '🇲🇽 MXN ($) Pesos' },
+                  { code: 'USD ($)', label: '🇺🇸 USD ($) Dólares' },
+                ].map((item) => (
                   <TouchableOpacity
-                    key={curr}
-                    onPress={() => setCurrency(curr)}
+                    key={item.code}
+                    onPress={() => setCurrency(item.code)}
                     style={[
                       styles.presetChip,
                       {
-                        backgroundColor: currency === curr ? colors.brandBg : colors.bgTertiary,
-                        borderColor: currency === curr ? colors.brandBorder : colors.borderSubtle,
+                        backgroundColor: currency === item.code ? colors.brandBg : colors.bgTertiary,
+                        borderColor: currency === item.code ? colors.brandBorder : colors.borderSubtle,
                       },
                     ]}
                   >
                     <Text
                       style={[
                         styles.presetChipText,
-                        { color: currency === curr ? colors.brandText : colors.textMain },
+                        { color: currency === item.code ? colors.brandText : colors.textMain },
                       ]}
                     >
-                      {curr}
+                      {item.label}
                     </Text>
                   </TouchableOpacity>
                 ))}

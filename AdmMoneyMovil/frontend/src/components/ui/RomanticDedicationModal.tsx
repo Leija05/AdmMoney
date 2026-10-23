@@ -13,14 +13,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeColors, radii } from '../../theme';
 
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
 interface FloatingHeart {
   id: number;
   x: number;
   animY: Animated.Value;
   animScale: Animated.Value;
   animOpacity: Animated.Value;
-  icon: 'heart' | 'heart-sharp' | 'sparkles' | 'rose';
-  color: string;
+  symbol: string;
+  size: number;
 }
 
 interface RomanticDedicationModalProps {
@@ -50,7 +52,7 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
         useNativeDriver: true,
       }).start();
 
-      // Trigger initial shower of hearts
+      // Trigger initial shower of rising hearts from the bottom
       spawnHearts(6);
     } else {
       cardScale.setValue(0.85);
@@ -88,53 +90,71 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
     return () => pulse.stop();
   }, [heartPulse]);
 
-  const spawnHearts = (count: number = 3) => {
+  const spawnHearts = (count: number = 8) => {
+    const symbols = ['💖', '💕', '❤️', '✨', '🌹', '🥰', '💌', '🌸'];
     const newHearts: FloatingHeart[] = [];
-    const colorsList = ['#F43F5E', '#EC4899', '#FB7185', '#FDA4AF', '#E11D48', '#FF6B8B'];
 
     for (let i = 0; i < count; i++) {
       const animY = new Animated.Value(0);
-      const animScale = new Animated.Value(0.4);
-      const animOpacity = new Animated.Value(1);
+      const animScale = new Animated.Value(0.3);
+      const animOpacity = new Animated.Value(0);
 
       const h: FloatingHeart = {
         id: Date.now() + Math.random(),
-        x: Math.random() * 260 - 130,
+        x: Math.random() * (screenWidth - 70) + 15,
         animY,
         animScale,
         animOpacity,
-        icon: Math.random() > 0.3 ? 'heart' : 'sparkles',
-        color: colorsList[Math.floor(Math.random() * colorsList.length)],
+        symbol: symbols[Math.floor(Math.random() * symbols.length)],
+        size: 22 + Math.random() * 18,
       };
 
       newHearts.push(h);
 
+      const travelDistance = -(screenHeight + 140);
+      const duration = 2400 + Math.random() * 900;
+
       Animated.parallel([
         Animated.timing(animY, {
-          toValue: -(160 + Math.random() * 120),
-          duration: 1600 + Math.random() * 600,
-          easing: Easing.out(Easing.quad),
+          toValue: travelDistance,
+          duration,
+          easing: Easing.bezier(0.2, 0.8, 0.3, 1),
           useNativeDriver: true,
         }),
-        Animated.timing(animScale, {
-          toValue: 1 + Math.random() * 0.8,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(animOpacity, {
-          toValue: 0,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
+        Animated.sequence([
+          Animated.timing(animScale, {
+            toValue: 1.25,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(animScale, {
+            toValue: 1.0,
+            duration: duration - 400,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.sequence([
+          Animated.timing(animOpacity, {
+            toValue: 1,
+            duration: 350,
+            useNativeDriver: true,
+          }),
+          Animated.delay(duration * 0.5),
+          Animated.timing(animOpacity, {
+            toValue: 0,
+            duration: duration * 0.5,
+            useNativeDriver: true,
+          }),
+        ]),
       ]).start();
     }
 
-    setHearts((prev) => [...prev.slice(-20), ...newHearts]);
+    setHearts((prev) => [...prev.slice(-30), ...newHearts]);
   };
 
   const handleSendMoreLove = () => {
     setLoveCount((c) => c + 1);
-    spawnHearts(7);
+    spawnHearts(10);
   };
 
   if (!visible) return null;
@@ -171,28 +191,6 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
               >
                 <Ionicons name="heart" size={44} color="#F43F5E" />
               </Animated.View>
-
-              {/* Floating Hearts Animation Layer */}
-              <View style={styles.floatingLayer} pointerEvents="none">
-                {hearts.map((h) => (
-                  <Animated.View
-                    key={h.id}
-                    style={[
-                      styles.floatingHeartItem,
-                      {
-                        transform: [
-                          { translateX: h.x },
-                          { translateY: h.animY },
-                          { scale: h.animScale },
-                        ],
-                        opacity: h.animOpacity,
-                      },
-                    ]}
-                  >
-                    <Ionicons name={h.icon} size={22} color={h.color} />
-                  </Animated.View>
-                ))}
-              </View>
             </View>
 
             {/* Dedication Header */}
@@ -247,6 +245,27 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
             </TouchableOpacity>
           </LinearGradient>
         </Animated.View>
+
+        {/* Rising Love Symbols Layer (From Bottom to Top) */}
+        <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+          {hearts.map((h) => (
+            <Animated.View
+              key={h.id}
+              style={{
+                position: 'absolute',
+                bottom: -20,
+                left: h.x,
+                transform: [
+                  { translateY: h.animY },
+                  { scale: h.animScale },
+                ],
+                opacity: h.animOpacity,
+              }}
+            >
+              <Text style={{ fontSize: h.size }}>{h.symbol}</Text>
+            </Animated.View>
+          ))}
+        </View>
       </View>
     </Modal>
   );

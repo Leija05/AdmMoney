@@ -34,16 +34,26 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
   const colors = useThemeColors();
   const isDark = colors.isDark;
 
-  const [phone, setPhone] = useState('');
+  const extract8Digits = (raw: string) => {
+    let digits = raw.replace(/\D/g, '');
+    if (digits.startsWith('5255')) {
+      digits = digits.slice(4);
+    } else if (digits.startsWith('55')) {
+      digits = digits.slice(2);
+    }
+    return digits.slice(0, 8);
+  };
+
+  const [phoneSuffix, setPhoneSuffix] = useState('');
   const [includePdf, setIncludePdf] = useState(true);
   const [customNote, setCustomNote] = useState('');
 
-  const customerName = order?.customer_name || sale?.customer_name || 'Cliente Mostrador';
+  const customerName = order?.customer_name || sale?.customer_name || 'Cliente';
   const initialPhone = order?.customer_phone || '';
 
   useEffect(() => {
     if (visible) {
-      setPhone(initialPhone);
+      setPhoneSuffix(extract8Digits(initialPhone));
       setCustomNote('');
       setIncludePdf(true);
     }
@@ -64,7 +74,7 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
 
   if (order) {
     ticketId = order.id;
-    ticketType = 'Pedido Programado';
+    ticketType = 'Pedido';
     const totalQty = order.items.reduce((s, i) => s + i.quantity, 0);
     itemsSummary = `${totalQty} galletas (${order.items.map((i) => `${i.quantity}x ${i.product_name}`).join(', ')})`;
     totalFormatted = `$${order.total_amount.toFixed(2)} MXN`;
@@ -74,7 +84,7 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
     pdfUrl = `${pdfBaseUrl}/orders/${order.id}/pdf${encodedNote}`;
   } else if (sale) {
     ticketId = sale.id;
-    ticketType = 'Venta Directa';
+    ticketType = 'Venta';
     itemsSummary = `${sale.quantity}x ${sale.cookie_name}`;
     totalFormatted = `$${sale.total_revenue.toFixed(2)} MXN`;
     paymentText = sale.payment_method || 'Efectivo';
@@ -83,43 +93,50 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
     pdfUrl = `${pdfBaseUrl}/cookies/sales/${sale.id}/pdf${encodedNote}`;
   }
 
-  // Build the live preview text
+  // Build the live preview text (clean, friendly, detailed and easy to read)
   const buildMessage = () => {
-    let msg = `🍪 *lucky cookies Galletas y postres*\n`;
-    msg += `Comprobante Oficial • Ticket #${ticketId}\n`;
-    msg += `━━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `👤 *Cliente:* ${customerName}\n`;
+    let msg = `🍪 *lucky cookies Galletas y postres* 🍪\n`;
+    msg += `¡Hola *${customerName}*! Muchas gracias por tu compra. Te compartimos tu comprobante:\n\n`;
+    msg += `📋 *Comprobante Oficial • Ticket #${ticketId}*\n`;
     msg += `📅 *${dateText}*\n`;
-    msg += `🍪 *Detalle:* ${itemsSummary}\n`;
-    msg += `💰 *Total:* ${totalFormatted}\n`;
+    msg += `🍪 *Tu Pedido:* ${itemsSummary}\n`;
+    msg += `💰 *Total a Cobrar:* ${totalFormatted}\n`;
     msg += `💳 *Método de Pago:* ${paymentText}\n`;
 
     if (customNote.trim()) {
-      msg += `\n💬 *Mensaje especial:*\n${customNote.trim()}\n`;
+      msg += `\n📝 *Nota:* ${customNote.trim()}\n`;
     }
 
     if (includePdf) {
-      msg += `\n📄 *Descargar Comprobante en PDF:* \n${pdfUrl}\n`;
+      msg += `\n📄 *Descarga tu comprobante oficial en PDF con logo:* \n${pdfUrl}\n`;
     }
 
-    msg += `━━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `¡Muchas gracias por tu preferencia! ✨`;
+    msg += `\n¡Muchas gracias por tu preferencia y que lo disfrutes mucho! ✨❤️`;
     return msg;
   };
 
   const handleConfirmSend = async () => {
-    const cleanPhone = phone.replace(/\D/g, '');
-    if (!cleanPhone || cleanPhone.length < 10) {
+    const cleanSuffix = phoneSuffix.replace(/\D/g, '');
+    if (!cleanSuffix || cleanSuffix.length === 0) {
       Alert.alert(
-        'Teléfono Requerido',
-        'Ingresa un número de WhatsApp válido (mínimo 10 dígitos) para enviar el ticket.'
+        'Número Requerido',
+        '⚠️ Por favor ingresa el número de WhatsApp del cliente para poder enviarle el ticket.'
       );
       return;
     }
 
+    if (cleanSuffix.length < 8) {
+      Alert.alert(
+        'Número Incompleto',
+        '⚠️ Por favor ingresa los 8 dígitos después del 55 para completar el número (10 dígitos en total).'
+      );
+      return;
+    }
+
+    const fullPhone = `5255${cleanSuffix}`;
     const message = buildMessage();
     const encoded = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encoded}`;
+    const whatsappUrl = `https://wa.me/${fullPhone}?text=${encoded}`;
 
     // If PDF is selected on web, open PDF in a new tab for instant view/download
     if (includePdf && Platform.OS === 'web') {
@@ -172,7 +189,7 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
           </View>
 
           <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
-            {/* Phone Number Input */}
+            {/* Phone Number Input with Fixed 55 Prefix */}
             <View style={styles.fieldGroup}>
               <Text style={[styles.label, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>
                 NÚMERO DE TELÉFONO O WHATSAPP (10 DÍGITOS) *
@@ -186,16 +203,43 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
                   },
                 ]}
               >
-                <Ionicons name="call-outline" size={18} color={colors.whatsappText} />
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    paddingRight: 10,
+                    borderRightWidth: 1,
+                    borderRightColor: isDark ? '#374151' : '#D1D5DB',
+                  }}
+                >
+                  <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#E5E7EB' : '#1F2937' }}>
+                    +52 55
+                  </Text>
+                </View>
                 <TextInput
-                  style={[styles.inputField, { color: isDark ? '#F1F3F7' : '#181A1F' }]}
-                  placeholder="Ej. 5512345678"
+                  style={[styles.inputField, { color: isDark ? '#F1F3F7' : '#181A1F', marginLeft: 10 }]}
+                  placeholder="1234 5678 (8 dígitos)"
                   placeholderTextColor={colors.textDim}
                   keyboardType="phone-pad"
-                  value={phone}
-                  onChangeText={setPhone}
+                  maxLength={10}
+                  value={phoneSuffix}
+                  onChangeText={(val) => {
+                    const cleaned = val.replace(/\D/g, '');
+                    if (cleaned.startsWith('5255')) {
+                      setPhoneSuffix(cleaned.slice(4).slice(0, 8));
+                    } else if (cleaned.startsWith('55') && cleaned.length > 8) {
+                      setPhoneSuffix(cleaned.slice(2).slice(0, 8));
+                    } else {
+                      setPhoneSuffix(cleaned.slice(0, 8));
+                    }
+                  }}
                 />
               </View>
+              <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 4 }}>
+                El 55 es fijo. Ingresa los 8 dígitos que van después.
+              </Text>
             </View>
 
             {/* Toggle PDF Ticket */}

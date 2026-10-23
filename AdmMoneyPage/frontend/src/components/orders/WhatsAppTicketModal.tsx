@@ -17,11 +17,21 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
   sale,
 }) => {
   const [includePdf, setIncludePdf] = useState(true);
-  const [customNote, setCustomNote] = useState('¡Muchas gracias por apoyar este emprendimiento de repostería con amor! 💕');
+  const [customNote, setCustomNote] = useState('');
 
-  // Customer phone initialization
+  const extract8Digits = (raw: string) => {
+    let digits = raw.replace(/\D/g, '');
+    if (digits.startsWith('5255')) {
+      digits = digits.slice(4);
+    } else if (digits.startsWith('55')) {
+      digits = digits.slice(2);
+    }
+    return digits.slice(0, 8);
+  };
+
+  // Customer phone initialization (only 8 digits after 55)
   const initialPhone = order?.customer_phone || '';
-  const [phone, setPhone] = useState(initialPhone);
+  const [phoneSuffix, setPhoneSuffix] = useState(extract8Digits(initialPhone));
 
   if (!isOpen || (!order && !sale)) return null;
 
@@ -39,45 +49,48 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
     itemsSummary = `• ${sale.quantity}x ${sale.cookie_name}`;
   }
 
-  // Clean phone number
-  const cleanPhone = phone.replace(/\D/g, '');
-
   // PDF endpoint URL
   const pdfUrl = isOrder
     ? `http://localhost:8000/api/orders/${targetId}/pdf`
     : `http://localhost:8000/api/cookies/sales/${targetId}/pdf`;
 
-  // Build formatted message
+  // Build clean, detailed, and easy-to-read formatted message
   const lines: string[] = [
-    `🍪 *LUCKY COOKIES GALLETAS Y POSTRES* 🍪`,
-    `¡Hola *${customerName}*! Muchas gracias por tu pedido. Te compartimos el comprobante de tu orden:`,
-    ``,
+    `🍪 *lucky cookies Galletas y postres* 🍪`,
+    `¡Hola *${customerName}*! Muchas gracias por tu compra. Te compartimos tu comprobante:\n`,
+    `📋 *Comprobante Oficial • Ticket #${targetId}*`,
     `📅 *Fecha:* ${deliveryDate}`,
-    `📦 *Detalle:*`,
+    `🍪 *Tu Pedido:*`,
     itemsSummary,
-    ``,
-    `💰 *Total a pagar:* $${totalAmount.toFixed(2)} MXN`,
+    `💰 *Total a Cobrar:* $${totalAmount.toFixed(2)} MXN`,
   ];
 
   if (customNote.trim()) {
-    lines.push(``);
-    lines.push(`📝 *Nota:* ${customNote.trim()}`);
+    lines.push(`\n📝 *Nota:* ${customNote.trim()}`);
   }
 
   if (includePdf) {
-    lines.push(``);
-    lines.push(`📄 *Descarga tu Ticket en PDF aquí:*`);
+    lines.push(`\n📄 *Descarga tu comprobante oficial en PDF con logo:*`);
     lines.push(pdfUrl);
   }
 
-  lines.push(``);
-  lines.push(`¡Que lo disfrutes mucho! ✨`);
+  lines.push(`\n¡Muchas gracias por tu preferencia y que lo disfrutes mucho! ✨❤️`);
 
   const fullMessage = lines.join('\n');
 
   const handleSendWhatsApp = () => {
+    const cleanSuffix = phoneSuffix.replace(/\D/g, '');
+    if (!cleanSuffix || cleanSuffix.length === 0) {
+      alert('⚠️ Por favor ingresa el número de WhatsApp del cliente para poder enviar el ticket.');
+      return;
+    }
+    if (cleanSuffix.length < 8) {
+      alert('⚠️ Por favor ingresa los 8 dígitos completos que siguen al 55 (Total 10 dígitos).');
+      return;
+    }
+    const cleanPhone = `5255${cleanSuffix}`;
     const encoded = encodeURIComponent(fullMessage);
-    const target = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+    const target = `https://wa.me/${cleanPhone}?text=${encoded}`;
     window.open(target, '_blank', 'noopener,noreferrer');
     onClose();
   };
@@ -138,30 +151,43 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
 
         {/* Form Body */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Phone input */}
+          {/* Phone input with fixed 55 prefix */}
           <div>
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted, #94A3B8)', marginBottom: '0.35rem' }}>
-              Teléfono o WhatsApp del Cliente
+              Número de Teléfono o WhatsApp del Cliente *
             </label>
-            <div style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-tertiary, #242936)', border: '1px solid var(--border-subtle, rgba(255,255,255,0.12))', borderRadius: '10px', overflow: 'hidden' }}>
+              <div style={{ padding: '0.65rem 0.85rem', background: 'rgba(37, 211, 102, 0.15)', borderRight: '1px solid var(--border-subtle, rgba(255,255,255,0.12))', fontWeight: 800, fontSize: '0.9rem', color: '#34D399', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>+52 55</span>
+              </div>
               <input
                 type="text"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Ej. 5512345678 (10 dígitos)"
+                value={phoneSuffix}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/\D/g, '');
+                  if (cleaned.startsWith('5255')) {
+                    setPhoneSuffix(cleaned.slice(4).slice(0, 8));
+                  } else if (cleaned.startsWith('55') && cleaned.length > 8) {
+                    setPhoneSuffix(cleaned.slice(2).slice(0, 8));
+                  } else {
+                    setPhoneSuffix(cleaned.slice(0, 8));
+                  }
+                }}
+                placeholder="1234 5678 (8 dígitos)"
                 style={{
-                  width: '100%',
+                  flex: 1,
                   padding: '0.65rem 0.85rem',
-                  borderRadius: '10px',
-                  background: 'var(--bg-tertiary, #242936)',
-                  border: '1px solid var(--border-subtle, rgba(255,255,255,0.12))',
+                  background: 'transparent',
+                  border: 'none',
                   color: 'var(--text-main, #FFFFFF)',
                   fontSize: '0.9rem',
                   outline: 'none',
-                  boxSizing: 'border-box',
                 }}
               />
             </div>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-dim, #64748B)', marginTop: '0.25rem', display: 'block' }}>
+              El 55 es fijo. Ingresa los 8 dígitos que van después.
+            </span>
           </div>
 
           {/* Toggle PDF Checkbox */}

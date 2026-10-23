@@ -7,7 +7,8 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert
+  Alert,
+  Platform
 } from 'react-native';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -96,6 +97,23 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
   };
 
   const handleDeleteConfirm = () => {
+    const doDelete = async () => {
+      try {
+        await onDelete(expense.id);
+        onClose();
+      } catch (err: any) {
+        Alert.alert('Error', err?.message || 'No se pudo eliminar el gasto.');
+      }
+    };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const ok = window.confirm(`¿Se eliminará "${expense.title}" por $${expense.amount.toFixed(2)} MXN de tu historial?`);
+      if (ok) {
+        doDelete();
+      }
+      return;
+    }
+
     Alert.alert(
       '¿Eliminar Gasto?',
       `Se eliminará "${expense.title}" por $${expense.amount.toFixed(2)} MXN de tu historial.`,
@@ -104,10 +122,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
         {
           text: 'Eliminar',
           style: 'destructive',
-          onPress: async () => {
-            await onDelete(expense.id);
-            onClose();
-          },
+          onPress: doDelete,
         },
       ]
     );

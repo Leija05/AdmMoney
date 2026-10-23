@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  Platform,
 } from 'react-native';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -39,6 +40,24 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
   const roiPct = sale.total_cost > 0 ? (sale.net_profit / sale.total_cost) * 100 : 0;
 
   const handleDelete = () => {
+    const doDelete = async () => {
+      try {
+        await onDeleteSale(sale.id);
+        onClose();
+        Alert.alert('Venta Eliminada', 'Se ha eliminado la venta y recalculado el balance.');
+      } catch (err: any) {
+        Alert.alert('Error', err?.message || 'No se pudo eliminar la venta.');
+      }
+    };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const ok = window.confirm(`¿Deseas cancelar y eliminar la venta de ${sale.quantity}x "${sale.cookie_name}" ($${sale.total_revenue.toFixed(2)} MXN)?`);
+      if (ok) {
+        doDelete();
+      }
+      return;
+    }
+
     Alert.alert(
       '¿Eliminar Venta?',
       `¿Deseas cancelar y eliminar la venta de ${sale.quantity}x "${sale.cookie_name}" ($${sale.total_revenue.toFixed(2)} MXN)?`,
@@ -47,11 +66,7 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
         {
           text: 'Eliminar Venta',
           style: 'destructive',
-          onPress: async () => {
-            await onDeleteSale(sale.id);
-            onClose();
-            Alert.alert('Venta Eliminada', 'Se ha eliminado la venta y recalculado el balance.');
-          },
+          onPress: doDelete,
         },
       ]
     );
