@@ -103,9 +103,9 @@ export const RomanticDedicationCard: React.FC = () => {
             {/* Header Row with Animated Beating Red Heart */}
             <View style={styles.topRow}>
               <View style={styles.badge}>
-                <Text style={styles.sparkle}>✨</Text>
-                <Text style={styles.badgeText}>DEDICATORIA ESPECIAL</Text>
-                <Text style={styles.sparkle}>✨</Text>
+                <Text style={styles.sparkle}>💜</Text>
+                <Text style={styles.badgeText}>Para Mi Natycita</Text>
+                <Text style={styles.sparkle}>💜</Text>
               </View>
 
               <Animated.View
@@ -125,7 +125,7 @@ export const RomanticDedicationCard: React.FC = () => {
             <View style={styles.quoteBox}>
               <Text style={[styles.quoteMark, { color: isDark ? '#FDA4AF' : '#FB7185' }]}>“</Text>
               <Text style={[styles.dedicationText, { color: isDark ? '#FFE4E6' : '#881337' }]}>
-                Aplicacion hecha con amor y mucho cariño para el amor de mi vida, te apoyo en tus emprendimientos, te apoyo en todo lo que tu quieras hacer y siempre sera asi, Te amo demasiado
+                Aplicacion hecha con amor y mucho cariño para el amor de mi vida, te apoyo en tus emprendimientos, te apoyo en todo lo que tu quieras hacer y siempre sera asi, vamos por mas meses juntos hermosa, Te amo demasiado
               </Text>
               <Text style={[styles.quoteMarkEnd, { color: isDark ? '#FDA4AF' : '#FB7185' }]}>”</Text>
             </View>
@@ -135,7 +135,7 @@ export const RomanticDedicationCard: React.FC = () => {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Ionicons name="infinite" size={16} color="#F43F5E" />
                 <Text style={[styles.footerSub, { color: isDark ? '#FDA4AF' : '#9F1239' }]}>
-                  Regalito de Mesesiversary • Hecho con Amor Jectorini
+                  Hecho con Amor • Jectorini
                 </Text>
               </View>
               <Text style={styles.touchHint}>Toca aquí 💌</Text>
