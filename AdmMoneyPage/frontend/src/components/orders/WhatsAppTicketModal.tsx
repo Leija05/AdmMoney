@@ -49,14 +49,14 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
   }
 
   // PDF endpoint URL (Secure Cryptographic Token)
-  const apiBase = APP_CONFIG.API_BASE_URL.replace(/\/+$/, '');
+  const rootDomain = APP_CONFIG.API_BASE_URL.replace(/\/api\/?$/, '').replace(/\/+$/, '');
   const encodedNote = customNote.trim() ? `?note=${encodeURIComponent(customNote.trim())}` : '';
   const token = isOrder ? order?.ticket_token : sale?.ticket_token;
   const pdfUrl = token
-    ? `${apiBase}/tickets/${token}${encodedNote}`
+    ? `${rootDomain}/tickets/${token}${encodedNote}`
     : isOrder
-    ? `${apiBase}/orders/${targetId}/pdf${encodedNote}`
-    : `${apiBase}/cookies/sales/${targetId}/pdf${encodedNote}`;
+    ? `${rootDomain}/api/orders/${targetId}/pdf${encodedNote}`
+    : `${rootDomain}/api/cookies/sales/${targetId}/pdf${encodedNote}`;
 
   const paymentText = isOrder
     ? `${order?.payment_method || 'Efectivo'}`

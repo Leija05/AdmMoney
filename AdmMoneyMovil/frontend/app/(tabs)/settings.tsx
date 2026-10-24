@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -59,6 +59,13 @@ export default function SettingsScreen() {
   const [tempBusinessName, setTempBusinessName] = useState(businessName);
   const [tempTicketFooter, setTempTicketFooter] = useState(ticketFooterText);
   const [isEditingBrand, setIsEditingBrand] = useState(false);
+
+  useEffect(() => {
+    if (!isEditingBrand) {
+      setTempBusinessName(businessName);
+      setTempTicketFooter(ticketFooterText);
+    }
+  }, [businessName, ticketFooterText, isEditingBrand]);
 
   const handleTestAndSync = async () => {
     setIsTesting(true);

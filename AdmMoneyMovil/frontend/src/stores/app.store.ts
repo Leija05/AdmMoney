@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
+import * as FileSystem from 'expo-file-system';
 import { LayoutAnimation, Platform, UIManager } from 'react-native';
 import {
   Expense,
@@ -13,6 +15,62 @@ import {
 } from '../lib/types';
 import { MobileApiService, setApiHost } from '../services/api';
 import { APP_CONFIG } from '../config/appConfig';
+
+const customStorage: StateStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    if (Platform.OS === 'web') {
+      try {
+        return typeof window !== 'undefined' ? window.localStorage.getItem(name) : null;
+      } catch {
+        return null;
+      }
+    }
+    try {
+      if (!FileSystem.documentDirectory) return null;
+      const fileUri = `${FileSystem.documentDirectory}${name}.json`;
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      if (!fileInfo.exists) return null;
+      return await FileSystem.readAsStringAsync(fileUri);
+    } catch (e) {
+      console.warn('Storage read error:', e);
+      return null;
+    }
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    if (Platform.OS === 'web') {
+      try {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(name, value);
+        }
+      } catch {}
+      return;
+    }
+    try {
+      if (!FileSystem.documentDirectory) return;
+      const fileUri = `${FileSystem.documentDirectory}${name}.json`;
+      await FileSystem.writeAsStringAsync(fileUri, value);
+    } catch (e) {
+      console.warn('Storage write error:', e);
+    }
+  },
+  removeItem: async (name: string): Promise<void> => {
+    if (Platform.OS === 'web') {
+      try {
+        if (typeof window !== 'undefined') {
+          window.localStorage.removeItem(name);
+        }
+      } catch {}
+      return;
+    }
+    try {
+      if (!FileSystem.documentDirectory) return;
+      const fileUri = `${FileSystem.documentDirectory}${name}.json`;
+      await FileSystem.deleteAsync(fileUri, { idempotent: true });
+    } catch (e) {
+      console.warn('Storage delete error:', e);
+    }
+  },
+};
 
 interface AppState {
   expenses: Expense[];
@@ -93,7 +151,9 @@ interface AppState {
   addScannedTicket: (ticket: ScannedTicket) => void;
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
+export const useAppStore = create<AppState>()(
+  persist(
+    (set, get) => ({
   expenses: [],
   cookies: [],
   ingredients: [],
@@ -404,4 +464,30 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { scannedTickets: [ticket, ...state.scannedTickets] };
     });
   },
-}));
+    }),
+    {
+      name: 'admmoney_mobile_settings_v1',
+      storage: createJSONStorage(() => customStorage),
+      partialize: (state) => ({
+        theme: state.theme,
+        currency: state.currency,
+        swipeEnabled: state.swipeEnabled,
+        hapticsEnabled: state.hapticsEnabled,
+        highPrecisionOcr: state.highPrecisionOcr,
+        dailyClosingReminder: state.dailyClosingReminder,
+        stockAlertsEnabled: state.stockAlertsEnabled,
+        businessName: state.businessName,
+        ticketFooterText: state.ticketFooterText,
+        privacyMode: state.privacyMode,
+        autoCategorizeAi: state.autoCategorizeAi,
+        scannedTickets: state.scannedTickets,
+        backendUrl: state.backendUrl,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state?.backendUrl) {
+          setApiHost(state.backendUrl);
+        }
+      },
+    }
+  )
+);

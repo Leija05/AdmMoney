@@ -105,7 +105,7 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
   if (!visible || (!sale && !order)) return null;
 
   const apiHost = getApiHost();
-  const pdfBaseUrl = apiHost.replace(/\/+$/, '');
+  const rootDomain = apiHost.replace(/\/api\/?$/, '').replace(/\/+$/, '');
 
   let ticketId = 0;
   let ticketType = '';
@@ -126,8 +126,8 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
     const encodedNote = customNote ? `?note=${encodeURIComponent(customNote)}` : '';
     const token = order.ticket_token;
     pdfUrl = token
-      ? `${pdfBaseUrl}/tickets/${token}${encodedNote}`
-      : `${pdfBaseUrl}/orders/${order.id}/pdf${encodedNote}`;
+      ? `${rootDomain}/tickets/${token}${encodedNote}`
+      : `${rootDomain}/api/orders/${order.id}/pdf${encodedNote}`;
   } else if (sale) {
     ticketId = sale.id;
     ticketType = 'Venta';
@@ -138,8 +138,8 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
     const encodedNote = customNote ? `?note=${encodeURIComponent(customNote)}` : '';
     const token = sale.ticket_token;
     pdfUrl = token
-      ? `${pdfBaseUrl}/tickets/${token}${encodedNote}`
-      : `${pdfBaseUrl}/cookies/sales/${sale.id}/pdf${encodedNote}`;
+      ? `${rootDomain}/tickets/${token}${encodedNote}`
+      : `${rootDomain}/api/cookies/sales/${sale.id}/pdf${encodedNote}`;
   }
 
   // Build the live preview text matching the exact requested structure

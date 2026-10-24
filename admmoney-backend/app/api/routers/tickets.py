@@ -98,7 +98,9 @@ EXPIRED_HTML_TEMPLATE = """<!DOCTYPE html>
 """
 
 @router.get("/tickets/{token}")
+@router.get("/api/tickets/{token}")
 @router.get("/t/{token}")
+@router.get("/api/t/{token}")
 def get_secure_ticket_pdf(token: str, note: Optional[str] = Query(None)):
     """
     Ruta pública segura para visualización y descarga de comprobantes en PDF.
@@ -134,6 +136,7 @@ def get_secure_ticket_pdf(token: str, note: Optional[str] = Query(None)):
     )
 
 @router.get("/tickets/{token}/status")
+@router.get("/api/tickets/{token}/status")
 def get_secure_ticket_status(token: str):
     """
     Verifica el estado de un token de comprobante sin descargar el PDF binario.

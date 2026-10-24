@@ -1,5 +1,6 @@
 import os
 import traceback
+from typing import Optional
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -77,6 +78,17 @@ def health_check():
         "service": "Adm Money API",
         "version": "2.1.0"
     }
+
+# Root aliases for legacy or direct PDF endpoints without /api prefix
+@app.get("/orders/{order_id}/pdf", tags=["Orders & Baking Pipeline"])
+def get_order_ticket_pdf_alias(order_id: int, note: Optional[str] = None):
+    from .api.routers.orders import get_order_ticket_pdf
+    return get_order_ticket_pdf(order_id=order_id, note=note)
+
+@app.get("/cookies/sales/{sale_id}/pdf", tags=["Cookies & Inventory"])
+def get_cookie_sale_ticket_pdf_alias(sale_id: int, note: Optional[str] = None):
+    from .api.routers.cookies import get_cookie_sale_ticket_pdf
+    return get_cookie_sale_ticket_pdf(sale_id=sale_id, note=note)
 
 if __name__ == "__main__":
     import uvicorn
