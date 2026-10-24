@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeColors, radii } from '../../theme';
+import { AnimatedSignature } from './AnimatedSignature';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -223,6 +224,19 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
               <Text style={[styles.subNote, { color: isDark ? '#FDA4AF' : '#9F1239' }]}>
                 Cada línea de código, cada cálculo y cada pantalla fueron diseñados pensando en ti y en tu éxito. ¡Sigamos construyendo grandes metas juntos! ♾️
               </Text>
+
+              {/* Animated Handwritten Signature */}
+              <View style={styles.signatureBox}>
+                <Text style={[styles.signatureCaption, { color: isDark ? '#FDA4AF' : '#9F1239' }]}>
+                  Con todo mi amor para ti:
+                </Text>
+                <AnimatedSignature
+                  visible={visible}
+                  color={isDark ? '#FDA4AF' : '#881337'}
+                  width={260}
+                  height={115}
+                />
+              </View>
             </View>
 
             {/* Interactive Love Tap Button */}
@@ -377,6 +391,20 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     textAlign: 'center',
     fontWeight: '500',
+  },
+  signatureBox: {
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(244, 63, 94, 0.15)',
+  },
+  signatureCaption: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    fontWeight: '600',
+    marginBottom: 4,
+    letterSpacing: 0.2,
   },
   loveBtn: {
     width: '100%',

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Heart, Sparkles, X, Send } from 'lucide-react';
+import { AnimatedSignature } from './AnimatedSignature';
 
 interface RomanticDedicationModalProps {
   isOpen: boolean;
@@ -166,6 +167,14 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
           Te apoyo en tus emprendimientos, en tus galletas, en tus sueños y en todo lo que decidas emprender.
           Nunca dudes de tu talento. ¡Te amo con todo mi corazón!"
         </p>
+
+        {/* Animated handwritten signature */}
+        <div style={{ marginBottom: '1.25rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '0.75rem', color: '#FDA4AF', fontStyle: 'italic', marginBottom: '2px' }}>
+            Con todo mi amor para ti:
+          </div>
+          <AnimatedSignature isOpen={isOpen} color="#FDA4AF" width={260} height={110} />
+        </div>
 
         {/* Counter & Action */}
         <div

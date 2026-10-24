@@ -48,6 +48,7 @@ export default function CookiesScreen() {
     togglePromotion,
     deletePromotion,
     addPromotion,
+    updatePromotion,
     addCookieSale,
     deleteCookieSale,
     addCookieProduct,
@@ -73,6 +74,7 @@ export default function CookiesScreen() {
   const [isAddCookieOpen, setIsAddCookieOpen] = useState(false);
   const [isAddIngredientOpen, setIsAddIngredientOpen] = useState(false);
   const [isAddPromoOpen, setIsAddPromoOpen] = useState(false);
+  const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(null);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('Todos');
@@ -189,6 +191,11 @@ export default function CookiesScreen() {
         await deleteIngredient(ing.id);
       },
     });
+  };
+
+  const handleEditPromotion = (promo: Promotion) => {
+    setEditingPromotion(promo);
+    setIsAddPromoOpen(true);
   };
 
   const handleDeletePromotion = (promo: Promotion) => {
@@ -651,12 +658,18 @@ export default function CookiesScreen() {
         {subTab === 'promotions' && (
           <View style={{ flex: 1 }}>
             <View style={styles.subtabActionBar}>
-              <Text style={[styles.subtabTitle, { color: colors.textMain }]}>Promociones & Ofertas Activas</Text>
+              <View>
+                <Text style={[styles.subtabTitle, { color: colors.textMain }]}>Promociones & Ofertas Activas</Text>
+                <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>Mantén pulsada una promoción para editarla</Text>
+              </View>
               <Button
                 title="+ Oferta"
                 variant="amber"
                 icon={<Ionicons name="add" size={16} color="#fff" />}
-                onPress={() => setIsAddPromoOpen(true)}
+                onPress={() => {
+                  setEditingPromotion(null);
+                  setIsAddPromoOpen(true);
+                }}
                 style={{ paddingVertical: 6, paddingHorizontal: 12 }}
               />
             </View>
@@ -667,56 +680,78 @@ export default function CookiesScreen() {
               renderItem={({ item }) => {
                 const color = item.color_tag || '#F59E0B';
                 return (
-                  <DoubleBezelCard style={{ marginBottom: 12, opacity: item.is_active ? 1 : 0.65 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                        <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: `${color}20`, alignItems: 'center', justifyContent: 'center' }}>
-                          <Ionicons name="pricetag" size={16} color={color} />
+                  <TouchableOpacity
+                    key={item.id}
+                    activeOpacity={0.82}
+                    delayLongPress={350}
+                    onLongPress={() => handleEditPromotion(item)}
+                    style={{ marginBottom: 12 }}
+                  >
+                    <DoubleBezelCard style={{ opacity: item.is_active ? 1 : 0.65 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                          <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: `${color}20`, alignItems: 'center', justifyContent: 'center' }}>
+                            <Ionicons name="pricetag" size={16} color={color} />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 15, fontWeight: '800', color: colors.textMain }}>{item.name}</Text>
+                            <Text style={{ fontSize: 11, color: colors.textDim }}>
+                              {item.target_type === 'all_products' ? 'Todo el Menú' : item.target_type === 'specific_products' ? 'Productos seleccionados' : 'Total de orden'}
+                            </Text>
+                          </View>
                         </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ fontSize: 15, fontWeight: '800', color: colors.textMain }}>{item.name}</Text>
-                          <Text style={{ fontSize: 11, color: colors.textDim }}>
-                            {item.target_type === 'all_products' ? 'Todo el Menú' : item.target_type === 'specific_products' ? 'Productos seleccionados' : 'Total de orden'}
+                        <View style={{ paddingVertical: 4, paddingHorizontal: 10, borderRadius: 12, backgroundColor: item.is_active ? color : colors.textMuted }}>
+                          <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{item.badge_text}</Text>
+                        </View>
+                      </View>
+
+                      <Text style={{ fontSize: 12, color: colors.textMuted, marginBottom: 10 }}>
+                        {item.description || 'Sin descripción.'}
+                      </Text>
+
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.borderSubtle, paddingTop: 8 }}>
+                        <TouchableOpacity
+                          onPress={() => togglePromotion(item.id)}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                        >
+                          <Ionicons
+                            name={item.is_active ? 'checkmark-circle' : 'pause-circle'}
+                            size={18}
+                            color={item.is_active ? colors.emeraldLight : colors.textMuted}
+                          />
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: item.is_active ? colors.emeraldLight : colors.textMuted }}>
+                            {item.is_active ? 'Activa' : 'Pausada'}
                           </Text>
+                        </TouchableOpacity>
+
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <TouchableOpacity
+                            onPress={() => handleEditPromotion(item)}
+                            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                            style={{
+                              padding: 6,
+                              borderRadius: 8,
+                              backgroundColor: colors.isDark ? 'rgba(59, 130, 246, 0.12)' : '#EFF6FF',
+                            }}
+                          >
+                            <Ionicons name="pencil" size={16} color="#3B82F6" />
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            onPress={() => handleDeletePromotion(item)}
+                            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                            style={{
+                              padding: 6,
+                              borderRadius: 8,
+                              backgroundColor: colors.isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2',
+                            }}
+                          >
+                            <Ionicons name="trash-outline" size={17} color="#EF4444" />
+                          </TouchableOpacity>
                         </View>
                       </View>
-                      <View style={{ paddingVertical: 4, paddingHorizontal: 10, borderRadius: 12, backgroundColor: item.is_active ? color : colors.textMuted }}>
-                        <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{item.badge_text}</Text>
-                      </View>
-                    </View>
-
-                    <Text style={{ fontSize: 12, color: colors.textMuted, marginBottom: 10 }}>
-                      {item.description || 'Sin descripción.'}
-                    </Text>
-
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.borderSubtle, paddingTop: 8 }}>
-                      <TouchableOpacity
-                        onPress={() => togglePromotion(item.id)}
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-                      >
-                        <Ionicons
-                          name={item.is_active ? 'checkmark-circle' : 'pause-circle'}
-                          size={18}
-                          color={item.is_active ? colors.emeraldLight : colors.textMuted}
-                        />
-                        <Text style={{ fontSize: 12, fontWeight: '700', color: item.is_active ? colors.emeraldLight : colors.textMuted }}>
-                          {item.is_active ? 'Activa' : 'Pausada'}
-                        </Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        onPress={() => handleDeletePromotion(item)}
-                        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                        style={{
-                          padding: 6,
-                          borderRadius: 8,
-                          backgroundColor: colors.isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2',
-                        }}
-                      >
-                        <Ionicons name="trash-outline" size={17} color="#EF4444" />
-                      </TouchableOpacity>
-                    </View>
-                  </DoubleBezelCard>
+                    </DoubleBezelCard>
+                  </TouchableOpacity>
                 );
               }}
               contentContainerStyle={{ paddingBottom: 40 }}
@@ -854,12 +889,17 @@ export default function CookiesScreen() {
         onAddIngredient={addIngredient}
       />
 
-      {/* Add Promotion Modal */}
+      {/* Add / Edit Promotion Modal */}
       <AddPromotionModal
         visible={isAddPromoOpen}
-        onClose={() => setIsAddPromoOpen(false)}
+        onClose={() => {
+          setIsAddPromoOpen(false);
+          setEditingPromotion(null);
+        }}
         cookies={cookies}
         onAddPromotion={addPromotion}
+        promotionToEdit={editingPromotion}
+        onUpdatePromotion={updatePromotion}
       />
 
       {/* Add / Edit Order Modal */}
