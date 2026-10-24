@@ -1,11 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { DoubleBezelCard } from '../ui/DoubleBezelCard';
-import { Badge } from '../ui/Badge';
-import { colors, useThemeColors } from '../../theme';
+import { useThemeColors, radii } from '../../theme';
 import { Expense } from '../../lib/types';
 import { Ionicons } from '@expo/vector-icons';
-
 import { confirmAction } from '../../stores/confirmation.store';
 
 interface ExpenseCardProps {
@@ -18,12 +16,24 @@ interface ExpenseCardProps {
 export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onPress, onLongPress, onDelete }) => {
   const colors = useThemeColors();
 
-  const getBadgeVariant = (cat: string) => {
-    if (cat.includes('Galletas')) return 'amber';
-    if (cat.includes('Empaques')) return 'purple';
-    if (cat.includes('Luz') || cat.includes('Servicios')) return 'cyan';
-    return 'emerald';
+  const getCategoryTheme = (cat: string) => {
+    if (cat.includes('Galletas')) {
+      return { icon: 'nutrition-outline' as const, bg: colors.amberBg, color: colors.amberText, border: colors.amberBorder };
+    }
+    if (cat.includes('Empaques')) {
+      return { icon: 'cube-outline' as const, bg: colors.purpleBg, color: colors.purpleText, border: colors.purpleBorder };
+    }
+    if (cat.includes('Luz') || cat.includes('Servicios')) {
+      return { icon: 'flash-outline' as const, bg: colors.cyanBg, color: colors.brandText, border: colors.brandBorder };
+    }
+    if (cat.includes('Transporte')) {
+      return { icon: 'car-outline' as const, bg: colors.brandBg, color: colors.brandText, border: colors.brandBorder };
+    }
+    return { icon: 'cart-outline' as const, bg: colors.roseBg, color: colors.roseText, border: colors.roseBorder };
   };
+
+  const catTheme = getCategoryTheme(expense.category);
+  const itemCount = expense.receipt_data?.items?.length || 0;
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -44,39 +54,68 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onPress, onLo
       delayLongPress={320}
     >
       <DoubleBezelCard style={styles.cardWrapper}>
-        <View style={styles.row}>
-          <View style={styles.leftCol}>
-            <Text style={[styles.title, { color: colors.textMain }]} numberOfLines={1}>
-              {expense.title}
-            </Text>
-            <View style={styles.metaRow}>
-              <Badge label={expense.category} variant={getBadgeVariant(expense.category)} />
-              <Text style={[styles.dateText, { color: colors.textDim }]}>{expense.date}</Text>
-              <Text style={[styles.payText, { color: colors.textDim }]}>• {expense.payment_method}</Text>
+        <View style={styles.cardBody}>
+          {/* Main Top Row: Icon + Title + Big Amount */}
+          <View style={styles.mainRow}>
+            {/* Round Category Icon */}
+            <View style={[styles.iconCircle, { backgroundColor: catTheme.bg, borderColor: catTheme.border }]}>
+              <Ionicons name={catTheme.icon} size={18} color={catTheme.color} />
             </View>
-            {expense.notes ? (
-              <Text style={[styles.notesText, { color: colors.textMuted }]} numberOfLines={1}>
-                {expense.notes}
+
+            {/* Concept & Category */}
+            <View style={styles.titleCol}>
+              <Text style={[styles.title, { color: colors.textMain }]} numberOfLines={1}>
+                {expense.title}
               </Text>
-            ) : null}
+              <View style={styles.categoryBadgeRow}>
+                <View style={[styles.categoryBadge, { backgroundColor: catTheme.bg, borderColor: catTheme.border }]}>
+                  <Text style={[styles.categoryBadgeText, { color: catTheme.color }]}>
+                    {expense.category}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Amount */}
+            <View style={styles.amountCol}>
+              <Text style={[styles.amountText, { color: colors.rose }]}>
+                -${expense.amount.toFixed(2)}
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.rightCol}>
-            <Text style={styles.amountText}>-${expense.amount.toFixed(2)}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-              {onPress && (
-                <View style={styles.inspectIcon}>
-                  <Ionicons name="chevron-forward" size={14} color={colors.textDim} />
+          {/* Bottom Info Bar: Metadata on left, Actions on right */}
+          <View style={[styles.bottomBar, { borderTopColor: colors.borderSubtle }]}>
+            <View style={styles.metaRow}>
+              <Text style={[styles.metaText, { color: colors.textDim }]}>{expense.date}</Text>
+              <Text style={[styles.metaDot, { color: colors.textDim }]}>•</Text>
+              <Text style={[styles.metaText, { color: colors.textDim }]}>{expense.payment_method}</Text>
+
+              {itemCount > 0 ? (
+                <View style={[styles.ticketBadge, { backgroundColor: colors.brandBg, borderColor: colors.brandBorder }]}>
+                  <Ionicons name="receipt-outline" size={10} color={colors.brand} />
+                  <Text style={[styles.ticketBadgeText, { color: colors.brandText }]}>
+                    Ticket ({itemCount})
+                  </Text>
                 </View>
-              )}
+              ) : null}
+            </View>
+
+            {/* Actions: Delete & Chevron */}
+            <View style={styles.actionsGroup}>
               {onDelete && (
                 <TouchableOpacity
                   onPress={handleDelete}
-                  style={styles.deleteBtn}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={[styles.deleteBtn, { backgroundColor: colors.bgTertiary }]}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Ionicons name="trash-outline" size={16} color={colors.rose} />
+                  <Ionicons name="trash-outline" size={13} color={colors.rose} />
                 </TouchableOpacity>
+              )}
+              {onPress && (
+                <View style={[styles.chevronBadge, { backgroundColor: colors.bgTertiary }]}>
+                  <Ionicons name="chevron-forward" size={13} color={colors.textDim} />
+                </View>
               )}
             </View>
           </View>
@@ -88,56 +127,109 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onPress, onLo
 
 const styles = StyleSheet.create({
   cardWrapper: {
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  row: {
+  cardBody: {
+    paddingVertical: 2,
+  },
+  mainRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 10,
   },
-  leftCol: {
+  iconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titleCol: {
     flex: 1,
-    paddingRight: 12,
+    justifyContent: 'center',
   },
   title: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.textMain,
-    marginBottom: 6,
+    fontSize: 14.5,
+    fontWeight: '800',
+    letterSpacing: 0.1,
+    marginBottom: 3,
   },
-  metaRow: {
+  categoryBadgeRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
   },
-  dateText: {
-    fontSize: 12,
-    color: colors.textDim,
+  categoryBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
   },
-  payText: {
-    fontSize: 12,
-    color: colors.textDim,
+  categoryBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
-  notesText: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginTop: 4,
-    fontStyle: 'italic',
-  },
-  rightCol: {
+  amountCol: {
     alignItems: 'flex-end',
     justifyContent: 'center',
   },
   amountText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.rose,
+    fontSize: 16.5,
+    fontWeight: '900',
+    letterSpacing: 0.2,
+  },
+  bottomBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 0.8,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  metaText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  metaDot: {
+    fontSize: 11,
+  },
+  ticketBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  ticketBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+  },
+  actionsGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginLeft: 8,
   },
   deleteBtn: {
-    padding: 4,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  inspectIcon: {
-    padding: 2,
+  chevronBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

@@ -14,7 +14,8 @@ import {
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { colors, useThemeColors, radii } from '../../theme';
-import { ReceiptScanResult, Expense, ReceiptItem } from '../../lib/types';
+import { ReceiptScanResult, Expense, ReceiptItem, Ingredient } from '../../lib/types';
+import { useAppStore } from '../../stores/app.store';
 import { Ionicons } from '@expo/vector-icons';
 
 interface ReceiptPreviewModalProps {
@@ -23,6 +24,25 @@ interface ReceiptPreviewModalProps {
   scanResult: ReceiptScanResult | null;
   imageUri?: string | null;
   onConfirm: (expense: Partial<Expense>) => Promise<void>;
+}
+
+export interface MatchedExistingItem {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
+  matchedIngredient: Ingredient;
+  selectedToUpdateStock: boolean;
+}
+
+export interface NewDetectedItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  price: number;
+  type: 'edible' | 'packaging';
+  selectedToRegister: boolean;
 }
 
 const CATEGORIES = [
@@ -40,6 +60,54 @@ const PAYMENT_METHODS = [
   'Tarjeta Débito/Crédito'
 ];
 
+const normalizeStr = (str: string) =>
+  str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const STOP_WORDS = new Set([
+  'de', 'del', 'la', 'el', 'los', 'las', 'un', 'una', 'con', 'sin', 'para', 'en', 'y', 'o',
+  'kg', 'kilo', 'kilos', 'gr', 'g', 'gramo', 'gramos', 'ml', 'lt', 'l', 'litro', 'litros',
+  'pz', 'pza', 'pzas', 'pieza', 'piezas', 'paq', 'paquete', 'caja', 'cajas', 'bolsa', 'bolsas',
+  'especial', 'super', 'extra', 'selecta', 'original', 'premium', 'marca'
+]);
+
+function findInventoryMatch(itemName: string, inventory: Ingredient[]): Ingredient | null {
+  const normItem = normalizeStr(itemName);
+  if (!normItem) return null;
+
+  // 1. Direct or inclusive match
+  for (const ing of inventory) {
+    const normIng = normalizeStr(ing.name);
+    if (normIng === normItem) return ing;
+    if (normItem.includes(normIng) || normIng.includes(normItem)) {
+      return ing;
+    }
+  }
+
+  // 2. Keyword tokens matching
+  const itemWords = normItem.split(' ').filter((w) => w.length >= 3 && !STOP_WORDS.has(w));
+  if (itemWords.length === 0) return null;
+
+  let bestMatch: Ingredient | null = null;
+  let maxMatchedKeywords = 0;
+
+  for (const ing of inventory) {
+    const ingWords = normalizeStr(ing.name).split(' ').filter((w) => w.length >= 3 && !STOP_WORDS.has(w));
+    const matchedCount = itemWords.filter((iw) => ingWords.some((w) => w.includes(iw) || iw.includes(w))).length;
+    if (matchedCount > maxMatchedKeywords && (matchedCount >= 2 || (matchedCount === 1 && ingWords.length === 1))) {
+      maxMatchedKeywords = matchedCount;
+      bestMatch = ing;
+    }
+  }
+
+  return bestMatch;
+}
+
 export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
   visible,
   onClose,
@@ -48,6 +116,11 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
   onConfirm
 }) => {
   const colors = useThemeColors();
+  const isDark = colors.isDark;
+  const registeredIngredients = useAppStore((state) => state.ingredients);
+  const updateIngredient = useAppStore((state) => state.updateIngredient);
+  const addIngredient = useAppStore((state) => state.addIngredient);
+
   const [isSaving, setIsSaving] = useState(false);
   const [merchant, setMerchant] = useState('');
   const [amount, setAmount] = useState('');
@@ -55,11 +128,58 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0]);
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<ReceiptItem[]>([]);
+  const [matchedExisting, setMatchedExisting] = useState<MatchedExistingItem[]>([]);
+  const [newDetected, setNewDetected] = useState<NewDetectedItem[]>([]);
   const [showRawText, setShowRawText] = useState(false);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [newProdName, setNewProdName] = useState('');
   const [newProdPrice, setNewProdPrice] = useState('');
   const [newProdQty, setNewProdQty] = useState('1');
+
+  const classifyReceiptItems = (receiptItems: ReceiptItem[], inventory: Ingredient[]) => {
+    const existingList: MatchedExistingItem[] = [];
+    const newList: NewDetectedItem[] = [];
+
+    receiptItems.forEach((it, idx) => {
+      const match = findInventoryMatch(it.name, inventory);
+      if (match) {
+        existingList.push({
+          id: `match-${idx}-${match.id}`,
+          name: it.name,
+          quantity: it.quantity || 1,
+          price: it.price || 0,
+          matchedIngredient: match,
+          selectedToUpdateStock: true,
+        });
+      } else {
+        const lower = it.name.toLowerCase();
+        let guessedUnit = 'kg';
+        if (/(ml|mili)/.test(lower)) guessedUnit = 'ml';
+        else if (/(lt|litro|litros)/.test(lower)) guessedUnit = 'l';
+        else if (/(gr|gramos|g\b)/.test(lower)) guessedUnit = 'g';
+        else if (/(pz|pza|pzas|pieza|piezas|caja|cajas|paq|bolsa)/.test(lower)) guessedUnit = 'pza';
+        else if ((it.quantity || 1) > 5) guessedUnit = 'pza';
+
+        let guessedType: 'edible' | 'packaging' = 'edible';
+        if (/(bolsa|caja|kraft|empaque|etiqueta|liston|cinta|domo)/.test(lower)) {
+          guessedType = 'packaging';
+        }
+
+        newList.push({
+          id: `new-${idx}-${Date.now()}`,
+          name: it.name,
+          quantity: it.quantity || 1,
+          unit: guessedUnit,
+          price: it.price || 0,
+          type: guessedType,
+          selectedToRegister: true,
+        });
+      }
+    });
+
+    setMatchedExisting(existingList);
+    setNewDetected(newList);
+  };
 
   useEffect(() => {
     if (scanResult) {
@@ -67,8 +187,10 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
       setAmount(scanResult.total_amount ? String(scanResult.total_amount) : '0.00');
       setCategory(scanResult.suggested_category || CATEGORIES[0]);
       setPaymentMethod('Efectivo');
-      setItems(scanResult.items ? [...scanResult.items] : []);
-      setNotes(`Ticket escaneado (${scanResult.items?.length || 0} artículos)`);
+      const parsedItems = scanResult.items ? [...scanResult.items] : [];
+      setItems(parsedItems);
+      classifyReceiptItems(parsedItems, registeredIngredients);
+      setNotes(`Ticket escaneado (${parsedItems.length} artículos)`);
       setShowRawText(false);
       setShowAddProduct(false);
     } else {
@@ -77,14 +199,76 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
       setCategory(CATEGORIES[0]);
       setPaymentMethod('Efectivo');
       setItems([]);
+      setMatchedExisting([]);
+      setNewDetected([]);
       setNotes('Ticket capturado');
     }
-  }, [scanResult]);
+  }, [scanResult, registeredIngredients]);
 
-  const handleRemoveItem = (index: number) => {
-    const next = [...items];
-    next.splice(index, 1);
-    setItems(next);
+  if (!visible) return null;
+
+  const handleToggleMatchedItem = (id: string) => {
+    setMatchedExisting((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, selectedToUpdateStock: !m.selectedToUpdateStock } : m))
+    );
+  };
+
+  const handleToggleNewItem = (id: string) => {
+    setNewDetected((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, selectedToRegister: !n.selectedToRegister } : n))
+    );
+  };
+
+  const handleToggleAllNew = (select: boolean) => {
+    setNewDetected((prev) => prev.map((n) => ({ ...n, selectedToRegister: select })));
+  };
+
+  const handleUpdateNewItem = (id: string, field: keyof NewDetectedItem, value: any) => {
+    setNewDetected((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, [field]: value } : n))
+    );
+  };
+
+  const handleRemoveMatchedItem = (id: string) => {
+    setMatchedExisting((prev) => {
+      const target = prev.find((m) => m.id === id);
+      const next = prev.filter((m) => m.id !== id);
+      if (target) {
+        setItems((prevItems) => {
+          const itemIdx = prevItems.findIndex((it) => it.name === target.name);
+          if (itemIdx >= 0) {
+            const nextItems = [...prevItems];
+            nextItems.splice(itemIdx, 1);
+            const sum = nextItems.reduce((acc, it) => acc + it.price, 0);
+            setAmount(sum.toFixed(2));
+            return nextItems;
+          }
+          return prevItems;
+        });
+      }
+      return next;
+    });
+  };
+
+  const handleRemoveNewItem = (id: string) => {
+    setNewDetected((prev) => {
+      const target = prev.find((n) => n.id === id);
+      const next = prev.filter((n) => n.id !== id);
+      if (target) {
+        setItems((prevItems) => {
+          const itemIdx = prevItems.findIndex((it) => it.name === target.name);
+          if (itemIdx >= 0) {
+            const nextItems = [...prevItems];
+            nextItems.splice(itemIdx, 1);
+            const sum = nextItems.reduce((acc, it) => acc + it.price, 0);
+            setAmount(sum.toFixed(2));
+            return nextItems;
+          }
+          return prevItems;
+        });
+      }
+      return next;
+    });
   };
 
   const handleAddProduct = () => {
@@ -94,10 +278,11 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
       Alert.alert('Datos requeridos', 'Ingresa el nombre y un precio válido para el producto.');
       return;
     }
-    const nextItems = [...items, { name: newProdName.trim(), quantity: qVal, price: pVal }];
+    const newItem: ReceiptItem = { name: newProdName.trim(), quantity: qVal, price: pVal };
+    const nextItems = [...items, newItem];
     setItems(nextItems);
+    classifyReceiptItems(nextItems, registeredIngredients);
 
-    // Auto-update total amount
     const sum = nextItems.reduce((acc, it) => acc + it.price, 0);
     setAmount(sum.toFixed(2));
 
@@ -116,22 +301,65 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
 
     try {
       setIsSaving(true);
+      let updatedStockCount = 0;
+      let newRegisteredCount = 0;
+
+      // 1. Update stock for registered ingredients
+      for (const match of matchedExisting) {
+        if (match.selectedToUpdateStock) {
+          const addQty = Number(match.quantity) || 1;
+          const newStock = Number((match.matchedIngredient.stock_quantity + addQty).toFixed(2));
+          await updateIngredient(match.matchedIngredient.id, {
+            stock_quantity: newStock,
+          });
+          updatedStockCount++;
+        }
+      }
+
+      // 2. Add newly selected ingredients into inventory
+      for (const newItem of newDetected) {
+        if (newItem.selectedToRegister && newItem.name.trim()) {
+          const qty = Number(newItem.quantity) || 1;
+          const cost = Number(newItem.price) || 0;
+          await addIngredient({
+            name: newItem.name.trim(),
+            stock_quantity: qty,
+            package_quantity: qty,
+            package_cost: cost,
+            cost_per_unit: Number((cost / qty).toFixed(3)),
+            unit: newItem.unit,
+            supplier: merchant.trim() || 'Proveedor',
+            type: newItem.type,
+          });
+          newRegisteredCount++;
+        }
+      }
+
+      // 3. Save Expense record
       await onConfirm({
         title: `Compra ${merchant.trim() || 'Comercio'}`,
         amount: val,
         category,
-        date: scanResult.date || new Date().toISOString().split('T')[0],
+        date: scanResult?.date || new Date().toISOString().split('T')[0],
         payment_method: paymentMethod,
         notes: notes.trim(),
         receipt_url: imageUri || '',
         receipt_data: {
           merchant: merchant.trim(),
           total_amount: val,
-          date: scanResult.date || new Date().toISOString().split('T')[0],
+          date: scanResult?.date || new Date().toISOString().split('T')[0],
           items,
-          raw_text: scanResult.raw_text,
+          matched_stock_updated: updatedStockCount,
+          new_ingredients_added: newRegisteredCount,
+          raw_text: scanResult?.raw_text || '',
         } as any,
       });
+
+      let summaryMsg = `Ticket de $${val.toFixed(2)} MXN registrado correctamente.`;
+      if (updatedStockCount > 0 || newRegisteredCount > 0) {
+        summaryMsg += `\n\nInventario Almacén:\n• ${updatedStockCount} insumo(s) existente(s) sumados a su stock.\n• ${newRegisteredCount} nuevo(s) insumo(s) registrados con éxito.`;
+      }
+      Alert.alert('¡Ticket Procesado!', summaryMsg);
       onClose();
     } catch (err) {
       console.error(err);
@@ -248,30 +476,310 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
               </View>
             </View>
 
-            {/* Receipt Items Breakdown */}
-            <View style={[styles.paperCard, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={[styles.paperTitle, { color: colors.textDim }]}>
-                  ARTÍCULOS EXTRAÍDOS ({items.length})
+            {/* MINI STATUS SUMMARY BAR */}
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+              <View style={[styles.statusSummaryPill, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.14)' : '#ECFDF5', borderColor: colors.emeraldBorder }]}>
+                <Ionicons name="cube" size={13} color={colors.emeraldLight} />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: colors.emeraldLight }}>
+                  {matchedExisting.length} Insumos Registrados
                 </Text>
-                <TouchableOpacity
-                  onPress={() => setShowAddProduct(!showAddProduct)}
-                  style={[styles.addProdBadge, { backgroundColor: colors.brandBg, borderColor: colors.brandBorder }]}
-                >
-                  <Ionicons name={showAddProduct ? 'close' : 'add'} size={13} color={colors.brandText} />
-                  <Text style={[styles.addProdText, { color: colors.brandText }]}>
-                    {showAddProduct ? 'Cerrar' : '+ Agregar'}
+              </View>
+              <View style={[styles.statusSummaryPill, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.14)' : '#FEF3C7', borderColor: colors.amberBorder }]}>
+                <Ionicons name="sparkles" size={13} color={colors.amberLight} />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: colors.amberLight }}>
+                  {newDetected.length} Insumos Nuevos
+                </Text>
+              </View>
+            </View>
+
+            {/* SECCIÓN 1: INSUMOS YA REGISTRADOS EN ALMACÉN (SE SUMARÁN AL STOCK) */}
+            <View style={[styles.sectionContainer, { backgroundColor: isDark ? '#14201E' : '#F0FDF4', borderColor: isDark ? 'rgba(16, 185, 129, 0.35)' : '#BBF7D0' }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="cube" size={16} color={colors.emeraldLight} />
+                  <Text style={[styles.sectionTitle, { color: colors.emeraldLight }]}>
+                    INSUMOS YA REGISTRADOS ({matchedExisting.length})
                   </Text>
-                </TouchableOpacity>
+                </View>
+                <View style={[styles.miniBadge, { backgroundColor: colors.emeraldBg, borderColor: colors.emeraldBorder }]}>
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: colors.emeraldLight }}>Se sumará a Stock</Text>
+                </View>
               </View>
 
-              {/* Form to manually add item to receipt */}
+              <Text style={{ fontSize: 11, color: isDark ? '#A7F3D0' : '#166534', marginTop: 4, marginBottom: 8, lineHeight: 15 }}>
+                El sistema reconoció estos insumos en tu almacén. Se sumará automáticamente la cantidad comprada a tu inventario:
+              </Text>
+
+              {matchedExisting.length === 0 ? (
+                <View style={[styles.emptyBoxSm, { borderColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7' }]}>
+                  <Text style={{ fontSize: 11, color: isDark ? '#6EE7B7' : '#15803D', fontStyle: 'italic' }}>
+                    No se detectaron insumos previamente registrados en este ticket.
+                  </Text>
+                </View>
+              ) : (
+                <View style={{ gap: 8 }}>
+                  {matchedExisting.map((match) => {
+                    const newStock = Number((match.matchedIngredient.stock_quantity + match.quantity).toFixed(2));
+                    return (
+                      <View
+                        key={match.id}
+                        style={[
+                          styles.matchedItemCard,
+                          {
+                            backgroundColor: isDark ? '#1A2E2B' : '#FFFFFF',
+                            borderColor: match.selectedToUpdateStock ? colors.emeraldBorder : colors.borderSubtle,
+                          },
+                        ]}
+                      >
+                        <TouchableOpacity
+                          onPress={() => handleToggleMatchedItem(match.id)}
+                          style={{ padding: 4 }}
+                        >
+                          <Ionicons
+                            name={match.selectedToUpdateStock ? "checkbox" : "square-outline"}
+                            size={20}
+                            color={match.selectedToUpdateStock ? colors.emeraldLight : colors.textDim}
+                          />
+                        </TouchableOpacity>
+
+                        <View style={{ flex: 1, paddingHorizontal: 6 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={[styles.ticketItemName, { color: colors.textMain }]} numberOfLines={1}>
+                              {match.quantity}x {match.name}
+                            </Text>
+                            <Text style={[styles.ticketItemPrice, { color: colors.emeraldLight }]}>
+                              ${match.price.toFixed(2)} MXN
+                            </Text>
+                          </View>
+
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                            <View style={[styles.detectedMatchPill, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7' }]}>
+                              <Ionicons name="checkmark-circle" size={11} color={colors.emeraldLight} />
+                              <Text style={{ fontSize: 10, fontWeight: '800', color: colors.emeraldLight }} numberOfLines={1}>
+                                Insumo: {match.matchedIngredient.name}
+                              </Text>
+                            </View>
+                          </View>
+
+                          <View style={[styles.stockTransformRow, { backgroundColor: isDark ? '#11221F' : '#F0FDF4', borderColor: isDark ? 'rgba(16, 185, 129, 0.25)' : '#DCFCE7' }]}>
+                            <Text style={{ fontSize: 11, color: isDark ? '#D1FAE5' : '#065F46' }}>
+                              Stock: <Text style={{ fontWeight: '700' }}>{match.matchedIngredient.stock_quantity} {match.matchedIngredient.unit}</Text> ➔ Nuevo: <Text style={{ fontWeight: '900', color: colors.emeraldLight }}>{newStock} {match.matchedIngredient.unit}</Text> (+{match.quantity})
+                            </Text>
+                          </View>
+                        </View>
+
+                        <TouchableOpacity
+                          onPress={() => handleRemoveMatchedItem(match.id)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          style={{ padding: 4 }}
+                        >
+                          <Ionicons name="trash-outline" size={16} color={colors.roseLight} />
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+
+            {/* SECCIÓN 2: INSUMOS NUEVOS DETECTADOS EN EL TICKET */}
+            <View style={[styles.sectionContainer, { backgroundColor: isDark ? '#231B15' : '#FFFBEB', borderColor: isDark ? 'rgba(245, 158, 11, 0.4)' : '#FDE68A', marginTop: 12 }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="sparkles" size={16} color={colors.amberLight} />
+                  <Text style={[styles.sectionTitle, { color: colors.amberLight }]}>
+                    INSUMOS NUEVOS DETECTADOS ({newDetected.length})
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  <TouchableOpacity
+                    onPress={() => handleToggleAllNew(true)}
+                    style={[styles.miniHeaderBtn, { backgroundColor: colors.amberBg, borderColor: colors.amberBorder }]}
+                  >
+                    <Text style={{ fontSize: 9.5, fontWeight: '800', color: colors.amberLight }}>Marcar Todos</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleToggleAllNew(false)}
+                    style={[styles.miniHeaderBtn, { backgroundColor: isDark ? '#2E2219' : '#FEF3C7', borderColor: colors.borderSubtle }]}
+                  >
+                    <Text style={{ fontSize: 9.5, fontWeight: '700', color: colors.textDim }}>Desmarcar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={[styles.alertNoticeBox, { backgroundColor: isDark ? '#2B1F17' : '#FEF3C7', borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : '#FDE68A' }]}>
+                <Ionicons name="alert-circle" size={18} color={colors.amberLight} />
+                <Text style={{ fontSize: 11, color: isDark ? '#FDE68A' : '#92400E', flex: 1, lineHeight: 15 }}>
+                  <Text style={{ fontWeight: '800' }}>¿Deseas agregar estos insumos nuevos?</Text> Selecciona de la lista los que quieres registrar en tu almacén con su precio y cantidad:
+                </Text>
+              </View>
+
+              {newDetected.length === 0 ? (
+                <View style={[styles.emptyBoxSm, { borderColor: isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7' }]}>
+                  <Text style={{ fontSize: 11, color: isDark ? '#FCD34D' : '#B45309', fontStyle: 'italic' }}>
+                    ¡Excelente! Todos los productos de este ticket ya están registrados en tu almacén.
+                  </Text>
+                </View>
+              ) : (
+                <View style={{ gap: 10, marginTop: 8 }}>
+                  {newDetected.map((item) => {
+                    const unitRate = item.quantity > 0 ? (item.price / item.quantity).toFixed(2) : '0.00';
+                    return (
+                      <View
+                        key={item.id}
+                        style={[
+                          styles.newItemCard,
+                          {
+                            backgroundColor: isDark ? '#221915' : '#FFFFFF',
+                            borderColor: item.selectedToRegister ? colors.amberBorder : colors.borderSubtle,
+                          },
+                        ]}
+                      >
+                        {/* Row 1: Checkbox + Editable Name + Delete */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <TouchableOpacity
+                            onPress={() => handleToggleNewItem(item.id)}
+                            style={{ padding: 2 }}
+                          >
+                            <Ionicons
+                              name={item.selectedToRegister ? "checkbox" : "square-outline"}
+                              size={20}
+                              color={item.selectedToRegister ? colors.amberLight : colors.textDim}
+                            />
+                          </TouchableOpacity>
+
+                          <View style={{ flex: 1 }}>
+                            <TextInput
+                              style={[styles.newItemNameInput, { color: isDark ? '#F1F3F7' : '#181A1F', backgroundColor: isDark ? '#1C1512' : '#F8FAFC', borderColor: colors.borderSubtle }]}
+                              value={item.name}
+                              onChangeText={(v) => handleUpdateNewItem(item.id, 'name', v)}
+                              placeholder="Nombre del nuevo insumo"
+                              placeholderTextColor={colors.textDim}
+                            />
+                          </View>
+
+                          <TouchableOpacity
+                            onPress={() => handleRemoveNewItem(item.id)}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <Ionicons name="trash-outline" size={16} color={colors.roseLight} />
+                          </TouchableOpacity>
+                        </View>
+
+                        {/* Row 2: Quantity, Unit Selector, and Price */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#1C1512' : '#F8FAFC', borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radii.sm, paddingHorizontal: 8, paddingVertical: 4 }}>
+                            <Text style={{ fontSize: 10, color: colors.textDim, marginRight: 4, fontWeight: '700' }}>CANT:</Text>
+                            <TextInput
+                              style={{ color: colors.textMain, fontSize: 13, fontWeight: '800', minWidth: 32, textAlign: 'center', padding: 0 }}
+                              value={String(item.quantity || '')}
+                              keyboardType="numeric"
+                              onChangeText={(v) => handleUpdateNewItem(item.id, 'quantity', parseFloat(v) || 0)}
+                            />
+                          </View>
+
+                          {/* Unit Selector Chips */}
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row', gap: 4 }}>
+                            {['kg', 'g', 'pza', 'l', 'ml'].map((u) => {
+                              const isUActive = item.unit.toLowerCase() === u;
+                              return (
+                                <TouchableOpacity
+                                  key={u}
+                                  onPress={() => handleUpdateNewItem(item.id, 'unit', u)}
+                                  style={[
+                                    styles.unitChip,
+                                    {
+                                      backgroundColor: isUActive ? colors.amberBg : (isDark ? '#1C1512' : '#F1F5F9'),
+                                      borderColor: isUActive ? colors.amberBorder : colors.borderSubtle,
+                                    },
+                                  ]}
+                                >
+                                  <Text style={{ fontSize: 10, fontWeight: isUActive ? '800' : '600', color: isUActive ? colors.amberLight : colors.textDim }}>
+                                    {u}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </ScrollView>
+
+                          {/* Price input */}
+                          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#1C1512' : '#F8FAFC', borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radii.sm, paddingHorizontal: 8, paddingVertical: 4 }}>
+                            <Text style={{ fontSize: 11, color: colors.textDim, fontWeight: '700' }}>$</Text>
+                            <TextInput
+                              style={{ color: colors.emeraldLight, fontSize: 13, fontWeight: '900', minWidth: 46, textAlign: 'right', padding: 0 }}
+                              value={String(item.price || '')}
+                              keyboardType="numeric"
+                              onChangeText={(v) => handleUpdateNewItem(item.id, 'price', parseFloat(v) || 0)}
+                            />
+                          </View>
+                        </View>
+
+                        {/* Row 3: Type Selector & Cost per unit hint */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                          <View style={{ flexDirection: 'row', gap: 4 }}>
+                            {(['edible', 'packaging'] as const).map((t) => {
+                              const isTActive = item.type === t;
+                              return (
+                                <TouchableOpacity
+                                  key={t}
+                                  onPress={() => handleUpdateNewItem(item.id, 'type', t)}
+                                  style={[
+                                    styles.typeChip,
+                                    {
+                                      backgroundColor: isTActive
+                                        ? (t === 'packaging' ? colors.purpleBg : colors.amberBg)
+                                        : (isDark ? '#1C1512' : '#F1F5F9'),
+                                      borderColor: isTActive
+                                        ? (t === 'packaging' ? colors.purpleBorder : colors.amberBorder)
+                                        : colors.borderSubtle,
+                                    },
+                                  ]}
+                                >
+                                  <Text
+                                    style={{
+                                      fontSize: 10,
+                                      fontWeight: isTActive ? '800' : '600',
+                                      color: isTActive
+                                        ? (t === 'packaging' ? colors.purpleLight : colors.amberLight)
+                                        : colors.textDim,
+                                    }}
+                                  >
+                                    {t === 'edible' ? '🍪 Comestible' : '📦 Empaque'}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+
+                          <Text style={{ fontSize: 10, color: colors.textDim }}>
+                            Costo: <Text style={{ fontWeight: '800', color: colors.emeraldLight }}>${unitRate} / {item.unit}</Text>
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+
+            {/* MANUAL PRODUCT ADD BUTTON & FORM */}
+            <View style={{ marginTop: 12 }}>
+              <TouchableOpacity
+                onPress={() => setShowAddProduct(!showAddProduct)}
+                style={[styles.manualAddTrigger, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+              >
+                <Ionicons name={showAddProduct ? "close-circle" : "add-circle"} size={16} color={colors.brandLight} />
+                <Text style={{ fontSize: 12, fontWeight: '800', color: colors.brandLight, flex: 1, marginLeft: 6 }}>
+                  {showAddProduct ? 'Cerrar formulario manual' : '+ Agregar Producto Manual al Ticket'}
+                </Text>
+              </TouchableOpacity>
+
               {showAddProduct && (
                 <View style={[styles.addProductBox, { borderColor: colors.borderSubtle, backgroundColor: colors.bgCard }]}>
                   <Text style={[styles.subLabel, { color: colors.textDim }]}>Agregar Producto Manual:</Text>
                   <TextInput
                     style={[styles.inputSm, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
-                    placeholder="Nombre del producto (ej. Harina)"
+                    placeholder="Nombre del producto (ej. Harina Selecta)"
                     placeholderTextColor={colors.textDim}
                     value={newProdName}
                     onChangeText={setNewProdName}
@@ -299,48 +807,27 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
                   </View>
                 </View>
               )}
+            </View>
 
-              <View style={[styles.divider, { borderColor: colors.borderSubtle }]} />
-
-              {items.length === 0 ? (
-                <Text style={{ fontSize: 12, color: colors.textDim, paddingVertical: 6, fontStyle: 'italic' }}>
-                  No se desglosaron artículos individuales. El total se registrará directamente.
-                </Text>
-              ) : (
-                items.map((item, idx) => (
-                  <View key={idx} style={[styles.itemRow, { borderBottomColor: colors.borderSubtle }]}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.itemName, { color: colors.textMain }]} numberOfLines={2}>
-                        {item.quantity}x {item.name}
-                      </Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                      <Text style={[styles.itemPrice, { color: colors.textMain }]}>${item.price.toFixed(2)}</Text>
-                      <TouchableOpacity onPress={() => handleRemoveItem(idx)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                        <Ionicons name="trash-outline" size={15} color={colors.rose} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))
-              )}
-
-              <View style={[styles.thickDivider, { backgroundColor: colors.borderSubtle }]} />
-              <View style={styles.totalRow}>
-                <Text style={[styles.totalLabel, { color: colors.textMain }]}>TOTAL TICKET:</Text>
-                <Text style={[styles.totalAmount, { color: colors.emeraldLight }]}>
-                  ${displayTotal.toFixed(2)} MXN
+            {/* TOTAL TICKET BAR */}
+            <View style={[styles.totalCardBar, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
+              <View>
+                <Text style={[styles.totalLabel, { color: colors.textMain }]}>TOTAL DEL TICKET:</Text>
+                <Text style={{ fontSize: 10, color: colors.textDim }}>
+                  {items.length} artículos desglosados en ticket
                 </Text>
               </View>
+              <Text style={[styles.totalAmount, { color: colors.emeraldLight }]}>
+                ${displayTotal.toFixed(2)} MXN
+              </Text>
             </View>
 
             {/* Expandable Raw Text from OCR */}
-            {scanResult.raw_text && (
+            {Boolean(scanResult?.raw_text) && (
               <View style={{ marginTop: 10 }}>
                 <TouchableOpacity
                   onPress={() => setShowRawText(!showRawText)}
-                  style={[styles.rawTextBtn, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
-                  activeOpacity={0.7}
-                >
+                  style={[styles.rawTextBtn, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
                   <Ionicons name="document-text-outline" size={14} color={colors.brand} />
                   <Text style={[styles.rawTextBtnLabel, { color: colors.brand }]}>
                     {showRawText ? 'Ocultar Texto Leído por IA' : 'Ver Texto Completo Leído por IA'}
@@ -350,9 +837,27 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
 
                 {showRawText && (
                   <View style={[styles.rawTextBox, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
-                    <Text style={[styles.rawTextContent, { color: colors.textMuted }]}>
-                      {scanResult.raw_text}
-                    </Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textDim, textTransform: 'uppercase' }}>
+                        Texto OCR detectado ({scanResult?.raw_text?.length || 0} caracteres)
+                      </Text>
+                      <Text style={{ fontSize: 9, color: colors.textDim }}>
+                        Desliza para ver todo ↓
+                      </Text>
+                    </View>
+                    <ScrollView
+                      style={styles.rawTextScroll}
+                      nestedScrollEnabled={true}
+                      showsVerticalScrollIndicator={true}
+                      persistentScrollbar={true}
+                    >
+                      <Text
+                        selectable={true}
+                        style={[styles.rawTextContent, { color: colors.textMuted }]}
+                      >
+                        {scanResult?.raw_text}
+                      </Text>
+                    </ScrollView>
                   </View>
                 )}
               </View>
@@ -607,11 +1112,13 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     padding: 10,
     marginTop: 6,
-    maxHeight: 140,
+  },
+  rawTextScroll: {
+    maxHeight: 180,
   },
   rawTextContent: {
     fontSize: 11,
-    lineHeight: 16,
+    lineHeight: 17,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   fixedFooter: {
@@ -621,5 +1128,134 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 26 : 16,
     borderTopWidth: 1,
     elevation: 8,
+  },
+  statusSummaryPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+  },
+  sectionContainer: {
+    borderRadius: radii.md,
+    borderWidth: 1,
+    padding: 12,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  miniBadge: {
+    borderWidth: 1,
+    borderRadius: radii.pill,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+  },
+  emptyBoxSm: {
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: radii.sm,
+    padding: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  matchedItemCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    borderWidth: 1,
+    borderRadius: radii.sm,
+    padding: 10,
+  },
+  ticketItemName: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    flex: 1,
+    paddingRight: 6,
+  },
+  ticketItemPrice: {
+    fontSize: 12.5,
+    fontWeight: '900',
+  },
+  detectedMatchPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 2,
+    paddingHorizontal: 7,
+    borderRadius: radii.pill,
+  },
+  stockTransformRow: {
+    marginTop: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+  },
+  alertNoticeBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: radii.sm,
+    padding: 8,
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  miniHeaderBtn: {
+    borderWidth: 1,
+    borderRadius: radii.pill,
+    paddingVertical: 2,
+    paddingHorizontal: 7,
+  },
+  newItemCard: {
+    borderWidth: 1,
+    borderRadius: radii.sm,
+    padding: 10,
+  },
+  newItemNameInput: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    borderWidth: 1,
+    borderRadius: radii.sm,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  unitChip: {
+    borderWidth: 1,
+    borderRadius: radii.sm,
+    paddingVertical: 4,
+    paddingHorizontal: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  typeChip: {
+    borderWidth: 1,
+    borderRadius: radii.pill,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  manualAddTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: radii.md,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  totalCardBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: radii.md,
+    padding: 12,
+    marginTop: 12,
   },
 });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   Receipt,
@@ -38,8 +38,23 @@ export const Navbar: React.FC<NavbarProps> = ({
   theme,
   onToggleTheme
 }) => {
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 25) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <header className="nav-island-wrapper">
+    <header className={`nav-island-wrapper ${isScrolled ? 'scrolled' : 'at-top'}`}>
       <nav className="nav-island">
         {/* Brand logo & title */}
         <div className="nav-brand" onClick={() => onTabChange('dashboard')}>

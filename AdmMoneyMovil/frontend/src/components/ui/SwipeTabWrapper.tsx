@@ -8,6 +8,7 @@ import {
   Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAppStore } from '../../stores/app.store';
 
 // Secuencia exacta de las 7 pestañas principales de la app móvil
 export const TAB_ROUTES = [
@@ -34,6 +35,8 @@ export const SwipeTabWrapper: React.FC<SwipeTabWrapperProps> = ({
   enabled = true,
 }) => {
   const router = useRouter();
+  const storeSwipeEnabled = useAppStore((state) => state.swipeEnabled);
+  const isEnabled = enabled && (storeSwipeEnabled ?? true);
   const screenWidth = Dimensions.get('window').width;
   const translateX = useRef(new Animated.Value(0)).current;
   const isNavigatingRef = useRef(false);
@@ -48,24 +51,30 @@ export const SwipeTabWrapper: React.FC<SwipeTabWrapperProps> = ({
 
   const panResponder = useRef(
     PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        if (!enabled || isNavigatingRef.current) return false;
-        // Solo capturar cuando el gesto es claramente horizontal para no interferir con scroll vertical
-        const isHorizontal =
-          Math.abs(gestureState.dx) > 14 &&
-          Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.5;
-        return isHorizontal;
+        if (!isEnabled || isNavigatingRef.current) return false;
+        // Solo capturar cuando el gesto es claramente horizontal y deliberado
+        return (
+          Math.abs(gestureState.dx) > 18 &&
+          Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.5
+        );
       },
       onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
-        if (!enabled || isNavigatingRef.current) return false;
-        // Para swipes rápidos horizontales
-        return Math.abs(gestureState.dx) > 28 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 2.0;
+        if (!isEnabled || isNavigatingRef.current) return false;
+        // En Android, los ScrollViews absorben gestos horizontales si no se capturan
+        return (
+          Math.abs(gestureState.dx) > 18 &&
+          Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.5
+        );
       },
+      onPanResponderTerminationRequest: () => true,
       onPanResponderGrant: () => {
         translateX.stopAnimation();
       },
       onPanResponderMove: (evt, gestureState) => {
-        if (!enabled || isNavigatingRef.current) return;
+        if (!isEnabled || isNavigatingRef.current) return;
 
         let dx = gestureState.dx;
 
@@ -80,45 +89,44 @@ export const SwipeTabWrapper: React.FC<SwipeTabWrapperProps> = ({
         translateX.setValue(dx);
       },
       onPanResponderRelease: (evt, gestureState) => {
-        if (!enabled || isNavigatingRef.current) return;
+        if (!isEnabled || isNavigatingRef.current) return;
 
-        const threshold = screenWidth * 0.22;
-        const isFastSwipe = Math.abs(gestureState.vx) > 0.35;
+        const threshold = screenWidth * 0.15;
+        const isFastSwipe = Math.abs(gestureState.vx) > 0.25;
         const dx = gestureState.dx;
 
         // Deslizar hacia la izquierda (avanzar a la pestaña siguiente)
-        if ((dx < -threshold || (dx < -25 && isFastSwipe)) && currentIndex < TAB_ROUTES.length - 1) {
+        if ((dx < -threshold || (dx < -20 && isFastSwipe)) && currentIndex < TAB_ROUTES.length - 1) {
           isNavigatingRef.current = true;
           const nextRoute = TAB_ROUTES[currentIndex + 1];
 
           Animated.timing(translateX, {
             toValue: -screenWidth,
-            duration: 180,
+            duration: 160,
             useNativeDriver: true,
           }).start(() => {
-            router.push(nextRoute as any);
-            // Pequeña espera para reiniciar tras cambiar de ruta
+            router.navigate(nextRoute as any);
             setTimeout(() => {
               translateX.setValue(0);
               isNavigatingRef.current = false;
-            }, 50);
+            }, 60);
           });
         }
         // Deslizar hacia la derecha (volver a la pestaña anterior)
-        else if ((dx > threshold || (dx > 25 && isFastSwipe)) && currentIndex > 0) {
+        else if ((dx > threshold || (dx > 20 && isFastSwipe)) && currentIndex > 0) {
           isNavigatingRef.current = true;
           const prevRoute = TAB_ROUTES[currentIndex - 1];
 
           Animated.timing(translateX, {
             toValue: screenWidth,
-            duration: 180,
+            duration: 160,
             useNativeDriver: true,
           }).start(() => {
-            router.push(prevRoute as any);
+            router.navigate(prevRoute as any);
             setTimeout(() => {
               translateX.setValue(0);
               isNavigatingRef.current = false;
-            }, 50);
+            }, 60);
           });
         }
         // Si no superó el umbral, regresar elásticamente a su posición original

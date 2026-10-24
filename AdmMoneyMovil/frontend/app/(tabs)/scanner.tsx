@@ -28,7 +28,7 @@ import { useRouter } from 'expo-router';
 export default function ScannerScreen() {
   const router = useRouter();
   const colors = useThemeColors();
-  const { addExpense, expenses, scannedTickets, addScannedTicket } = useAppStore();
+  const { addExpense, expenses, scannedTickets, addScannedTicket, highPrecisionOcr } = useAppStore();
 
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -112,17 +112,18 @@ export default function ScannerScreen() {
         return;
       }
 
+      const imgQuality = highPrecisionOcr ? 0.98 : 0.75;
       let result: ImagePicker.ImagePickerResult;
       try {
         result = await ImagePicker.launchCameraAsync({
           mediaTypes: ['images'],
           allowsEditing: false,
-          quality: 0.85,
+          quality: imgQuality,
         });
       } catch (camErr: any) {
         console.warn('Primary launchCameraAsync fallback:', camErr);
         result = await ImagePicker.launchCameraAsync({
-          quality: 0.85,
+          quality: imgQuality,
         });
       }
 
@@ -179,12 +180,13 @@ export default function ScannerScreen() {
         return;
       }
 
+      const imgQuality = highPrecisionOcr ? 0.98 : 0.75;
       let result: ImagePicker.ImagePickerResult;
       try {
         result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ['images'],
           allowsEditing: false,
-          quality: 0.85,
+          quality: imgQuality,
           legacy: Platform.OS === 'android',
         });
       } catch (pickerErr: any) {
@@ -192,7 +194,7 @@ export default function ScannerScreen() {
         result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ['images'],
           allowsEditing: false,
-          quality: 0.85,
+          quality: imgQuality,
           legacy: Platform.OS !== 'android',
         });
       }
@@ -332,11 +334,6 @@ export default function ScannerScreen() {
     setIsModalVisible(false);
     setImageUri(null);
     setScanResult(null);
-    Alert.alert(
-      '¡Gasto Registrado con Éxito!',
-      `Se sumaron $${data.amount?.toFixed(2)} MXN a tus gastos generales.`,
-      [{ text: 'Ver en Gastos', onPress: () => router.push('/expenses') }]
-    );
   };
 
   return (
@@ -348,7 +345,32 @@ export default function ScannerScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.screenEyebrow, { color: colors.brandLight }]}>OCR INTELIGENTE</Text>
+            <View style={styles.headerBadgeRow}>
+              <Text style={[styles.screenEyebrow, { color: colors.brandLight }]}>OCR INTELIGENTE</Text>
+              <View
+                style={[
+                  styles.precisionBadge,
+                  {
+                    backgroundColor: highPrecisionOcr ? 'rgba(16, 185, 129, 0.12)' : 'rgba(100, 116, 139, 0.12)',
+                    borderColor: highPrecisionOcr ? '#10B981' : colors.borderSubtle,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={highPrecisionOcr ? 'sparkles' : 'flash-outline'}
+                  size={11}
+                  color={highPrecisionOcr ? '#10B981' : colors.textDim}
+                />
+                <Text
+                  style={[
+                    styles.precisionBadgeText,
+                    { color: highPrecisionOcr ? '#10B981' : colors.textDim },
+                  ]}
+                >
+                  {highPrecisionOcr ? 'IA Alta Precisión' : 'Modo Rápido'}
+                </Text>
+              </View>
+            </View>
             <Text style={[styles.screenTitle, { color: colors.textMain }]}>Escáner de Tickets</Text>
             <Text style={[styles.screenSubtitle, { color: colors.textMuted }]}>
               Toma foto a tu ticket de compra para extraer automáticamente los productos y sumarlos a tus gastos.
@@ -510,25 +532,53 @@ export default function ScannerScreen() {
                   </Text>
                 </View>
               ) : (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.demoButtonsRow}
-                >
+                <View style={styles.ticketsVerticalList}>
                   {userTickets.map((ticket, idx) => (
                     <TouchableOpacity
                       key={ticket.id || idx}
                       onPress={() => handleSelectUploadedTicket(ticket)}
-                      style={[styles.demoTicketChip, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+                      style={[
+                        styles.ticketListItem,
+                        {
+                          backgroundColor: colors.bgTertiary,
+                          borderColor: colors.borderSubtle,
+                        },
+                      ]}
+                      activeOpacity={0.7}
                       disabled={isScanning}
                     >
-                      <Ionicons name="receipt" size={13} color={colors.brand} />
-                      <Text style={[styles.demoTicketText, { color: colors.textMain }]} numberOfLines={1}>
-                        {ticket.merchant} ({ticket.amount > 0 ? `$${ticket.amount.toFixed(0)}` : 'Sin total'})
-                      </Text>
+                      <View style={[styles.ticketListIconBox, { backgroundColor: colors.brandBg }]}>
+                        <Ionicons name="receipt-outline" size={18} color={colors.brand} />
+                      </View>
+
+                      <View style={styles.ticketListInfo}>
+                        <Text style={[styles.ticketListMerchant, { color: colors.textMain }]} numberOfLines={1}>
+                          {ticket.merchant || 'Ticket Registrado'}
+                        </Text>
+                        <Text style={[styles.ticketListMeta, { color: colors.textDim }]}>
+                          {ticket.date || 'Reciente'} • {ticket.category || 'Insumos'}
+                        </Text>
+                      </View>
+
+                      <View style={styles.ticketListRight}>
+                        <Text
+                          style={[
+                            styles.ticketListAmount,
+                            { color: ticket.amount > 0 ? colors.rose : colors.textDim },
+                          ]}
+                        >
+                          {ticket.amount > 0 ? `-$${ticket.amount.toFixed(2)}` : 'Sin total'}
+                        </Text>
+                        <View style={styles.ticketListActionBadge}>
+                          <Text style={[styles.ticketListActionText, { color: colors.brandLight }]}>
+                            Ver
+                          </Text>
+                          <Ionicons name="chevron-forward" size={12} color={colors.brandLight} />
+                        </View>
+                      </View>
                     </TouchableOpacity>
                   ))}
-                </ScrollView>
+                </View>
               )}
             </View>
           </View>
@@ -554,10 +604,28 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.md,
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
   header: {
     marginBottom: 10,
+  },
+  headerBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  precisionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  precisionBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
   screenEyebrow: {
     fontSize: 11,
@@ -762,22 +830,52 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  demoButtonsRow: {
-    flexDirection: 'row',
+  ticketsVerticalList: {
     gap: 8,
+    marginTop: 4,
   },
-  demoTicketChip: {
+  ticketListItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    padding: 10,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderRadius: radii.pill,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    gap: 10,
   },
-  demoTicketText: {
-    fontSize: 12,
-    fontWeight: '600',
+  ticketListIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ticketListInfo: {
+    flex: 1,
+  },
+  ticketListMerchant: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  ticketListMeta: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  ticketListRight: {
+    alignItems: 'flex-end',
+  },
+  ticketListAmount: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  ticketListActionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    marginTop: 2,
+  },
+  ticketListActionText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
   emptyTicketsContainer: {
     paddingVertical: 4,

@@ -5,7 +5,7 @@ export interface ConfirmationOptions {
   message: string;
   confirmText?: string;
   cancelText?: string;
-  type?: 'danger' | 'warning' | 'info';
+  type?: 'danger' | 'warning' | 'info' | 'success';
   onConfirm: () => Promise<void> | void;
   onCancel?: () => void;
 }

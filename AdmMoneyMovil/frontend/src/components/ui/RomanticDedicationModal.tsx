@@ -232,9 +232,10 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
                 </Text>
                 <AnimatedSignature
                   visible={visible}
-                  color={isDark ? '#FDA4AF' : '#881337'}
-                  width={260}
-                  height={115}
+                  color={isDark ? '#FDA4AF' : '#BE123C'}
+                  width={270}
+                  height={125}
+                  isDark={isDark}
                 />
               </View>
             </View>

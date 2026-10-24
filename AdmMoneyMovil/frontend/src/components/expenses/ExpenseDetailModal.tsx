@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal,
   View,
@@ -8,7 +8,10 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Platform
+  Platform,
+  Animated,
+  PanResponder,
+  Dimensions,
 } from 'react-native';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -54,7 +57,52 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0]);
   const [notes, setNotes] = useState('');
+  const [editItems, setEditItems] = useState<Array<{ name: string; price: number; quantity?: number }>>([]);
   const [isSaving, setIsSaving] = useState(false);
+
+  const screenHeight = Dimensions.get('window').height;
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      translateY.setValue(0);
+    }
+  }, [visible]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return gestureState.dy > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.3;
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        if (gestureState.dy > 0) {
+          translateY.setValue(gestureState.dy);
+        } else {
+          translateY.setValue(gestureState.dy * 0.15);
+        }
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dy > 110 || (gestureState.dy > 30 && gestureState.vy > 0.35)) {
+          Animated.timing(translateY, {
+            toValue: screenHeight,
+            duration: 180,
+            useNativeDriver: true,
+          }).start(() => {
+            onClose();
+            translateY.setValue(0);
+          });
+        } else {
+          Animated.spring(translateY, {
+            toValue: 0,
+            friction: 8,
+            tension: 80,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
 
   useEffect(() => {
     if (expense) {
@@ -63,11 +111,51 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
       setCategory(expense.category);
       setPaymentMethod(expense.payment_method || 'Efectivo');
       setNotes(expense.notes || '');
+      const rawItems = expense.receipt_data?.items;
+      if (Array.isArray(rawItems) && rawItems.length > 0) {
+        setEditItems(
+          rawItems.map((it: any) => ({
+            name: it.name || '',
+            price: Number(it.price || 0),
+            quantity: it.quantity ? Number(it.quantity) : 1,
+          }))
+        );
+      } else {
+        setEditItems([]);
+      }
       setIsEditing(false);
     }
   }, [expense]);
 
   if (!expense) return null;
+
+  const handleUpdateItem = (index: number, field: string, value: any) => {
+    setEditItems((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
+  };
+
+  const handleAddItem = () => {
+    setEditItems((prev) => [
+      ...prev,
+      { name: '', price: 0, quantity: 1 },
+    ]);
+  };
+
+  const handleRemoveItem = (index: number) => {
+    setEditItems((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleAutoCalculateTotal = () => {
+    if (editItems.length === 0) return;
+    const total = editItems.reduce(
+      (acc, it) => acc + (Number(it.price) || 0) * (Number(it.quantity) || 1),
+      0
+    );
+    setAmount(total.toFixed(2));
+  };
 
   const handleSaveEdit = async () => {
     const val = parseFloat(amount);
@@ -78,15 +166,25 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
 
     try {
       setIsSaving(true);
+      const cleanedItems = editItems.filter(
+        (it) => it.name.trim().length > 0 || (Number(it.price) || 0) > 0
+      );
+
+      const updatedReceiptData = {
+        ...(expense.receipt_data || {}),
+        items: cleanedItems,
+      };
+
       await onUpdate(expense.id, {
         title: title.trim(),
         amount: val,
         category,
         payment_method: paymentMethod,
         notes: notes.trim(),
+        receipt_data: updatedReceiptData,
       });
       setIsEditing(false);
-      Alert.alert('¡Actualizado!', 'El gasto ha sido modificado correctamente.');
+      Alert.alert('¡Actualizado!', 'El gasto y sus artículos han sido modificados correctamente.');
       onClose();
     } catch (err) {
       Alert.alert('Error', 'No se pudo guardar la modificación.');
@@ -121,25 +219,46 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
       <View style={styles.backdrop}>
-        <View style={[styles.dialog, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
-          {/* Header */}
-          <View style={[styles.header, { borderBottomColor: colors.borderSubtle }]}>
-            <View style={{ flex: 1, paddingRight: 8 }}>
-              <Text style={[styles.headerEyebrow, { color: colors.emeraldLight }]}>
-                {isEditing ? 'Editar Registro' : 'Detalle del Gasto'}
-              </Text>
-              <Text style={[styles.headerTitle, { color: colors.textMain }]} numberOfLines={1}>
-                {expense.title}
-              </Text>
+        <Animated.View
+          style={[
+            styles.dialog,
+            {
+              backgroundColor: colors.bgCard,
+              borderColor: colors.borderSubtle,
+              transform: [{ translateY }],
+            },
+          ]}
+        >
+          {/* Swipe down handle and Header with panResponder */}
+          <View {...panResponder.panHandlers}>
+            <View style={styles.dragHandleContainer}>
+              <View style={[styles.dragHandleBar, { backgroundColor: colors.borderSubtle }]} />
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={22} color={colors.textMuted} />
-            </TouchableOpacity>
+
+            <View style={[styles.header, { borderBottomColor: colors.borderSubtle }]}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={[styles.headerEyebrow, { color: colors.emeraldLight }]}>
+                  {isEditing ? 'Editar Registro' : 'Detalle del Gasto'}
+                </Text>
+                <Text style={[styles.headerTitle, { color: colors.textMain }]} numberOfLines={1}>
+                  {expense.title}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                <Ionicons name="close" size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <ScrollView style={styles.body}>
+          <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: 40 }}>
             {!isEditing ? (
               /* VIEW MODE */
               <View>
@@ -168,6 +287,31 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                   <Text style={[styles.infoKey, { color: colors.textDim }]}>Categoría Contable</Text>
                   <Text style={[styles.infoVal, { color: colors.textMain }]}>{expense.category}</Text>
                 </View>
+
+                {/* Scanned Receipt Breakdown */}
+                {Array.isArray(expense.receipt_data?.items) && expense.receipt_data.items.length > 0 && (
+                  <View style={[styles.receiptBox, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
+                    <View style={styles.receiptHeader}>
+                      <Ionicons name="receipt-outline" size={15} color={colors.brand} />
+                      <Text style={[styles.receiptHeaderText, { color: colors.textMain }]}>
+                        Artículos del Ticket ({expense.receipt_data.items.length})
+                      </Text>
+                    </View>
+                    <View style={[styles.receiptDivider, { backgroundColor: colors.borderSubtle }]} />
+                    {expense.receipt_data.items.map((item: any, idx: number) => (
+                      <View key={idx} style={[styles.receiptItemRow, { borderBottomColor: colors.borderSubtle }]}>
+                        <View style={{ flex: 1, paddingRight: 8 }}>
+                          <Text style={[styles.receiptItemName, { color: colors.textMain }]} numberOfLines={1}>
+                            {item.quantity && item.quantity > 1 ? `${item.quantity}x ` : ''}{item.name}
+                          </Text>
+                        </View>
+                        <Text style={[styles.receiptItemPrice, { color: colors.textMain }]}>
+                          ${Number(item.price || 0).toFixed(2)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
 
                 {expense.notes ? (
                   <View style={[styles.notesBox, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
@@ -248,6 +392,101 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                   ))}
                 </View>
 
+                {/* Editable Articles / Items List */}
+                <View style={{ marginBottom: 14 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="receipt-outline" size={15} color={colors.brandLight} />
+                      <Text style={[styles.formLabel, { color: colors.textMuted, marginBottom: 0 }]}>
+                        Artículos del Ticket ({editItems.length})
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      {editItems.length > 0 && (
+                        <TouchableOpacity
+                          onPress={handleAutoCalculateTotal}
+                          style={[styles.smallActionBtn, { backgroundColor: colors.emeraldBg, borderColor: colors.emeraldBorder }]}
+                        >
+                          <Ionicons name="calculator-outline" size={12} color={colors.emeraldLight} />
+                          <Text style={[styles.smallActionBtnText, { color: colors.emeraldLight }]}>Sumar al Total</Text>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity
+                        onPress={handleAddItem}
+                        style={[styles.smallActionBtn, { backgroundColor: colors.brandGlow, borderColor: colors.brandLight }]}
+                      >
+                        <Ionicons name="add" size={13} color={colors.brandLight} />
+                        <Text style={[styles.smallActionBtnText, { color: colors.brandLight }]}>+ Artículo</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {editItems.length === 0 ? (
+                    <TouchableOpacity
+                      onPress={handleAddItem}
+                      style={[styles.emptyItemsBox, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+                    >
+                      <Ionicons name="add-circle-outline" size={18} color={colors.brandLight} />
+                      <Text style={[styles.emptyItemsText, { color: colors.textMuted }]}>
+                        Toca para agregar artículos desglosados del ticket
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={{ gap: 8 }}>
+                      {editItems.map((item, idx) => (
+                        <View
+                          key={idx}
+                          style={[
+                            styles.editItemRow,
+                            { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }
+                          ]}
+                        >
+                          <TextInput
+                            style={[styles.itemInputName, { color: colors.textMain }]}
+                            placeholder="Nombre artículo"
+                            placeholderTextColor={colors.textDim}
+                            value={item.name}
+                            onChangeText={(txt) => handleUpdateItem(idx, 'name', txt)}
+                          />
+
+                          <View style={styles.itemRightGroup}>
+                            <View style={styles.itemQtyWrapper}>
+                              <Text style={[styles.itemSubLabel, { color: colors.textDim }]}>Cant:</Text>
+                              <TextInput
+                                style={[styles.itemInputQty, { color: colors.textMain }]}
+                                placeholder="1"
+                                placeholderTextColor={colors.textDim}
+                                keyboardType="numeric"
+                                value={String(item.quantity || 1)}
+                                onChangeText={(txt) => handleUpdateItem(idx, 'quantity', parseInt(txt) || 1)}
+                              />
+                            </View>
+
+                            <View style={styles.itemPriceWrapper}>
+                              <Text style={[styles.itemSubLabel, { color: colors.textDim }]}>$</Text>
+                              <TextInput
+                                style={[styles.itemInputPrice, { color: colors.emeraldLight }]}
+                                placeholder="0.00"
+                                placeholderTextColor={colors.textDim}
+                                keyboardType="numeric"
+                                value={item.price > 0 || item.price === 0 ? String(item.price) : ''}
+                                onChangeText={(txt) => handleUpdateItem(idx, 'price', parseFloat(txt) || 0)}
+                              />
+                            </View>
+
+                            <TouchableOpacity
+                              onPress={() => handleRemoveItem(idx)}
+                              style={styles.itemDeleteBtn}
+                            >
+                              <Ionicons name="trash-outline" size={16} color={colors.roseLight} />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
                 <Text style={styles.formLabel}>Notas u Observaciones</Text>
                 <TextInput
                   style={[styles.input, { height: 60 }]}
@@ -277,7 +516,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
               </View>
             )}
           </ScrollView>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -297,11 +536,22 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSubtle,
     maxHeight: '90%',
   },
+  dragHandleContainer: {
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  dragHandleBar: {
+    width: 40,
+    height: 4.5,
+    borderRadius: 3,
+    opacity: 0.6,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
   },
@@ -433,5 +683,127 @@ const styles = StyleSheet.create({
   pillTextActive: {
     color: '#ffffff',
     fontWeight: '700',
+  },
+  receiptBox: {
+    padding: 12,
+    borderRadius: radii.md,
+    marginTop: 12,
+    borderWidth: 1,
+  },
+  receiptHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  receiptHeaderText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  receiptDivider: {
+    height: 1,
+    marginVertical: 8,
+  },
+  receiptItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 5,
+    borderBottomWidth: 0.5,
+  },
+  receiptItemName: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  receiptItemPrice: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  smallActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: radii.pill,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  smallActionBtnText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  emptyItemsBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: radii.md,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+  },
+  emptyItemsText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  editItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: radii.md,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 8,
+  },
+  itemInputName: {
+    flex: 1,
+    fontSize: 13,
+    paddingVertical: 4,
+  },
+  itemRightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  itemQtyWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+    borderRadius: radii.sm,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  itemSubLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  itemInputQty: {
+    fontSize: 12,
+    width: 24,
+    textAlign: 'center',
+    paddingVertical: 2,
+    paddingHorizontal: 0,
+    fontWeight: '700',
+  },
+  itemPriceWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+    borderRadius: radii.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  itemInputPrice: {
+    fontSize: 13,
+    minWidth: 46,
+    fontWeight: '800',
+    paddingVertical: 2,
+    paddingHorizontal: 0,
+  },
+  itemDeleteBtn: {
+    padding: 4,
   },
 });

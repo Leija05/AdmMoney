@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal,
   View,
@@ -12,11 +12,15 @@ import {
   Linking,
   Alert,
   Platform,
+  Animated,
+  PanResponder,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors, radii, spacing } from '../../theme';
 import { CookieSale, Order } from '../../lib/types';
 import { getApiHost } from '../../services/api';
+import { useAppStore } from '../../stores/app.store';
 
 interface WhatsAppTicketModalProps {
   visible: boolean;
@@ -33,6 +37,8 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
 }) => {
   const colors = useThemeColors();
   const isDark = colors.isDark;
+  const businessName = useAppStore((state) => state.businessName) || 'Lucky Cookies';
+  const ticketFooterText = useAppStore((state) => state.ticketFooterText) || '¡Muchas gracias por tu preferencia y que disfrutes mucho tus galletas!';
 
   const extract10Digits = (raw: string) => {
     let digits = raw.replace(/\D/g, '');
@@ -46,11 +52,50 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
   const [includePdf, setIncludePdf] = useState(true);
   const [customNote, setCustomNote] = useState('');
 
+  const screenHeight = Dimensions.get('window').height;
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return gestureState.dy > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.3;
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        if (gestureState.dy > 0) {
+          translateY.setValue(gestureState.dy);
+        } else {
+          translateY.setValue(gestureState.dy * 0.15);
+        }
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dy > 110 || (gestureState.dy > 30 && gestureState.vy > 0.35)) {
+          Animated.timing(translateY, {
+            toValue: screenHeight,
+            duration: 180,
+            useNativeDriver: true,
+          }).start(() => {
+            onClose();
+            translateY.setValue(0);
+          });
+        } else {
+          Animated.spring(translateY, {
+            toValue: 0,
+            friction: 8,
+            tension: 80,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
   const customerName = order?.customer_name || sale?.customer_name || 'Cliente';
   const initialPhone = order?.customer_phone || '';
 
   useEffect(() => {
     if (visible) {
+      translateY.setValue(0);
       setPhoneDigits(extract10Digits(initialPhone));
       setCustomNote('');
       setIncludePdf(true);
@@ -93,7 +138,7 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
 
   // Build the live preview text matching the exact requested structure
   const buildMessage = () => {
-    let msg = `🍪 *Lucky Cookies • Galletas y Postres* 🍪\n\n`;
+    let msg = `🍪 *${businessName}* 🍪\n\n`;
     msg += `¡Hola *${customerName}*! Muchas gracias por tu compra. Te compartimos el comprobante de tu ${ticketType.toLowerCase()}:\n\n`;
     msg += `📋 *Comprobante Oficial • Ticket #${ticketId}*\n`;
     msg += `📅 *${dateText}*\n`;
@@ -109,7 +154,7 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
       msg += `\n📄 *Descarga tu comprobante oficial en PDF con logo:*\n${pdfUrl}\n`;
     }
 
-    msg += `\n✨ ¡Muchas gracias por tu preferencia y que disfrutes mucho tus galletas! ❤️🍪`;
+    msg += `\n✨ ${ticketFooterText} ❤️🍪`;
     return msg;
   };
 
@@ -172,36 +217,48 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
   };
 
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <View
+        <Animated.View
           style={[
             styles.dialog,
             {
               backgroundColor: isDark ? '#1C202A' : '#FFFFFF',
               borderColor: isDark ? '#2E384D' : '#E2E8F0',
+              transform: [{ translateY }],
             },
           ]}
         >
-          {/* Header */}
-          <View style={[styles.header, { borderBottomColor: isDark ? '#2A303C' : '#E5E7EB' }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Image
-                source={require('../../../assets/lucky_cookies_logo.png')}
-                style={styles.logoImage}
+          {/* Top Drag Handle & Header with swipe-down handler */}
+          <View {...panResponder.panHandlers}>
+            <View style={styles.dragHandleContainer}>
+              <View
+                style={[
+                  styles.dragHandleBar,
+                  { backgroundColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)' },
+                ]}
               />
-              <View>
-                <Text style={[styles.headerEyebrow, { color: colors.whatsappText }]}>
-                  WhatsApp Ticket & PDF
-                </Text>
-                <Text style={[styles.headerTitle, { color: isDark ? '#F1F3F7' : '#181A1F' }]}>
-                  Enviar a {customerName}
-                </Text>
-              </View>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={22} color={colors.textMuted} />
-            </TouchableOpacity>
+
+            <View style={[styles.header, { borderBottomColor: isDark ? '#2A303C' : '#E5E7EB' }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Image
+                  source={require('../../../assets/lucky_cookies_logo.png')}
+                  style={styles.logoImage}
+                />
+                <View>
+                  <Text style={[styles.headerEyebrow, { color: colors.whatsappText }]}>
+                    WhatsApp Ticket & PDF
+                  </Text>
+                  <Text style={[styles.headerTitle, { color: isDark ? '#F1F3F7' : '#181A1F' }]}>
+                    Enviar a {customerName}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                <Ionicons name="close" size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
@@ -409,7 +466,7 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
               </TouchableOpacity>
             </View>
           </ScrollView>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -541,6 +598,16 @@ const styles = StyleSheet.create({
   cancelBtnText: {
     fontSize: 13,
     fontWeight: '700',
+  },
+  dragHandleContainer: {
+    alignItems: 'center',
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  dragHandleBar: {
+    width: 42,
+    height: 4.5,
+    borderRadius: 3,
   },
   sendBtn: {
     flex: 2,

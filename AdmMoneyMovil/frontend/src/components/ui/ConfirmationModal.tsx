@@ -19,9 +19,57 @@ export const ConfirmationModal: React.FC = () => {
 
   if (!isOpen || !options) return null;
 
-  const isDanger = options.type !== 'warning' && options.type !== 'info';
-  const confirmLabel = options.confirmText || (isDanger ? 'Sí, Eliminar' : 'Confirmar');
+  const isDanger = options.type === 'danger';
+  const isSuccess = options.type === 'success';
+  const isWarning = options.type === 'warning';
+
+  const hasCancel = Boolean(options.cancelText && options.cancelText.trim().length > 0);
+  const confirmLabel =
+    options.confirmText ||
+    (isDanger ? 'Sí, Eliminar' : isSuccess ? '¡Entendido!' : 'Confirmar');
   const cancelLabel = options.cancelText || 'Cancelar';
+
+  const getBadgeMeta = () => {
+    if (isSuccess) {
+      return {
+        bg: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.12)',
+        border: isDark ? 'rgba(16, 185, 129, 0.35)' : 'rgba(16, 185, 129, 0.3)',
+        color: '#10B981',
+        icon: 'checkmark-circle' as const,
+      };
+    }
+    if (isWarning) {
+      return {
+        bg: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.12)',
+        border: isDark ? 'rgba(245, 158, 11, 0.35)' : 'rgba(245, 158, 11, 0.3)',
+        color: '#F59E0B',
+        icon: 'alert-circle' as const,
+      };
+    }
+    if (isDanger) {
+      return {
+        bg: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.12)',
+        border: isDark ? 'rgba(239, 68, 68, 0.35)' : 'rgba(239, 68, 68, 0.3)',
+        color: '#EF4444',
+        icon: 'trash-outline' as const,
+      };
+    }
+    return {
+      bg: isDark ? 'rgba(14, 165, 233, 0.15)' : 'rgba(2, 132, 199, 0.12)',
+      border: isDark ? 'rgba(14, 165, 233, 0.35)' : 'rgba(2, 132, 199, 0.3)',
+      color: colors.brand,
+      icon: 'information-circle' as const,
+    };
+  };
+
+  const meta = getBadgeMeta();
+
+  const getConfirmBg = () => {
+    if (isSuccess) return '#059669';
+    if (isDanger) return '#DC2626';
+    if (isWarning) return '#D97706';
+    return colors.brand;
+  };
 
   return (
     <Modal
@@ -37,7 +85,7 @@ export const ConfirmationModal: React.FC = () => {
               style={[
                 styles.dialogCard,
                 {
-                  backgroundColor: isDark ? '#181C26' : '#FFFFFF',
+                  backgroundColor: isDark ? '#141822' : '#FFFFFF',
                   borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                 },
               ]}
@@ -47,15 +95,15 @@ export const ConfirmationModal: React.FC = () => {
                 style={[
                   styles.iconBadge,
                   {
-                    backgroundColor: isDanger ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.12)',
-                    borderColor: isDanger ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)',
+                    backgroundColor: meta.bg,
+                    borderColor: meta.border,
                   },
                 ]}
               >
                 <Ionicons
-                  name={isDanger ? 'trash-outline' : 'alert-circle-outline'}
-                  size={28}
-                  color={isDanger ? '#EF4444' : '#F59E0B'}
+                  name={meta.icon}
+                  size={30}
+                  color={meta.color}
                 />
               </View>
 
@@ -87,22 +135,24 @@ export const ConfirmationModal: React.FC = () => {
 
               {/* Actions Footer */}
               <View style={styles.actionsRow}>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={closeConfirm}
-                  disabled={isLoading}
-                  style={[
-                    styles.cancelButton,
-                    {
-                      backgroundColor: isDark ? '#232836' : '#F1F5F9',
-                      borderColor: colors.borderSubtle,
-                    },
-                  ]}
-                >
-                  <Text style={[styles.cancelButtonText, { color: colors.textMuted }]}>
-                    {cancelLabel}
-                  </Text>
-                </TouchableOpacity>
+                {hasCancel && (
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={closeConfirm}
+                    disabled={isLoading}
+                    style={[
+                      styles.cancelButton,
+                      {
+                        backgroundColor: isDark ? '#1F2432' : '#F1F5F9',
+                        borderColor: colors.borderSubtle,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.cancelButtonText, { color: colors.textMuted }]}>
+                      {cancelLabel}
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
                 <TouchableOpacity
                   activeOpacity={0.8}
@@ -111,7 +161,9 @@ export const ConfirmationModal: React.FC = () => {
                   style={[
                     styles.confirmButton,
                     {
-                      backgroundColor: isDanger ? '#DC2626' : colors.brand,
+                      backgroundColor: getConfirmBg(),
+                      flex: hasCancel ? 1 : undefined,
+                      width: hasCancel ? undefined : '100%',
                     },
                   ]}
                 >
@@ -120,8 +172,8 @@ export const ConfirmationModal: React.FC = () => {
                   ) : (
                     <>
                       <Ionicons
-                        name={isDanger ? 'trash' : 'checkmark'}
-                        size={16}
+                        name={isDanger ? 'trash' : 'checkmark-circle'}
+                        size={17}
                         color="#FFFFFF"
                       />
                       <Text style={styles.confirmButtonText}>
@@ -142,46 +194,45 @@ export const ConfirmationModal: React.FC = () => {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(9, 13, 20, 0.72)',
+    backgroundColor: 'rgba(9, 13, 20, 0.76)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
   },
   dialogCard: {
     width: '100%',
-    maxWidth: 390,
-    borderRadius: radii.outer || 24,
+    maxWidth: 380,
+    borderRadius: 24,
     padding: 24,
     borderWidth: 1,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.35,
-    shadowRadius: 24,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.4,
+    shadowRadius: 28,
+    elevation: 12,
   },
   iconBadge: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
   title: {
-    fontSize: 18,
+    fontSize: 18.5,
     fontWeight: '800',
     textAlign: 'center',
     letterSpacing: -0.3,
     marginBottom: 8,
   },
   message: {
-    fontSize: 13,
+    fontSize: 13.5,
     lineHeight: 20,
     textAlign: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 8,
+    marginBottom: 20,
   },
   warningPill: {
     flexDirection: 'row',
@@ -189,51 +240,52 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 7,
     paddingHorizontal: 12,
-    borderRadius: 12,
+    borderRadius: radii.sm || 10,
     borderWidth: 1,
     marginBottom: 18,
     width: '100%',
-    justifyContent: 'center',
   },
   warningPillText: {
     fontSize: 11,
     fontWeight: '600',
+    flex: 1,
   },
   actionsRow: {
     flexDirection: 'row',
-    gap: 10,
+    alignItems: 'center',
+    gap: 12,
     width: '100%',
-    marginTop: 4,
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: radii.md || 14,
+    paddingVertical: 13,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '700',
   },
   confirmButton: {
-    flex: 1.25,
-    paddingVertical: 12,
-    borderRadius: radii.md || 14,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
     gap: 6,
-    shadowColor: '#DC2626',
+    paddingVertical: 13,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 4,
   },
   confirmButtonText: {
-    fontSize: 13,
-    fontWeight: '800',
     color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
 });

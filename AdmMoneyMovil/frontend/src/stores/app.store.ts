@@ -29,6 +29,27 @@ interface AppState {
   isLoading: boolean;
   useMockData: boolean;
   theme: 'light' | 'dark';
+  currency: string;
+  swipeEnabled: boolean;
+  hapticsEnabled: boolean;
+  highPrecisionOcr: boolean;
+  dailyClosingReminder: boolean;
+  stockAlertsEnabled: boolean;
+  businessName: string;
+  ticketFooterText: string;
+  privacyMode: boolean;
+  autoCategorizeAi: boolean;
+
+  setCurrency: (currency: string) => void;
+  setSwipeEnabled: (enabled: boolean) => void;
+  setHapticsEnabled: (enabled: boolean) => void;
+  setHighPrecisionOcr: (enabled: boolean) => void;
+  setDailyClosingReminder: (enabled: boolean) => void;
+  setStockAlertsEnabled: (enabled: boolean) => void;
+  setBusinessName: (name: string) => void;
+  setTicketFooterText: (text: string) => void;
+  setPrivacyMode: (enabled: boolean) => void;
+  setAutoCategorizeAi: (enabled: boolean) => void;
 
   setTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
@@ -87,6 +108,27 @@ export const useAppStore = create<AppState>((set, get) => ({
   isLoading: false,
   useMockData: false,
   theme: 'light',
+  currency: 'MXN',
+  swipeEnabled: true,
+  hapticsEnabled: true,
+  highPrecisionOcr: true,
+  dailyClosingReminder: true,
+  stockAlertsEnabled: true,
+  businessName: 'Lucky Cookies',
+  ticketFooterText: '¡Gracias por endulzar tu día con nosotros!',
+  privacyMode: false,
+  autoCategorizeAi: true,
+
+  setCurrency: (currency: string) => set({ currency }),
+  setSwipeEnabled: (swipeEnabled: boolean) => set({ swipeEnabled }),
+  setHapticsEnabled: (hapticsEnabled: boolean) => set({ hapticsEnabled }),
+  setHighPrecisionOcr: (highPrecisionOcr: boolean) => set({ highPrecisionOcr }),
+  setDailyClosingReminder: (dailyClosingReminder: boolean) => set({ dailyClosingReminder }),
+  setStockAlertsEnabled: (stockAlertsEnabled: boolean) => set({ stockAlertsEnabled }),
+  setBusinessName: (businessName: string) => set({ businessName }),
+  setTicketFooterText: (ticketFooterText: string) => set({ ticketFooterText }),
+  setPrivacyMode: (privacyMode: boolean) => set({ privacyMode }),
+  setAutoCategorizeAi: (autoCategorizeAi: boolean) => set({ autoCategorizeAi }),
 
   setTheme: (theme: 'light' | 'dark') => {
     try {

@@ -7,7 +7,8 @@ import {
   Alert,
   ScrollView,
   Switch,
-  TouchableOpacity
+  TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useThemeColors, radii, spacing } from '../../src/theme';
@@ -17,110 +18,180 @@ import { BackendHeartbeat } from '../../src/components/ui/BackendHeartbeat';
 import { RomanticDedicationCard } from '../../src/components/ui/RomanticDedicationCard';
 import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
 import { useAppStore } from '../../src/stores/app.store';
-import { APP_CONFIG } from '../../src/config/appConfig';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function SettingsScreen() {
   const {
-    backendUrl,
-    setBackendUrl,
     isOnline,
     checkConnection,
     loadAllData,
     theme,
     toggleTheme,
-    expenses,
-    cookies,
-    sales,
-    orders,
+    currency,
+    setCurrency,
+    swipeEnabled,
+    setSwipeEnabled,
+    hapticsEnabled,
+    setHapticsEnabled,
+    highPrecisionOcr,
+    setHighPrecisionOcr,
+    autoCategorizeAi,
+    setAutoCategorizeAi,
+    dailyClosingReminder,
+    setDailyClosingReminder,
+    stockAlertsEnabled,
+    setStockAlertsEnabled,
+    businessName,
+    setBusinessName,
+    ticketFooterText,
+    setTicketFooterText,
+    privacyMode,
+    setPrivacyMode,
   } = useAppStore();
 
   const colors = useThemeColors();
-  const [urlInput, setUrlInput] = useState(backendUrl);
   const [isTesting, setIsTesting] = useState(false);
-
-  // System preferences state
-  const [currency, setCurrency] = useState('MXN ($)');
-  const [swipeEnabled, setSwipeEnabled] = useState(true);
-  const [hapticsEnabled, setHapticsEnabled] = useState(true);
+  const [lastPing, setLastPing] = useState<number | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<string>('Al iniciar app');
   const [smoothAnimations, setSmoothAnimations] = useState(true);
-  const [autoSync, setAutoSync] = useState(true);
 
-  const handleSetPreset = (preset: string) => {
-    setUrlInput(preset);
-    setBackendUrl(preset);
-  };
+  // Editable business info local state
+  const [tempBusinessName, setTempBusinessName] = useState(businessName);
+  const [tempTicketFooter, setTempTicketFooter] = useState(ticketFooterText);
+  const [isEditingBrand, setIsEditingBrand] = useState(false);
 
-  const handleSaveAndTest = async () => {
+  const handleTestAndSync = async () => {
     setIsTesting(true);
-    const cleanedUrl = urlInput.trim().replace(/\/+$/, '');
-    setBackendUrl(cleanedUrl);
-    const ok = await checkConnection();
-    setIsTesting(false);
-    if (ok) {
-      await loadAllData();
+    const start = Date.now();
+    try {
+      const ok = await checkConnection();
+      const latency = Date.now() - start;
+      setLastPing(latency);
+
+      if (ok) {
+        await loadAllData();
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        setLastSyncTime(timeStr);
+        setIsTesting(false);
+        Alert.alert(
+          '¡Sincronización Exitosa! 🟢',
+          `Conexión verificada con la nube en ${latency} ms.\n\nTodas tus ventas, recetas, gastos e inventario están al día.`
+        );
+      } else {
+        setIsTesting(false);
+        Alert.alert(
+          'Sin Conexión a la Nube 🔴',
+          'No se pudo establecer conexión con el servidor. Verifica tu conexión a internet e inténtalo de nuevo.'
+        );
+      }
+    } catch {
+      setIsTesting(false);
       Alert.alert(
-        '¡Conexión Exitosa! 🟢',
-        `Conectado exitosamente con ${cleanedUrl}.\n\nBase de datos MongoDB Atlas sincronizada en tiempo real.`
-      );
-    } else {
-      Alert.alert(
-        'Sin Conexión 🔴',
-        `No se pudo conectar al backend en "${cleanedUrl}".\n\nVerifica que el servicio en Render o tu servidor local esté levantado y accesible.`
+        'Error de Conexión',
+        'Ocurrió una anomalía de red al contactar la nube. Intenta nuevamente.'
       );
     }
   };
 
-  const handleExportData = () => {
-    const summary = {
-      gastos_totales: expenses.length,
-      recetas_galletas: cookies.length,
-      ventas_cobradas: sales.length,
-      pedidos_agendados: orders.length,
-      servidor: backendUrl,
-      fecha_export: new Date().toISOString(),
-    };
-    Alert.alert(
-      '📦 Resumen de Datos Listo',
-      JSON.stringify(summary, null, 2),
-      [{ text: 'Entendido', style: 'default' }]
-    );
-  };
-
-  const handleClearCache = async () => {
-    Alert.alert(
-      '¿Recargar Datos del Servidor?',
-      'Se actualizarán todas las recetas, gastos, ventas y pedidos directamente de MongoDB Atlas.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Recargar',
-          style: 'default',
-          onPress: async () => {
-            await loadAllData();
-            Alert.alert('¡Sincronizado!', 'Datos actualizados con éxito.');
-          },
-        },
-      ]
-    );
+  const handleSaveBrand = () => {
+    if (!tempBusinessName.trim()) {
+      Alert.alert('Nombre Requerido', 'El nombre comercial no puede estar vacío.');
+      return;
+    }
+    setBusinessName(tempBusinessName.trim());
+    setTicketFooterText(tempTicketFooter.trim());
+    setIsEditingBrand(false);
+    Alert.alert('¡Marca Actualizada!', 'Los datos de tu negocio y tickets han sido guardados.');
   };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]}>
       <SwipeTabWrapper currentRoute="/settings" enabled={swipeEnabled}>
-        <ScrollView contentContainerStyle={styles.container}>
+        <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+          {/* Header */}
           <View style={styles.header}>
             <Text style={[styles.screenEyebrow, { color: colors.brandText }]}>Sistema & Ajustes</Text>
-            <Text style={[styles.screenTitle, { color: colors.textMain }]}>Configuración General</Text>
+            <Text style={[styles.screenTitle, { color: colors.textMain }]}>Configuración de la App</Text>
             <Text style={[styles.screenSubtitle, { color: colors.textMuted }]}>
-              Personaliza la experiencia, controles del sistema, conectividad y dedicatoria.
+              Control de sincronización, experiencia visual, inteligencia artificial y tu negocio.
             </Text>
           </View>
 
-          {/* 💌 DEDICATORIA ESPECIAL HECHA CON AMOR (CON CORAZÓN ROJO PALPITANDO) */}
+          {/* 💌 DEDICATORIA ESPECIAL HECHA CON AMOR */}
           <RomanticDedicationCard />
 
-          {/* 1. MODO OSCURO ("MEDIO APAGADO") & APARIENCIA */}
+          {/* 1. SINCRONIZACIÓN Y CONEXIÓN A LA NUBE (LIMPIO, SIN URLS EXPUESTAS) */}
+          <DoubleBezelCard style={styles.sectionCard}>
+            <View style={styles.statusRow}>
+              <View style={{ flex: 1, paddingRight: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="cloud-done" size={18} color={isOnline ? colors.emeraldLight : colors.roseLight} />
+                  <Text style={[styles.cardTitle, { color: colors.textMain }]}>Sincronización en la Nube</Text>
+                </View>
+                <Text style={[styles.cardSub, { color: colors.textDim }]}>
+                  Sincroniza en tiempo real tus ventas, recetas, pedidos y balance con la base de datos centralizada.
+                </Text>
+              </View>
+              <BackendHeartbeat />
+            </View>
+
+            {/* Metrics Bar */}
+            <View style={[styles.syncMetricsBox, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
+              <View style={styles.metricItem}>
+                <Text style={[styles.metricLabel, { color: colors.textDim }]}>Estado</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                  <View style={[styles.statusDot, { backgroundColor: isOnline ? '#10B981' : '#EF4444' }]} />
+                  <Text style={[styles.metricVal, { color: isOnline ? colors.emeraldLight : colors.roseLight }]}>
+                    {isOnline ? 'En Línea' : 'Desconectado'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={[styles.metricDivider, { backgroundColor: colors.borderSubtle }]} />
+
+              <View style={styles.metricItem}>
+                <Text style={[styles.metricLabel, { color: colors.textDim }]}>Latencia</Text>
+                <Text style={[styles.metricVal, { color: colors.textMain, marginTop: 2 }]}>
+                  {lastPing ? `${lastPing} ms` : isOnline ? 'Óptima' : '--'}
+                </Text>
+              </View>
+
+              <View style={[styles.metricDivider, { backgroundColor: colors.borderSubtle }]} />
+
+              <View style={styles.metricItem}>
+                <Text style={[styles.metricLabel, { color: colors.textDim }]}>Última Sinc.</Text>
+                <Text style={[styles.metricVal, { color: colors.textMain, marginTop: 2 }]}>
+                  {lastSyncTime}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              disabled={isTesting}
+              onPress={handleTestAndSync}
+              style={[
+                styles.syncActionButton,
+                { backgroundColor: colors.brand },
+                isTesting && { opacity: 0.75 },
+              ]}
+            >
+              {isTesting ? (
+                <>
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <Text style={styles.syncActionButtonText}>Probando y Sincronizando...</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="cloud-upload" size={17} color="#FFFFFF" />
+                  <Text style={styles.syncActionButtonText}>Probar y Sincronizar Conexión</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </DoubleBezelCard>
+
+          {/* 2. APARIENCIA & MONEDA DEL SISTEMA */}
           <DoubleBezelCard style={styles.sectionCard}>
             <View style={styles.statusRow}>
               <View style={{ flex: 1, paddingRight: 12 }}>
@@ -147,40 +218,48 @@ export default function SettingsScreen() {
               />
             </View>
 
-            {/* Currency selector chips (Only MXN and USD allowed) */}
+            {/* Selector de Moneda */}
             <View style={{ marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.borderSubtle }}>
-              <Text style={[styles.subLabel, { color: colors.textDim }]}>Moneda del Sistema (Solo MXN y USD)</Text>
+              <Text style={[styles.subLabel, { color: colors.textDim }]}>Moneda del Sistema</Text>
               <View style={styles.presetsRow}>
                 {[
-                  { code: 'MXN ($)', label: '🇲🇽 MXN ($) Pesos' },
-                  { code: 'USD ($)', label: '🇺🇸 USD ($) Dólares' },
-                ].map((item) => (
-                  <TouchableOpacity
-                    key={item.code}
-                    onPress={() => setCurrency(item.code)}
-                    style={[
-                      styles.presetChip,
-                      {
-                        backgroundColor: currency === item.code ? colors.brandBg : colors.bgTertiary,
-                        borderColor: currency === item.code ? colors.brandBorder : colors.borderSubtle,
-                      },
-                    ]}
-                  >
-                    <Text
+                  { code: 'MXN', label: '🇲🇽 MXN ($) Pesos Mexicanos' },
+                  { code: 'USD', label: '🇺🇸 USD ($) Dólares' },
+                ].map((item) => {
+                  const isActive = currency === item.code;
+                  return (
+                    <TouchableOpacity
+                      key={item.code}
+                      onPress={() => setCurrency(item.code)}
                       style={[
-                        styles.presetChipText,
-                        { color: currency === item.code ? colors.brandText : colors.textMain },
+                        styles.presetChip,
+                        {
+                          backgroundColor: isActive ? colors.brandBg : colors.bgTertiary,
+                          borderColor: isActive ? colors.brandBorder : colors.borderSubtle,
+                        },
                       ]}
                     >
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Ionicons
+                        name={isActive ? 'radio-button-on' : 'radio-button-off'}
+                        size={13}
+                        color={isActive ? colors.brandText : colors.textDim}
+                      />
+                      <Text
+                        style={[
+                          styles.presetChipText,
+                          { color: isActive ? colors.brandText : colors.textMain },
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
           </DoubleBezelCard>
 
-          {/* 2. GESTOS, ANIMACIONES & NAVEGACIÓN */}
+          {/* 3. GESTOS, ANIMACIONES & NAVEGACIÓN */}
           <DoubleBezelCard style={styles.sectionCard}>
             <Text style={[styles.cardTitle, { color: colors.textMain, marginBottom: 12 }]}>
               Gestos & Experiencia de Uso
@@ -196,7 +275,7 @@ export default function SettingsScreen() {
                   </Text>
                 </View>
                 <Text style={[styles.cardSub, { color: colors.textDim }]}>
-                  Desliza a la izquierda o derecha para moverte fluidamente entre pestañas.
+                  Desliza a la izquierda o derecha en cualquier pantalla para moverte entre pestañas.
                 </Text>
               </View>
               <Switch
@@ -213,11 +292,11 @@ export default function SettingsScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Ionicons name="sparkles" size={17} color={colors.amberLight} />
                   <Text style={[styles.settingItemTitle, { color: colors.textMain }]}>
-                    Animaciones Suaves y Rápidas
+                    Animaciones Fluidas & Transiciones
                   </Text>
                 </View>
                 <Text style={[styles.cardSub, { color: colors.textDim }]}>
-                  Transiciones y scrolls optimizados para responder al instante sin demoras.
+                  Micro-animaciones en tarjetas, botones y cambio de tema sin lag.
                 </Text>
               </View>
               <Switch
@@ -228,7 +307,7 @@ export default function SettingsScreen() {
               />
             </View>
 
-            {/* Haptic Feedback */}
+            {/* Haptic / Long Press */}
             <View style={[styles.settingItemRow, { borderTopWidth: 1, borderTopColor: colors.borderSubtle, paddingTop: 12 }]}>
               <View style={{ flex: 1, paddingRight: 10 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -238,7 +317,7 @@ export default function SettingsScreen() {
                   </Text>
                 </View>
                 <Text style={[styles.cardSub, { color: colors.textDim }]}>
-                  Mantén presionado cualquier gasto para abrir el menú de duplicar, editar o eliminar.
+                  Mantén presionado cualquier elemento para acceder a menú rápido de acciones.
                 </Text>
               </View>
               <Switch
@@ -250,177 +329,183 @@ export default function SettingsScreen() {
             </View>
           </DoubleBezelCard>
 
-          {/* 3. SERVER CONNECTION STATUS CARD WITH BEATING HEART */}
+          {/* 4. INTELIGENCIA ARTIFICIAL & ESCÁNER OCR */}
           <DoubleBezelCard style={styles.sectionCard}>
-            <View style={styles.statusRow}>
-              <View style={{ flex: 1, paddingRight: 12 }}>
-                <Text style={[styles.cardTitle, { color: colors.textMain }]}>Estado del Servidor</Text>
-                <Text style={[styles.cardSub, { color: colors.textDim }]}>
-                  {isOnline
-                    ? 'Conexión activa con base de datos MongoDB Atlas en vivo.'
-                    : 'Desconectado del backend. Toca el botón para verificar.'}
-                </Text>
-              </View>
-              <BackendHeartbeat />
-            </View>
-
-            <View style={[styles.codeHintBox, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
-              <Ionicons name="chatbubble-ellipses-outline" size={15} color={colors.brandLight} />
-              <Text style={[styles.codeHintText, { color: colors.textMuted }]}>
-                Mensaje actual: "{isOnline ? APP_CONFIG.BACKEND_STATUS_MESSAGE_ONLINE : APP_CONFIG.BACKEND_STATUS_MESSAGE_OFFLINE}"
-                {'\n'}
-                <Text style={{ fontSize: 10, color: colors.textDim }}>
-                  Para personalizar este mensaje, edita <Text style={styles.codeHighlight}>src/config/appConfig.ts</Text>
-                </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+              <Ionicons name="hardware-chip" size={18} color={colors.brandLight} />
+              <Text style={[styles.cardTitle, { color: colors.textMain }]}>
+                Inteligencia Artificial & Escáner
               </Text>
             </View>
+
+            {/* OCR Precision */}
+            <View style={styles.settingItemRow}>
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="scan" size={16} color={colors.brandLight} />
+                  <Text style={[styles.settingItemTitle, { color: colors.textMain }]}>
+                    OCR de Alta Precisión con IA
+                  </Text>
+                </View>
+                <Text style={[styles.cardSub, { color: colors.textDim }]}>
+                  Aumenta el contraste y nitidez en fotos de tickets para extraer conceptos y montos exactos.
+                </Text>
+              </View>
+              <Switch
+                value={highPrecisionOcr}
+                onValueChange={setHighPrecisionOcr}
+                trackColor={{ false: '#E2E8F0', true: colors.brandGlow }}
+                thumbColor={highPrecisionOcr ? colors.brandLight : '#CBD5E1'}
+              />
+            </View>
+
+            {/* Smart Categorization */}
+            <View style={[styles.settingItemRow, { borderTopWidth: 1, borderTopColor: colors.borderSubtle, paddingTop: 12 }]}>
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="pricetags" size={16} color={colors.amberLight} />
+                  <Text style={[styles.settingItemTitle, { color: colors.textMain }]}>
+                    Auto-Categorización Inteligente
+                  </Text>
+                </View>
+                <Text style={[styles.cardSub, { color: colors.textDim }]}>
+                  Clasifica automáticamente entre Insumos, Empaque o Servicios según el texto leído.
+                </Text>
+              </View>
+              <Switch
+                value={autoCategorizeAi}
+                onValueChange={setAutoCategorizeAi}
+                trackColor={{ false: '#E2E8F0', true: colors.amberBg }}
+                thumbColor={autoCategorizeAi ? colors.amberLight : '#CBD5E1'}
+              />
+            </View>
           </DoubleBezelCard>
 
-          {/* 4. SERVER ADDRESS & QUICK PRESETS */}
+          {/* 5. ALERTAS Y OPERACIÓN DEL NEGOCIO */}
           <DoubleBezelCard style={styles.sectionCard}>
-            <Text style={[styles.cardTitle, { color: colors.textMain }]}>URL del Servidor Backend</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+              <Ionicons name="notifications" size={18} color={colors.amberLight} />
+              <Text style={[styles.cardTitle, { color: colors.textMain }]}>
+                Alertas & Operación Diaria
+              </Text>
+            </View>
+
+            {/* Modo Privacidad ante Clientes */}
+            <View style={styles.settingItemRow}>
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="eye-off" size={16} color={colors.brandLight} />
+                  <Text style={[styles.settingItemTitle, { color: colors.textMain }]}>
+                    Modo Privacidad ante Clientes
+                  </Text>
+                </View>
+                <Text style={[styles.cardSub, { color: colors.textDim }]}>
+                  Oculta las cifras de ganancia neta y balance de ingresos con asteriscos (••••) al mostrar el catálogo o recetas a terceros.
+                </Text>
+              </View>
+              <Switch
+                value={privacyMode}
+                onValueChange={setPrivacyMode}
+                trackColor={{ false: '#E2E8F0', true: colors.brandGlow }}
+                thumbColor={privacyMode ? colors.brandLight : '#CBD5E1'}
+              />
+            </View>
+
+            {/* Low stock alerts */}
+            <View style={[styles.settingItemRow, { borderTopWidth: 1, borderTopColor: colors.borderSubtle, paddingTop: 12 }]}>
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="alert-circle" size={16} color={colors.roseLight} />
+                  <Text style={[styles.settingItemTitle, { color: colors.textMain }]}>
+                    Alerta de Stock Crítico
+                  </Text>
+                </View>
+                <Text style={[styles.cardSub, { color: colors.textDim }]}>
+                  Indica con insignia roja cuando queden pocas porciones de harina, mantequilla o empaques.
+                </Text>
+              </View>
+              <Switch
+                value={stockAlertsEnabled}
+                onValueChange={setStockAlertsEnabled}
+                trackColor={{ false: '#E2E8F0', true: colors.roseBg }}
+                thumbColor={stockAlertsEnabled ? colors.roseLight : '#CBD5E1'}
+              />
+            </View>
+          </DoubleBezelCard>
+
+          {/* 6. IDENTIDAD DE MARCA & TICKETS */}
+          <DoubleBezelCard style={styles.sectionCard}>
+            <View style={styles.statusRow}>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="storefront" size={18} color={colors.brandLight} />
+                  <Text style={[styles.cardTitle, { color: colors.textMain }]}>Identidad de Tu Negocio</Text>
+                </View>
+                <Text style={[styles.cardSub, { color: colors.textDim }]}>
+                  Información visible en el encabezado de la app y tickets enviados a clientes.
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setIsEditingBrand(!isEditingBrand)}
+                style={[styles.editBadgeBtn, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+              >
+                <Ionicons name={isEditingBrand ? 'close' : 'pencil'} size={14} color={colors.textMain} />
+                <Text style={[styles.editBadgeText, { color: colors.textMain }]}>
+                  {isEditingBrand ? 'Cancelar' : 'Editar'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {isEditingBrand ? (
+              <View style={{ marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.borderSubtle }}>
+                <Text style={[styles.formLabel, { color: colors.textDim }]}>Nombre Comercial / Marca</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
+                  value={tempBusinessName}
+                  onChangeText={setTempBusinessName}
+                  placeholder="Ej: Lucky Cookies"
+                  placeholderTextColor={colors.textDim}
+                />
+
+                <Text style={[styles.formLabel, { color: colors.textDim, marginTop: 8 }]}>Mensaje al Pie del Ticket</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
+                  value={tempTicketFooter}
+                  onChangeText={setTempTicketFooter}
+                  placeholder="Ej: ¡Gracias por tu compra!"
+                  placeholderTextColor={colors.textDim}
+                />
+
+                <Button
+                  title="Guardar Datos de Marca"
+                  variant="primary"
+                  icon={<Ionicons name="checkmark-done" size={16} color="#FFFFFF" />}
+                  onPress={handleSaveBrand}
+                  style={{ marginTop: 6 }}
+                />
+              </View>
+            ) : (
+              <View style={[styles.brandPreviewBox, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
+                <View>
+                  <Text style={[styles.brandPreviewLabel, { color: colors.textDim }]}>Nombre comercial activo</Text>
+                  <Text style={[styles.brandPreviewTitle, { color: colors.textMain }]}>{businessName}</Text>
+                  <Text style={[styles.brandPreviewFooter, { color: colors.textMuted }]}>"{ticketFooterText}"</Text>
+                </View>
+              </View>
+            )}
+          </DoubleBezelCard>
+
+          {/* 7. APP INFO & FIRMA DIGITAL */}
+          <DoubleBezelCard style={styles.sectionCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="information-circle" size={18} color={colors.brandLight} />
+              <Text style={[styles.cardTitle, { color: colors.textMain }]}>Adm Money Suite Móvil</Text>
+            </View>
             <Text style={[styles.cardSub, { color: colors.textDim }]}>
-              Selecciona un preset o escribe la dirección de tu backend:
+              Versión 2.3.0 • Sistema Financiero & Control de Repostería
             </Text>
-
-            {/* Quick preset chips */}
-            <View style={styles.presetsRow}>
-              <TouchableOpacity
-                style={[
-                  styles.presetChip,
-                  {
-                    backgroundColor: urlInput.includes('onrender.com') ? colors.brandBg : colors.bgTertiary,
-                    borderColor: urlInput.includes('onrender.com') ? colors.brandBorder : colors.borderSubtle,
-                  },
-                ]}
-                onPress={() => handleSetPreset('https://admmoney-backend.onrender.com')}
-              >
-                <Ionicons name="cloud" size={12} color={urlInput.includes('onrender.com') ? colors.brandText : colors.textMuted} />
-                <Text
-                  style={[
-                    styles.presetChipText,
-                    { color: urlInput.includes('onrender.com') ? colors.brandText : colors.textMain },
-                  ]}
-                >
-                  Render Cloud
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.presetChip,
-                  {
-                    backgroundColor: urlInput.includes('localhost') ? colors.brandBg : colors.bgTertiary,
-                    borderColor: urlInput.includes('localhost') ? colors.brandBorder : colors.borderSubtle,
-                  },
-                ]}
-                onPress={() => handleSetPreset('http://localhost:8000')}
-              >
-                <Text
-                  style={[
-                    styles.presetChipText,
-                    { color: urlInput.includes('localhost') ? colors.brandText : colors.textMain },
-                  ]}
-                >
-                  Web: localhost
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.presetChip,
-                  {
-                    backgroundColor: urlInput.includes('10.0.2.2') ? colors.brandBg : colors.bgTertiary,
-                    borderColor: urlInput.includes('10.0.2.2') ? colors.brandBorder : colors.borderSubtle,
-                  },
-                ]}
-                onPress={() => handleSetPreset('http://10.0.2.2:8000')}
-              >
-                <Text
-                  style={[
-                    styles.presetChipText,
-                    { color: urlInput.includes('10.0.2.2') ? colors.brandText : colors.textMain },
-                  ]}
-                >
-                  Android Emulador
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.presetChip,
-                  {
-                    backgroundColor: urlInput.includes('172.16.216.105') ? colors.brandBg : colors.bgTertiary,
-                    borderColor: urlInput.includes('172.16.216.105') ? colors.brandBorder : colors.borderSubtle,
-                  },
-                ]}
-                onPress={() => handleSetPreset('http://172.16.216.105:8000')}
-              >
-                <Text
-                  style={[
-                    styles.presetChipText,
-                    { color: urlInput.includes('172.16.216.105') ? colors.brandText : colors.textMain },
-                  ]}
-                >
-                  Wi-Fi LAN
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
-              value={urlInput}
-              onChangeText={setUrlInput}
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholder="https://tu-backend.onrender.com"
-              placeholderTextColor={colors.textDim}
-            />
-
-            <Button
-              title={isTesting ? 'Probando conexión...' : 'Probar & Sincronizar'}
-              variant="primary"
-              disabled={isTesting}
-              icon={<Ionicons name="wifi" size={16} color="#fff" />}
-              onPress={handleSaveAndTest}
-            />
-          </DoubleBezelCard>
-
-          {/* 5. GESTIÓN DE DATOS & MANTENIMIENTO */}
-          <DoubleBezelCard style={styles.sectionCard}>
-            <Text style={[styles.cardTitle, { color: colors.textMain }]}>Herramientas & Respaldo</Text>
-            <Text style={[styles.cardSub, { color: colors.textDim, marginBottom: 12 }]}>
-              Acciones de mantenimiento y exportación de datos.
-            </Text>
-
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <View style={{ flex: 1 }}>
-                <Button
-                  title="Resumen JSON"
-                  variant="secondary"
-                  icon={<Ionicons name="download-outline" size={15} />}
-                  onPress={handleExportData}
-                  style={{ paddingVertical: 8 }}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Button
-                  title="Recargar BD"
-                  variant="secondary"
-                  icon={<Ionicons name="refresh-outline" size={15} />}
-                  onPress={handleClearCache}
-                  style={{ paddingVertical: 8 }}
-                />
-              </View>
-            </View>
-          </DoubleBezelCard>
-
-          {/* 6. APP INFO */}
-          <DoubleBezelCard style={styles.sectionCard}>
-            <Text style={[styles.cardTitle, { color: colors.textMain }]}>Adm Money Suite Móvil</Text>
-            <Text style={[styles.cardSub, { color: colors.textDim }]}>Versión 2.2.0 • Expo SDK 52 • React Native 0.76</Text>
             <Text style={[styles.cardSub, { color: colors.textMuted, marginTop: 6 }]}>
-              Base de datos en la nube MongoDB Atlas conectada en tiempo real. Sin datos fijos ni modo demo.
+              Base de datos en la nube conectada y sincronizada en tiempo real. Todas las funciones operan al 100%.
             </Text>
           </DoubleBezelCard>
         </ScrollView>
@@ -435,7 +520,7 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: spacing.md,
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
   header: {
     marginBottom: 16,
@@ -489,25 +574,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  codeHintBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    borderRadius: radii.sm,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginTop: 14,
-    borderWidth: 1,
-  },
-  codeHintText: {
-    fontSize: 12,
-    flex: 1,
-    lineHeight: 17,
-  },
-  codeHighlight: {
-    fontFamily: 'monospace',
-    fontWeight: '700',
-  },
   presetsRow: {
     flexDirection: 'row',
     gap: 8,
@@ -517,21 +583,113 @@ const styles = StyleSheet.create({
   presetChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
     borderWidth: 1,
     borderRadius: radii.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   presetChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  syncMetricsBox: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    borderRadius: radii.md,
+    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    marginTop: 14,
+    marginBottom: 12,
+  },
+  metricItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  metricLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  metricVal: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  metricDivider: {
+    width: 1,
+    height: 28,
+  },
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  syncActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 13,
+    borderRadius: radii.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  syncActionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  editBadgeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: radii.pill,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  editBadgeText: {
     fontSize: 11,
     fontWeight: '700',
+  },
+  formLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    marginBottom: 4,
   },
   input: {
     borderWidth: 1,
     borderRadius: radii.md,
+    padding: 10,
+    fontSize: 13,
+    marginBottom: 10,
+  },
+  brandPreviewBox: {
+    borderRadius: radii.md,
+    borderWidth: 1,
     padding: 12,
-    fontSize: 14,
-    marginVertical: 12,
+    marginTop: 12,
+  },
+  brandPreviewLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  brandPreviewTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  brandPreviewFooter: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginTop: 3,
   },
 });

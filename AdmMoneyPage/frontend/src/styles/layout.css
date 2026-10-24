@@ -3,15 +3,26 @@
    Clean Editorial Minimalist with Pastel Touches
    ========================================================================== */
 
-/* Detached Floating Island Navbar */
+/* Dynamic Floating Island Navbar (Full-width at top, pill floating on scroll) */
 .nav-island-wrapper {
   position: sticky;
-  top: 1rem;
+  top: 0;
   z-index: 50;
   display: flex;
   justify-content: center;
+  width: 100%;
+  margin-bottom: 2rem;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-island-wrapper.at-top {
+  top: 0;
+  padding: 0;
+}
+
+.nav-island-wrapper.scrolled {
+  top: 0.85rem;
   padding: 0 1.25rem;
-  margin-bottom: 2.25rem;
 }
 
 .nav-island {
@@ -19,15 +30,29 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  max-width: 1360px;
   background: var(--bg-glass);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-pill);
-  padding: 0.5rem 1.25rem;
   box-shadow: var(--shadow-ambient);
-  transition: all 0.25s var(--ease-spring);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-island-wrapper.at-top .nav-island {
+  max-width: 100%;
+  border-radius: 0;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0.8rem 2.5rem;
+}
+
+.nav-island-wrapper.scrolled .nav-island {
+  max-width: 1360px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-subtle);
+  padding: 0.5rem 1.25rem;
+  box-shadow: var(--shadow-lifted);
 }
 
 .nav-island:hover {

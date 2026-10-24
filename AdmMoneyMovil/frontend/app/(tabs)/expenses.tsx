@@ -44,7 +44,18 @@ const PAYMENT_METHODS = [
 export default function ExpensesScreen() {
   const router = useRouter();
   const colors = useThemeColors();
-  const { expenses, addExpense, updateExpense, deleteExpense, loadAllData, isLoading, theme, toggleTheme } = useAppStore();
+  const {
+    expenses,
+    addExpense,
+    updateExpense,
+    deleteExpense,
+    loadAllData,
+    isLoading,
+    theme,
+    toggleTheme,
+    currency,
+    hapticsEnabled,
+  } = useAppStore();
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -121,7 +132,10 @@ export default function ExpensesScreen() {
           >
             {/* Top Row: Eyebrow + Controls */}
             <View style={styles.headerTopRow}>
-              <Text style={[styles.screenEyebrow, { color: colors.rose }]}>Control Financiero</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.brand }} />
+                <Text style={[styles.screenEyebrow, { color: colors.textMuted }]}>Control Financiero</Text>
+              </View>
               <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
                 <TouchableOpacity
                   onPress={toggleTheme}
@@ -146,10 +160,16 @@ export default function ExpensesScreen() {
             {/* Main Financial Amount & + Gasto Button Row */}
             <View style={styles.headerMainRow}>
               <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textDim, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Gasto Total Registrado
+                </Text>
                 <Text style={[styles.totalAmount, { color: colors.rose }]} numberOfLines={1}>
                   -${totalSum.toFixed(2)}
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textDim }}> {currency}</Text>
                 </Text>
-                <Text style={[styles.subText, { color: colors.textMuted }]}>{filtered.length} gastos encontrados</Text>
+                <Text style={[styles.subText, { color: colors.textMuted }]}>
+                  {filtered.length} {filtered.length === 1 ? 'gasto registrado' : 'gastos registrados'}
+                </Text>
               </View>
 
               <Button
@@ -198,7 +218,9 @@ export default function ExpensesScreen() {
                 {isActive ? (
                   <LinearGradient
                     colors={
-                      cat.includes('Galletas')
+                      cat === 'Todas'
+                        ? ['#0284C7', '#0369A1']
+                        : cat.includes('Galletas')
                         ? (gradients.amber as any)
                         : cat.includes('Empaques')
                         ? (gradients.purple as any)
@@ -228,11 +250,11 @@ export default function ExpensesScreen() {
             <ExpenseCard
               expense={item}
               onPress={(exp) => setSelectedExpense(exp)}
-              onLongPress={(exp) => setLongPressedExpense(exp)}
+              onLongPress={hapticsEnabled ? (exp) => setLongPressedExpense(exp) : undefined}
               onDelete={deleteExpense}
             />
           )}
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ paddingBottom: 110 }}
           onRefresh={loadAllData}
           refreshing={isLoading}
           ListEmptyComponent={
@@ -259,6 +281,7 @@ export default function ExpensesScreen() {
           }
         />
       </View>
+      </SwipeTabWrapper>
 
       {/* Expense Detail & Edit Modal */}
       <ExpenseDetailModal
@@ -377,7 +400,6 @@ export default function ExpensesScreen() {
         }}
         onDelete={deleteExpense}
       />
-      </SwipeTabWrapper>
     </SafeAreaView>
   );
 }
@@ -392,13 +414,13 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   headerCard: {
-    marginBottom: 16,
+    marginBottom: 10,
   },
   headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   headerMainRow: {
     flexDirection: 'row',
@@ -421,11 +443,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   screenEyebrow: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: colors.rose,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    fontSize: 12,
+    fontWeight: '700',
   },
   totalAmount: {
     fontSize: 26,
@@ -434,7 +453,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   categoryScroll: {
-    marginBottom: 12,
+    flexGrow: 0,
+    height: 38,
+    marginBottom: 8,
   },
   catPillContainer: {
     borderRadius: radii.pill,
@@ -473,7 +494,7 @@ const styles = StyleSheet.create({
   catPillTextActive: {
     fontSize: 12,
     fontWeight: '800',
-    color: colors.brandText,
+    color: '#FFFFFF',
   },
   emptyBox: {
     alignItems: 'center',
@@ -524,7 +545,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     borderRadius: radii.md,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   searchInput: {
     flex: 1,

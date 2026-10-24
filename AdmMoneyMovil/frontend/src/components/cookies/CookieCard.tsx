@@ -11,16 +11,38 @@ interface CookieCardProps {
   cookie: CookieProduct;
   onSell: (cookie: CookieProduct) => void;
   onInspect?: (cookie: CookieProduct) => void;
+  onLongPress?: (cookie: CookieProduct) => void;
+  privacyMode?: boolean;
 }
 
-export const CookieCard: React.FC<CookieCardProps> = ({ cookie, onSell, onInspect }) => {
+export const CookieCard: React.FC<CookieCardProps> = ({
+  cookie,
+  onSell,
+  onInspect,
+  onLongPress,
+  privacyMode = false,
+}) => {
   const colors = useThemeColors();
+
+  const handleCardPress = () => {
+    if (onInspect) {
+      onInspect(cookie);
+    }
+  };
+
+  const handleCardLongPress = () => {
+    if (onLongPress) {
+      onLongPress(cookie);
+    }
+  };
 
   return (
     <DoubleBezelCard style={styles.cardWrapper}>
       <TouchableOpacity
-        activeOpacity={onInspect ? 0.75 : 1}
-        onPress={() => onInspect && onInspect(cookie)}
+        activeOpacity={0.75}
+        onPress={handleCardPress}
+        onLongPress={handleCardLongPress}
+        delayLongPress={300}
         style={styles.headerRow}
       >
         <View style={styles.imageWrapper}>
@@ -32,15 +54,21 @@ export const CookieCard: React.FC<CookieCardProps> = ({ cookie, onSell, onInspec
             <Text style={[styles.cookieName, { color: colors.textMain }]} numberOfLines={1}>
               {cookie.name}
             </Text>
-            {onInspect && (
-              <Ionicons name="information-circle-outline" size={18} color={colors.amberLight} />
-            )}
+            <TouchableOpacity
+              onPress={handleCardLongPress}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="ellipsis-horizontal-circle" size={20} color={colors.amberLight} />
+            </TouchableOpacity>
           </View>
           <Text style={[styles.cookieDesc, { color: colors.textMuted }]} numberOfLines={2}>
             {cookie.description || 'Receta artesanal neoyorquina.'}
           </Text>
           <View style={styles.badgeRow}>
-            <Badge label={`${cookie.profit_margin_pct.toFixed(1)}% Margen`} variant="emerald" />
+            <Badge
+              label={privacyMode ? '•••% Margen' : `${cookie.profit_margin_pct.toFixed(1)}% Margen`}
+              variant="emerald"
+            />
             <Text style={[styles.batchText, { color: colors.textDim }]}>
               Tanda: {cookie.batch_yield || 16} pzas
             </Text>
@@ -50,14 +78,16 @@ export const CookieCard: React.FC<CookieCardProps> = ({ cookie, onSell, onInspec
 
       {/* THE REQUESTED UNIT ECONOMICS: LO QUE GASTO vs PRECIO vs LO QUE GANO */}
       <TouchableOpacity
-        activeOpacity={onInspect ? 0.75 : 1}
-        onPress={() => onInspect && onInspect(cookie)}
+        activeOpacity={0.75}
+        onPress={handleCardPress}
+        onLongPress={handleCardLongPress}
+        delayLongPress={300}
         style={[styles.econContainer, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
       >
         <View style={styles.econBox}>
           <Text style={[styles.econLabel, { color: colors.textDim }]}>Lo que gasto</Text>
           <Text style={[styles.econValue, { color: colors.roseLight }]}>
-            ${cookie.recipe_cost.toFixed(2)}
+            {privacyMode ? '••••••' : `$${cookie.recipe_cost.toFixed(2)}`}
           </Text>
           <Text style={[styles.econSub, { color: colors.textDim }]}>con empaque</Text>
         </View>
@@ -73,7 +103,7 @@ export const CookieCard: React.FC<CookieCardProps> = ({ cookie, onSell, onInspec
         <View style={[styles.econBox, styles.econBorderLeft]}>
           <Text style={[styles.econLabel, { color: colors.textDim }]}>Lo que gano</Text>
           <Text style={[styles.econValue, { color: colors.emeraldLight }]}>
-            +${cookie.profit_per_unit.toFixed(2)}
+            {privacyMode ? '••••••' : `+$${cookie.profit_per_unit.toFixed(2)}`}
           </Text>
           <Text style={[styles.econSub, { color: colors.emeraldLight, fontWeight: '700' }]}>
             neta libre
@@ -87,13 +117,15 @@ export const CookieCard: React.FC<CookieCardProps> = ({ cookie, onSell, onInspec
           <Ionicons name="pricetag" size={12} color={colors.purpleLight} />
           <Text style={[styles.promoTitle, { color: colors.purpleLight }]}>Promoción 3 x $90</Text>
         </View>
-        <Text style={[styles.promoValue, { color: colors.purpleLight }]}>+$60.99 ganancia neta</Text>
+        <Text style={[styles.promoValue, { color: colors.purpleLight }]}>
+          {privacyMode ? '••••••' : '+$60.99 ganancia neta'}
+        </Text>
       </View>
 
       <View style={{ flexDirection: 'row', gap: 8 }}>
         {onInspect && (
           <Button
-            title="Ver Receta"
+            title="Receta"
             variant="secondary"
             onPress={() => onInspect(cookie)}
             icon={<Ionicons name="book-outline" size={15} color={colors.textMain} />}

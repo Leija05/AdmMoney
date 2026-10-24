@@ -8,45 +8,75 @@ import * as Font from 'expo-font';
 import { useFonts } from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
 import { ConfirmationModal } from '../src/components/ui/ConfirmationModal';
+import { ThemeTransitionOverlay } from '../src/components/ui/ThemeTransitionOverlay';
 import { confirmAction } from '../src/stores/confirmation.store';
 
-// Polyfill Alert.alert for react-native-web using the high-end ConfirmationModal
-if (Platform.OS === 'web' && typeof window !== 'undefined') {
-  Alert.alert = (title: string, message?: string, buttons?: any[]) => {
-    if (!buttons || buttons.length <= 1) {
-      // Single button informational dialog
-      confirmAction({
-        title: title || 'Aviso',
-        message: message || '',
-        confirmText: buttons?.[0]?.text || 'Entendido',
-        cancelText: '',
-        type: 'info',
-        onConfirm: () => {
-          buttons?.[0]?.onPress?.();
-        },
-      });
-      return;
-    }
+// Global polyfill: replaces native system dialogs with the custom ConfirmationModal
+Alert.alert = (title: string, message?: string, buttons?: any[]) => {
+  const lowerTitle = (title || '').toLowerCase();
 
-    const cancelBtn = buttons.find((b) => b.style === 'cancel');
-    const confirmBtn = buttons.find((b) => b.style !== 'cancel') || buttons[buttons.length - 1];
-    const isDestructive = confirmBtn?.style === 'destructive' || title.toLowerCase().includes('eliminar');
+  const isSuccess =
+    lowerTitle.includes('¡') ||
+    lowerTitle.includes('éxito') ||
+    lowerTitle.includes('registrada') ||
+    lowerTitle.includes('guardad') ||
+    lowerTitle.includes('actualizad') ||
+    lowerTitle.includes('listo') ||
+    lowerTitle.includes('copiad') ||
+    lowerTitle.includes('sincronizad');
 
+  const isDestructive =
+    lowerTitle.includes('eliminar') ||
+    lowerTitle.includes('borrar') ||
+    lowerTitle.includes('quitar') ||
+    buttons?.some((b) => b?.style === 'destructive');
+
+  const isWarning =
+    lowerTitle.includes('atención') ||
+    lowerTitle.includes('datos') ||
+    lowerTitle.includes('cuidado') ||
+    lowerTitle.includes('incomplet');
+
+  const modalType = isDestructive
+    ? 'danger'
+    : isSuccess
+    ? 'success'
+    : isWarning
+    ? 'warning'
+    : 'info';
+
+  if (!buttons || buttons.length <= 1) {
+    // Single button informational or celebration dialog
     confirmAction({
-      title: title || '¿Estás seguro?',
-      message: message || 'Confirma si deseas continuar con esta acción.',
-      confirmText: confirmBtn?.text || (isDestructive ? 'Sí, Eliminar' : 'Aceptar'),
-      cancelText: cancelBtn?.text || 'Cancelar',
-      type: isDestructive ? 'danger' : 'warning',
-      onConfirm: async () => {
-        await confirmBtn?.onPress?.();
-      },
-      onCancel: () => {
-        cancelBtn?.onPress?.();
+      title: title || 'Aviso',
+      message: message || '',
+      confirmText: buttons?.[0]?.text || (isSuccess ? '¡Excelente!' : 'Entendido'),
+      cancelText: '',
+      type: modalType,
+      onConfirm: () => {
+        buttons?.[0]?.onPress?.();
       },
     });
-  };
-}
+    return;
+  }
+
+  const cancelBtn = buttons.find((b) => b?.style === 'cancel');
+  const confirmBtn = buttons.find((b) => b?.style !== 'cancel') || buttons[buttons.length - 1];
+
+  confirmAction({
+    title: title || '¿Estás seguro?',
+    message: message || 'Confirma si deseas continuar con esta acción.',
+    confirmText: confirmBtn?.text || (isDestructive ? 'Sí, Eliminar' : 'Aceptar'),
+    cancelText: cancelBtn?.text || 'Cancelar',
+    type: modalType,
+    onConfirm: async () => {
+      await confirmBtn?.onPress?.();
+    },
+    onCancel: () => {
+      cancelBtn?.onPress?.();
+    },
+  });
+};
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -99,6 +129,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
       <ConfirmationModal />
+      <ThemeTransitionOverlay />
     </View>
   );
 }

@@ -18,6 +18,8 @@ interface AddIngredientModalProps {
   visible: boolean;
   onClose: () => void;
   onAddIngredient: (data: Partial<Ingredient>) => Promise<any>;
+  onUpdateIngredient?: (id: number, data: Partial<Ingredient>) => Promise<any>;
+  editingIngredient?: Ingredient | null;
 }
 
 const UNITS = ['kg', 'g', 'pza', 'ml', 'L'];
@@ -26,6 +28,8 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
   visible,
   onClose,
   onAddIngredient,
+  onUpdateIngredient,
+  editingIngredient,
 }) => {
   const colors = useThemeColors();
   const isDark = colors.isDark;
@@ -36,6 +40,26 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
   const [stockQty, setStockQty] = useState('1');
   const [supplier, setSupplier] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  React.useEffect(() => {
+    if (visible) {
+      if (editingIngredient) {
+        setName(editingIngredient.name || '');
+        setUnit(editingIngredient.unit || UNITS[0]);
+        setPackageCost(String(editingIngredient.package_cost ?? ''));
+        setPackageQty(String(editingIngredient.package_quantity ?? '1'));
+        setStockQty(String(editingIngredient.stock_quantity ?? '1'));
+        setSupplier(editingIngredient.supplier || '');
+      } else {
+        setName('');
+        setUnit(UNITS[0]);
+        setPackageCost('');
+        setPackageQty('1');
+        setStockQty('1');
+        setSupplier('');
+      }
+    }
+  }, [visible, editingIngredient]);
 
   const costNum = parseFloat(packageCost) || 0;
   const qtyNum = parseFloat(packageQty) || 1;
@@ -53,7 +77,7 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
 
     try {
       setIsSaving(true);
-      await onAddIngredient({
+      const payload: Partial<Ingredient> = {
         name: name.trim(),
         unit,
         package_cost: costNum,
@@ -61,16 +85,19 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
         cost_per_unit: Number(unitCost.toFixed(4)),
         stock_quantity: parseFloat(stockQty) || 1,
         supplier: supplier.trim() || 'Proveedor Local',
-      });
+      };
 
-      setName('');
-      setPackageCost('');
-      setPackageQty('1');
-      setStockQty('1');
-      setSupplier('');
-      setIsSaving(false);
-      onClose();
-      Alert.alert('¡Insumo Guardado!', `"${name}" registrado con costo unitario de $${unitCost.toFixed(2)} por ${unit}.`);
+      if (editingIngredient && onUpdateIngredient) {
+        await onUpdateIngredient(editingIngredient.id, payload);
+        setIsSaving(false);
+        onClose();
+        Alert.alert('¡Insumo Actualizado!', `"${name}" actualizado con éxito.`);
+      } else {
+        await onAddIngredient(payload);
+        setIsSaving(false);
+        onClose();
+        Alert.alert('¡Insumo Guardado!', `"${name}" registrado con costo unitario de $${unitCost.toFixed(2)} por ${unit}.`);
+      }
     } catch (err) {
       setIsSaving(false);
       Alert.alert('Error', 'No se pudo guardar el insumo.');
@@ -93,7 +120,7 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
             <View>
               <Text style={[styles.headerEyebrow, { color: colors.amberLight }]}>Materia Prima</Text>
               <Text style={[styles.headerTitle, { color: isDark ? '#F1F3F7' : '#181A1F' }]}>
-                Registrar Nuevo Insumo
+                {editingIngredient ? 'Editar Insumo Registrado' : 'Registrar Nuevo Insumo'}
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -101,7 +128,11 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={{ flexShrink: 1 }}
+            contentContainerStyle={{ padding: 18, paddingBottom: 40 }}
+            showsVerticalScrollIndicator={true}
+          >
             <Text style={[styles.formLabel, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>
               Nombre del Insumo / Materia Prima
             </Text>
@@ -264,7 +295,13 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
                 style={{ flex: 1 }}
               />
               <Button
-                title={isSaving ? "Guardando..." : "Guardar Insumo"}
+                title={
+                  isSaving
+                    ? "Guardando..."
+                    : editingIngredient
+                    ? "Guardar Cambios"
+                    : "Guardar Insumo"
+                }
                 variant="primary"
                 disabled={isSaving}
                 icon={<Ionicons name="checkmark-circle" size={17} color="#fff" />}

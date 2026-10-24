@@ -32,6 +32,7 @@ export default function DashboardScreen() {
     expenses,
     sales,
     cookies,
+    promotions,
     summary,
     isOnline,
     useMockData,
@@ -43,7 +44,14 @@ export default function DashboardScreen() {
     addCookieSale,
     theme,
     toggleTheme,
+    privacyMode,
+    currency,
+    businessName,
+    dailyClosingReminder,
+    orders,
   } = useAppStore();
+
+  const [isReminderDismissed, setIsReminderDismissed] = useState(false);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -73,13 +81,21 @@ export default function DashboardScreen() {
 
   const [isQuickSaleOpen, setIsQuickSaleOpen] = useState(false);
   const [quickSaleQty, setQuickSaleQty] = useState(1);
-  const [quickSalePromo, setQuickSalePromo] = useState(false);
+  const [selectedPromoId, setSelectedPromoId] = useState<number | null>(null);
 
   const totalExpenses = summary?.total_all_expenses ?? expenses.reduce((acc, e) => acc + e.amount, 0);
   const cookieRevenue = summary?.total_cookie_revenue ?? sales.reduce((acc, s) => acc + s.total_revenue, 0);
   const cookieProfit = summary?.net_cookie_profit ?? sales.reduce((acc, s) => acc + s.net_profit, 0);
   const netBalance = cookieRevenue - totalExpenses;
   const marginPct = summary?.cookie_profit_margin_pct ?? (cookieRevenue > 0 ? (cookieProfit / cookieRevenue) * 100 : 0);
+
+  const pendingDeliveries = orders.filter(
+    (o) => o.status === 'Pendiente' || o.status === 'En Preparación' || o.status === 'Listo'
+  ).length;
+  const completedDeliveries = orders.filter((o) => o.status === 'Completado').length;
+  const pendingCollections = orders.filter(
+    (o) => o.payment_status === 'Pendiente' || o.payment_status === 'Anticipo'
+  ).length;
 
   const starCookie = cookies[0] || {
     id: 1,
@@ -88,6 +104,42 @@ export default function DashboardScreen() {
     recipe_cost: 9.67,
     profit_per_unit: 25.33,
   };
+
+  const activeStarPromos = promotions.filter((p) => {
+    if (!p.is_active) return false;
+    if (p.target_type === 'all_products' || p.target_type === 'order_total') return true;
+    if (p.target_type === 'specific_products') {
+      return (p.target_product_ids || []).includes(starCookie?.id || 0);
+    }
+    return true;
+  });
+
+  const selectedPromo = activeStarPromos.find((p) => p.id === selectedPromoId) || null;
+  const rawSubtotal = starCookie.sale_price * quickSaleQty;
+  let promoDiscount = 0;
+
+  if (selectedPromo) {
+    if (quickSaleQty >= selectedPromo.min_quantity && rawSubtotal >= selectedPromo.min_order_amount) {
+      if (selectedPromo.promo_type === 'combo_fixed_price') {
+        const combos = Math.floor(quickSaleQty / selectedPromo.min_quantity);
+        const normalComboVal = starCookie.sale_price * selectedPromo.min_quantity;
+        const savingsPerCombo = Math.max(0, normalComboVal - selectedPromo.discount_value);
+        promoDiscount = combos * savingsPerCombo;
+      } else if (selectedPromo.promo_type === 'percentage') {
+        promoDiscount = rawSubtotal * (selectedPromo.discount_value / 100);
+      } else if (selectedPromo.promo_type === 'fixed_amount') {
+        promoDiscount = Math.min(rawSubtotal, selectedPromo.discount_value);
+      } else if (selectedPromo.promo_type === 'two_for_one') {
+        const freeUnits = Math.floor(quickSaleQty / 2);
+        promoDiscount = freeUnits * starCookie.sale_price;
+      }
+    }
+  }
+
+  promoDiscount = Math.round(promoDiscount * 100) / 100;
+  const quickSaleTotal = Math.max(0, rawSubtotal - promoDiscount);
+  const effectiveUnitPrice = quickSaleQty > 0 ? quickSaleTotal / quickSaleQty : starCookie.sale_price;
+  const quickSaleNetProfit = quickSaleTotal - (starCookie.recipe_cost * quickSaleQty);
 
   const handleCreateQuickExpense = async () => {
     const val = parseFloat(quickExpAmount);
@@ -109,25 +161,28 @@ export default function DashboardScreen() {
   };
 
   const handleConfirmStarSale = async () => {
-    const unitPrice = quickSalePromo ? 30.0 : starCookie.sale_price;
-    const totalRev = unitPrice * quickSaleQty;
-    const netProf = totalRev - (starCookie.recipe_cost * quickSaleQty);
-
     await addCookieSale({
       cookie_id: starCookie.id,
       quantity: quickSaleQty,
-      unit_price: unitPrice,
+      unit_price: effectiveUnitPrice,
       customer_name: 'Cliente Mostrador',
       payment_method: 'Efectivo',
-      notes: quickSalePromo
-        ? `Promo 3x$90 (${quickSaleQty} pzas a $30 c/u)`
-        : `Venta Individual (${quickSaleQty} pza a $${unitPrice.toFixed(2)})`,
+      promotion_id: selectedPromo?.id,
+      promotion_name: selectedPromo?.name,
+      discount_amount: promoDiscount,
+      notes: selectedPromo
+        ? `${selectedPromo.name} (${quickSaleQty} pzas, desc $${promoDiscount.toFixed(2)})`
+        : `Venta Individual (${quickSaleQty} pza${quickSaleQty > 1 ? 's' : ''} a $${starCookie.sale_price.toFixed(2)})`,
     });
 
     setIsQuickSaleOpen(false);
+    setSelectedPromoId(null);
+    setQuickSaleQty(1);
+
+    const marginPctCalc = quickSaleTotal > 0 ? Math.round((quickSaleNetProfit / quickSaleTotal) * 100) : 0;
     Alert.alert(
       '¡Venta Registrada!',
-      `Cobraste $${totalRev.toFixed(2)} MXN y obtuviste +$${netProf.toFixed(2)} MXN de ganancia libre.`
+      `Cobraste $${quickSaleTotal.toFixed(2)} MXN y ganaste +$${quickSaleNetProfit.toFixed(2)} MXN netos (${marginPctCalc}% rendimiento).`
     );
   };
 
@@ -149,7 +204,7 @@ export default function DashboardScreen() {
           <View>
             <View style={styles.brandRow}>
               <View style={styles.brandDot} />
-              <Text style={styles.brandText}>Adm Money Mobile</Text>
+              <Text style={styles.brandText}>{businessName || 'Adm Money Mobile'}</Text>
             </View>
             <Text style={[styles.greeting, { color: colors.textMain }]}>Resumen Financiero</Text>
           </View>
@@ -221,8 +276,10 @@ export default function DashboardScreen() {
             </View>
 
             <Text style={{ fontSize: 32, fontWeight: '900', color: '#FFFFFF', letterSpacing: -0.5 }}>
-              ${netBalance.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              <Text style={{ fontSize: 15, fontWeight: '600', color: 'rgba(255,255,255,0.65)' }}> MXN</Text>
+              {privacyMode
+                ? '••••••••'
+                : `$${netBalance.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              <Text style={{ fontSize: 15, fontWeight: '600', color: 'rgba(255,255,255,0.65)' }}> {currency}</Text>
             </Text>
 
             {/* Micro Dual Ledger Indicators with Frosted Glass */}
@@ -242,10 +299,10 @@ export default function DashboardScreen() {
                   Ingresos Galletas
                 </Text>
                 <Text style={{ fontSize: 15, fontWeight: '900', color: '#6EE7B7', marginTop: 2 }}>
-                  +${cookieRevenue.toFixed(2)}
+                  {privacyMode ? '••••••' : `+$${cookieRevenue.toFixed(2)}`}
                 </Text>
                 <Text style={{ fontSize: 10, fontWeight: '700', color: '#A7F3D0', marginTop: 1 }}>
-                  +${cookieProfit.toFixed(2)} libres ({marginPct.toFixed(0)}%)
+                  {privacyMode ? '••••••' : `+$${cookieProfit.toFixed(2)} libres (${marginPct.toFixed(0)}%)`}
                 </Text>
               </View>
 
@@ -256,7 +313,7 @@ export default function DashboardScreen() {
                   Egresos Totales
                 </Text>
                 <Text style={{ fontSize: 15, fontWeight: '900', color: '#FDA4AF', marginTop: 2 }}>
-                  -${totalExpenses.toFixed(2)}
+                  {privacyMode ? '••••••' : `-$${totalExpenses.toFixed(2)}`}
                 </Text>
                 <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)', marginTop: 1 }}>
                   {expenses.length} movimientos
@@ -281,10 +338,12 @@ export default function DashboardScreen() {
                   <Ionicons name="cafe" size={16} color={colors.amberLight} />
                 </View>
                 <Text style={[styles.statValue, { color: colors.emeraldLight }]}>
-                  +${cookieProfit.toFixed(2)}
+                  {privacyMode ? '••••••' : `+$${cookieProfit.toFixed(2)}`}
                 </Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                  <Text style={[styles.statSub, { color: colors.textDim }]}>{marginPct.toFixed(1)}% margen neto</Text>
+                  <Text style={[styles.statSub, { color: colors.textDim }]}>
+                    {privacyMode ? '•••% margen' : `${marginPct.toFixed(1)}% margen neto`}
+                  </Text>
                   <Ionicons name="chevron-forward" size={13} color={colors.textDim} />
                 </View>
               </DoubleBezelCard>
@@ -302,7 +361,7 @@ export default function DashboardScreen() {
                   <Ionicons name="receipt" size={16} color={colors.rose} />
                 </View>
                 <Text style={[styles.statValue, { color: colors.rose }]}>
-                  -${totalExpenses.toFixed(2)}
+                  {privacyMode ? '••••••' : `-$${totalExpenses.toFixed(2)}`}
                 </Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
                   <Text style={[styles.statSub, { color: colors.textDim }]}>{expenses.length} movimientos</Text>
@@ -370,17 +429,27 @@ export default function DashboardScreen() {
                   {starCookie.name}
                 </Text>
                 <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>
-                  Costo: ${starCookie.recipe_cost.toFixed(2)} • Ganas <Text style={{ color: colors.emerald, fontWeight: '800' }}>+${starCookie.profit_per_unit.toFixed(2)}</Text> c/u
+                  {privacyMode ? (
+                    'Costo: •••••• • Ganas •••••• c/u'
+                  ) : (
+                    <>
+                      Costo: ${starCookie.recipe_cost.toFixed(2)} • Ganas{' '}
+                      <Text style={{ color: colors.emerald, fontWeight: '800' }}>
+                        +${starCookie.profit_per_unit.toFixed(2)}
+                      </Text>{' '}
+                      c/u
+                    </>
+                  )}
                 </Text>
               </View>
 
               <Button
-                title="Vender"
+                title={privacyMode ? 'Vender' : 'Vender'}
                 variant="amber"
                 icon={<Ionicons name="flash" size={13} color="#fff" />}
                 onPress={() => {
                   setQuickSaleQty(1);
-                  setQuickSalePromo(false);
+                  setSelectedPromoId(null);
                   setIsQuickSaleOpen(true);
                 }}
                 style={{ paddingVertical: 6, paddingHorizontal: 12 }}
@@ -388,6 +457,7 @@ export default function DashboardScreen() {
             </View>
           </DoubleBezelCard>
         </FadeSlideIn>
+
 
         {/* Recent Transactions List */}
         <FadeSlideIn delay={240}>
@@ -425,7 +495,7 @@ export default function DashboardScreen() {
                     </View>
                     <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
                       <Text style={{ color: colors.rose, fontWeight: '800', fontSize: 15 }}>
-                        -${exp.amount.toFixed(2)}
+                        {privacyMode ? '••••••' : `-$${exp.amount.toFixed(2)}`}
                       </Text>
                       <Ionicons name="chevron-forward" size={14} color={colors.textDim} />
                     </View>
@@ -496,38 +566,62 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             </View>
             <View style={{ padding: 20 }}>
-              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+              <Text style={[styles.formLabel, { color: colors.textMuted }]}>Esquema de Venta / Promociones</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8, paddingBottom: 10 }}
+              >
                 <TouchableOpacity
                   style={[
                     styles.schemeBtn,
-                    { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle },
-                    !quickSalePromo && styles.schemeBtnActive,
+                    { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, minWidth: 120 },
+                    selectedPromoId === null && styles.schemeBtnActive,
                   ]}
                   onPress={() => {
-                    setQuickSalePromo(false);
-                    setQuickSaleQty(1);
+                    setSelectedPromoId(null);
                   }}
                 >
-                  <Text style={[styles.schemeBtnTitle, { color: colors.textMain }, !quickSalePromo && { color: colors.amberLight }]}>
-                    Individual ($35)
+                  <Text style={[styles.schemeBtnTitle, { color: colors.textMain }, selectedPromoId === null && { color: colors.amberLight }]}>
+                    Individual (${starCookie.sale_price.toFixed(0)})
                   </Text>
+                  <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 2 }}>Precio regular</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.schemeBtn,
-                    { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle },
-                    quickSalePromo && styles.schemeBtnActiveGreen,
-                  ]}
-                  onPress={() => {
-                    setQuickSalePromo(true);
-                    setQuickSaleQty(3);
-                  }}
-                >
-                  <Text style={[styles.schemeBtnTitle, { color: colors.textMain }, quickSalePromo && { color: colors.emeraldLight }]}>
-                    Promo 3 x $90
-                  </Text>
-                </TouchableOpacity>
-              </View>
+
+                {activeStarPromos.map((p) => {
+                  const isSelected = selectedPromoId === p.id;
+                  return (
+                    <TouchableOpacity
+                      key={p.id}
+                      style={[
+                        styles.schemeBtn,
+                        { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, minWidth: 120 },
+                        isSelected && styles.schemeBtnActiveGreen,
+                      ]}
+                      onPress={() => {
+                        setSelectedPromoId(p.id);
+                        if (quickSaleQty < p.min_quantity) {
+                          setQuickSaleQty(p.min_quantity);
+                        }
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.schemeBtnTitle,
+                          { color: colors.textMain },
+                          isSelected && { color: colors.emeraldLight },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {p.name}
+                      </Text>
+                      <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 2 }}>
+                        Mín. {p.min_quantity} pz{p.min_quantity > 1 ? 's' : ''}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
 
               <View style={styles.stepperContainer}>
                 <TouchableOpacity
@@ -546,9 +640,16 @@ export default function DashboardScreen() {
               </View>
 
               <View style={[styles.quickSaleTotalBox, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
-                <Text style={[styles.quickSaleTotalLabel, { color: colors.textMuted }]}>Total a Cobrar:</Text>
+                <View>
+                  <Text style={[styles.quickSaleTotalLabel, { color: colors.textMuted }]}>Total a Cobrar:</Text>
+                  {promoDiscount > 0 && (
+                    <Text style={{ fontSize: 11, color: colors.emeraldLight, fontWeight: '700' }}>
+                      Ahorro: -${promoDiscount.toFixed(2)}
+                    </Text>
+                  )}
+                </View>
                 <Text style={styles.quickSaleTotalVal}>
-                  ${(quickSalePromo ? 30.0 * quickSaleQty : starCookie.sale_price * quickSaleQty).toFixed(2)} MXN
+                  ${quickSaleTotal.toFixed(2)} MXN
                 </Text>
               </View>
 
@@ -575,7 +676,7 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: spacing.md,
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
   header: {
     flexDirection: 'row',

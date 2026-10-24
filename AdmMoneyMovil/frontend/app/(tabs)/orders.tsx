@@ -153,7 +153,7 @@ export default function OrdersScreen() {
             onPaymentStatusChange={handlePaymentStatusChange}
           />
         )}
-        contentContainerStyle={{ padding: 16, paddingBottom: 60 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 110 }}
         onRefresh={loadAllData}
         refreshing={isLoading}
         ListHeaderComponent={
@@ -250,6 +250,7 @@ export default function OrdersScreen() {
           </View>
         }
       />
+      </SwipeTabWrapper>
 
       {/* Add / Edit Order Modal */}
       <OrderModal
@@ -262,7 +263,6 @@ export default function OrdersScreen() {
         onSave={handleSaveOrder}
         onSaveCustomer={addCustomer}
       />
-      </SwipeTabWrapper>
     </SafeAreaView>
   );
 }

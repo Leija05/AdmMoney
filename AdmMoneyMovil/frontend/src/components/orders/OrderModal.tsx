@@ -9,6 +9,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Order, OrderItem, CookieProduct, Promotion, Customer } from '../../lib/types';
 import { colors, useThemeColors, radii, spacing } from '../../theme';
@@ -274,8 +275,8 @@ export const OrderModal: React.FC<OrderModalProps> = ({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <Modal visible={visible} animationType="slide" transparent={false} statusBarTranslucent onRequestClose={onClose}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['top', 'bottom']}>
         {/* Top Navigation Bar */}
         <View style={[styles.topBar, { backgroundColor: colors.bgCard, borderBottomColor: colors.borderSubtle }]}>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -293,7 +294,12 @@ export const OrderModal: React.FC<OrderModalProps> = ({
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={[styles.content, { paddingBottom: 60 }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={true}
+        >
           {/* Customer info card */}
           <DoubleBezelCard style={styles.card}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -781,7 +787,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
 
           <View style={{ height: 40 }} />
         </ScrollView>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 };
@@ -796,8 +802,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    paddingTop: 54,
-    paddingBottom: 16,
+    paddingTop: 12,
+    paddingBottom: 14,
     backgroundColor: colors.bgCard,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,

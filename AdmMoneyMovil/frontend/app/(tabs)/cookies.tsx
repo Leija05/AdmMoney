@@ -8,7 +8,9 @@ import {
   Modal,
   TextInput,
   ScrollView,
-  Alert
+  Alert,
+  Image,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,6 +19,7 @@ import { CookieCard } from '../../src/components/cookies/CookieCard';
 import { CookieRecipeDetailModal } from '../../src/components/cookies/CookieRecipeDetailModal';
 import { SaleDetailModal } from '../../src/components/cookies/SaleDetailModal';
 import { AddCookieModal } from '../../src/components/cookies/AddCookieModal';
+import { EditCookieModal } from '../../src/components/cookies/EditCookieModal';
 import { AddIngredientModal } from '../../src/components/cookies/AddIngredientModal';
 import { AddPromotionModal } from '../../src/components/cookies/AddPromotionModal';
 import { OrderCard } from '../../src/components/orders/OrderCard';
@@ -52,8 +55,10 @@ export default function CookiesScreen() {
     addCookieSale,
     deleteCookieSale,
     addCookieProduct,
+    updateCookieProduct,
     deleteCookieProduct,
     addIngredient,
+    updateIngredient,
     deleteIngredient,
     addOrder,
     updateOrder,
@@ -64,15 +69,21 @@ export default function CookiesScreen() {
     isOnline,
     theme,
     toggleTheme,
+    stockAlertsEnabled,
+    currency,
+    privacyMode,
   } = useAppStore();
 
   const [subTab, setSubTab] = useState<'catalog' | 'ingredients' | 'sales' | 'promotions' | 'orders'>('catalog');
 
   // Modals state
   const [inspectedCookie, setInspectedCookie] = useState<CookieProduct | null>(null);
+  const [actionSheetCookie, setActionSheetCookie] = useState<CookieProduct | null>(null);
+  const [editingCookieProduct, setEditingCookieProduct] = useState<CookieProduct | null>(null);
   const [selectedSale, setSelectedSale] = useState<CookieSale | null>(null);
   const [isAddCookieOpen, setIsAddCookieOpen] = useState(false);
   const [isAddIngredientOpen, setIsAddIngredientOpen] = useState(false);
+  const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
   const [isAddPromoOpen, setIsAddPromoOpen] = useState(false);
   const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(null);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
@@ -418,23 +429,43 @@ export default function CookiesScreen() {
           <View style={styles.statsRow}>
             <View>
               <Text style={[styles.statsLabel, { color: colors.textDim }]}>Ganancia Neta Libre</Text>
-              <Text style={[styles.profitValue, { color: colors.emeraldLight }]}>+${totalProfit.toFixed(2)}</Text>
+              <Text style={[styles.profitValue, { color: colors.emeraldLight }]}>
+                {privacyMode ? '••••••' : `+$${totalProfit.toFixed(2)}`}
+              </Text>
               <Text style={[styles.statsSub, { color: colors.textDim }]}>{totalUnits} galletas vendidas</Text>
             </View>
 
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={[styles.statsLabel, { color: colors.textDim }]}>Total Ingresos</Text>
-              <Text style={[styles.revenueValue, { color: colors.amberLight }]}>${totalRevenue.toFixed(2)}</Text>
+              <Text style={[styles.revenueValue, { color: colors.amberLight }]}>
+                {privacyMode ? '••••••' : `$${totalRevenue.toFixed(2)}`}
+              </Text>
               <Text style={[styles.statsSub, { color: colors.textDim }]}>{sales.length} ventas registradas</Text>
             </View>
           </View>
 
-          {/* Unit Economics Highlights Bar */}
-          <View style={[styles.economicsMiniBar, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
-            <Text style={[styles.economicsMiniText, { color: colors.textMuted }]}>
-              🍪 Tanda: 16 pzas • Insumo: $6.77 • Empaque: $2.90 • Total Lote: $9.67
-            </Text>
-          </View>
+          {/* Unit Economics Highlights Bar (Screenshot 4) - Tap to edit batch parameters & profit */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => {
+              if (cookies.length > 0) {
+                setEditingCookieProduct(cookies[0]);
+              }
+            }}
+            style={[styles.economicsMiniBar, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+          >
+            <View style={{ flex: 1, paddingRight: 6 }}>
+              <Text style={[styles.economicsMiniText, { color: colors.textMuted }]}>
+                {privacyMode
+                  ? '🍪 Tanda: 16 pzas • Insumo: •••••• • Empaque: •••••• • Total: ••••••'
+                  : '🍪 Tanda: 16 pzas • Insumo: $6.77 • Empaque: $2.90 • Total Lote: $9.67'}
+              </Text>
+            </View>
+            <View style={[styles.editTandaBadge, { backgroundColor: colors.amberBg, borderColor: colors.amberBorder }]}>
+              <Ionicons name="pencil" size={11} color={colors.amberLight} />
+              <Text style={[styles.editTandaText, { color: colors.amberLight }]}>Editar Tanda</Text>
+            </View>
+          </TouchableOpacity>
         </DoubleBezelCard>
 
         {/* 5 Sub-tabs scrollable pills with vibrant gradients */}
@@ -501,11 +532,13 @@ export default function CookiesScreen() {
               renderItem={({ item }) => (
                 <CookieCard
                   cookie={item}
+                  privacyMode={privacyMode}
                   onSell={handleOpenSale}
                   onInspect={(c) => setInspectedCookie(c)}
+                  onLongPress={(c) => setActionSheetCookie(c)}
                 />
               )}
-              contentContainerStyle={{ paddingBottom: 40 }}
+              contentContainerStyle={{ paddingBottom: 110 }}
               onRefresh={loadAllData}
               refreshing={isLoading}
             />
@@ -521,7 +554,10 @@ export default function CookiesScreen() {
                 title="+ Insumo"
                 variant="primary"
                 icon={<Ionicons name="add" size={16} color="#fff" />}
-                onPress={() => setIsAddIngredientOpen(true)}
+                onPress={() => {
+                  setEditingIngredient(null);
+                  setIsAddIngredientOpen(true);
+                }}
                 style={{ paddingVertical: 6, paddingHorizontal: 12 }}
               />
             </View>
@@ -542,30 +578,64 @@ export default function CookiesScreen() {
                       <Text style={{ fontSize: 14, fontWeight: '800', color: colors.textMain }}>
                         {item.name}
                       </Text>
-                      <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>
-                        {item.supplier} • Stock: {item.stock_quantity} {item.unit}
-                      </Text>
+                      {stockAlertsEnabled && item.stock_quantity <= 2 ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+                          <View style={{ backgroundColor: colors.roseBg, borderColor: colors.roseBorder, borderWidth: 1, borderRadius: radii.sm, paddingHorizontal: 6, paddingVertical: 2 }}>
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: colors.roseText }}>
+                              ⚠️ Stock Crítico: {item.stock_quantity} {item.unit} restantes
+                            </Text>
+                          </View>
+                        </View>
+                      ) : (
+                        <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>
+                          {item.supplier} • Stock: {item.stock_quantity} {item.unit}
+                        </Text>
+                      )}
                       <Text style={{ fontSize: 11, color: colors.amberLight, marginTop: 2 }}>
                         Paquete: ${item.package_cost.toFixed(2)} / {item.package_quantity} {item.unit}
                       </Text>
                     </View>
 
-                    <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                    <View style={{ alignItems: 'flex-end', gap: 6 }}>
                       <Text style={{ fontSize: 14, fontWeight: '900', color: colors.emeraldLight }}>
                         ${item.cost_per_unit.toFixed(3)} / {item.unit}
                       </Text>
-                      <TouchableOpacity
-                        onPress={() => handleDeleteIngredient(item)}
-                        style={{ padding: 4 }}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                      >
-                        <Ionicons name="trash-outline" size={15} color={colors.rose} />
-                      </TouchableOpacity>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <TouchableOpacity
+                          onPress={() => {
+                            setEditingIngredient(item);
+                            setIsAddIngredientOpen(true);
+                          }}
+                          style={{
+                            padding: 6,
+                            borderRadius: radii.sm,
+                            backgroundColor: colors.bgTertiary,
+                            borderWidth: 1,
+                            borderColor: colors.borderSubtle,
+                          }}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="pencil" size={14} color={colors.textMain} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => handleDeleteIngredient(item)}
+                          style={{
+                            padding: 6,
+                            borderRadius: radii.sm,
+                            backgroundColor: colors.bgTertiary,
+                            borderWidth: 1,
+                            borderColor: colors.borderSubtle,
+                          }}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="trash-outline" size={14} color={colors.rose} />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   </View>
                 </DoubleBezelCard>
               )}
-              contentContainerStyle={{ paddingBottom: 40 }}
+              contentContainerStyle={{ paddingBottom: 110 }}
               onRefresh={loadAllData}
               refreshing={isLoading}
               ListEmptyComponent={
@@ -642,7 +712,7 @@ export default function CookiesScreen() {
                   </DoubleBezelCard>
                 </TouchableOpacity>
               )}
-              contentContainerStyle={{ paddingBottom: 40 }}
+              contentContainerStyle={{ paddingBottom: 110 }}
               onRefresh={loadAllData}
               refreshing={isLoading}
               ListEmptyComponent={
@@ -756,7 +826,7 @@ export default function CookiesScreen() {
                   </TouchableOpacity>
                 );
               }}
-              contentContainerStyle={{ paddingBottom: 40 }}
+              contentContainerStyle={{ paddingBottom: 110 }}
               onRefresh={loadAllData}
               refreshing={isLoading}
               ListEmptyComponent={
@@ -841,7 +911,7 @@ export default function CookiesScreen() {
                   onPaymentStatusChange={handlePaymentStatusChange}
                 />
               )}
-              contentContainerStyle={{ paddingBottom: 40 }}
+              contentContainerStyle={{ paddingBottom: 110 }}
               onRefresh={loadAllData}
               refreshing={isLoading}
               ListEmptyComponent={
@@ -859,6 +929,7 @@ export default function CookiesScreen() {
           </View>
         )}
       </View>
+      </SwipeTabWrapper>
 
       {/* Cookie Recipe Ingredients Detail Modal */}
       <CookieRecipeDetailModal
@@ -868,6 +939,187 @@ export default function CookiesScreen() {
         onSell={handleOpenSale}
         onDeleteCookie={deleteCookieProduct}
       />
+
+      {/* Edit Cookie Recipe & Batch Profit Modal */}
+      <EditCookieModal
+        visible={!!editingCookieProduct}
+        cookie={editingCookieProduct}
+        onClose={() => setEditingCookieProduct(null)}
+        onUpdateCookie={updateCookieProduct}
+      />
+
+      {/* Cookie Quick Actions Sheet (Long-Press Menu) */}
+      <Modal
+        visible={!!actionSheetCookie}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setActionSheetCookie(null)}
+      >
+        <TouchableOpacity
+          style={styles.actionSheetBackdrop}
+          activeOpacity={1}
+          onPress={() => setActionSheetCookie(null)}
+        >
+          {actionSheetCookie && (
+            <TouchableOpacity
+              activeOpacity={1}
+              style={[
+                styles.actionSheetDialog,
+                {
+                  backgroundColor: colors.bgCard,
+                  borderColor: colors.borderSubtle,
+                },
+              ]}
+            >
+              {/* Drag Handle Bar */}
+              <View style={styles.sheetHandleWrapper}>
+                <View style={[styles.sheetHandleBar, { backgroundColor: colors.borderSubtle }]} />
+              </View>
+
+              {/* Header with cookie info */}
+              <View style={styles.actionSheetHeader}>
+                <Image source={{ uri: actionSheetCookie.image_url }} style={styles.actionSheetImg} />
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <Text style={[styles.actionSheetTitle, { color: colors.textMain }]} numberOfLines={1}>
+                    {actionSheetCookie.name}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                    <Badge label={`$${actionSheetCookie.sale_price.toFixed(2)} MXN`} variant="amber" />
+                    <Badge label={`Tanda: ${actionSheetCookie.batch_yield || 16} pzas`} variant="gray" />
+                  </View>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setActionSheetCookie(null)}
+                  style={[styles.actionSheetCloseCircle, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+                >
+                  <Ionicons name="close" size={18} color={colors.textMain} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={[styles.actionSheetDivider, { backgroundColor: colors.borderSubtle }]} />
+
+              {/* Option 1: Ver Receta & Costos */}
+              <TouchableOpacity
+                style={[styles.actionSheetItem, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+                onPress={() => {
+                  const target = actionSheetCookie;
+                  setActionSheetCookie(null);
+                  setInspectedCookie(target);
+                }}
+              >
+                <View style={[styles.actionSheetIconBox, { backgroundColor: colors.amberBg }]}>
+                  <Ionicons name="book" size={19} color={colors.amberLight} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.actionSheetItemTitle, { color: colors.textMain }]}>Ver Receta & Costos</Text>
+                  <Text style={[styles.actionSheetItemSub, { color: colors.textDim }]}>
+                    Desglose de insumos, ganancia y promociones
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={17} color={colors.textDim} />
+              </TouchableOpacity>
+
+              {/* Option 2: Editar Receta & Tanda */}
+              <TouchableOpacity
+                style={[styles.actionSheetItem, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+                onPress={() => {
+                  const target = actionSheetCookie;
+                  setActionSheetCookie(null);
+                  setEditingCookieProduct(target);
+                }}
+              >
+                <View style={[styles.actionSheetIconBox, { backgroundColor: colors.emeraldBg }]}>
+                  <Ionicons name="pencil" size={19} color={colors.emeraldLight} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.actionSheetItemTitle, { color: colors.textMain }]}>Editar Receta & Tanda</Text>
+                  <Text style={[styles.actionSheetItemSub, { color: colors.textDim }]}>
+                    Modificar piezas por tanda, insumos y ganancia libre
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={17} color={colors.textDim} />
+              </TouchableOpacity>
+
+              {/* Option 3: Registrar Venta Rápida */}
+              <TouchableOpacity
+                style={[styles.actionSheetItem, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+                onPress={() => {
+                  const target = actionSheetCookie;
+                  setActionSheetCookie(null);
+                  handleOpenSale(target);
+                }}
+              >
+                <View style={[styles.actionSheetIconBox, { backgroundColor: colors.brandGlow }]}>
+                  <Ionicons name="flash" size={19} color={colors.brandLight} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.actionSheetItemTitle, { color: colors.textMain }]}>Registrar Venta Rápida</Text>
+                  <Text style={[styles.actionSheetItemSub, { color: colors.textDim }]}>
+                    Cobro directo de mostrador con promos automáticas
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={17} color={colors.textDim} />
+              </TouchableOpacity>
+
+              {/* Option 4: Cambiar Foto */}
+              <TouchableOpacity
+                style={[styles.actionSheetItem, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+                onPress={() => {
+                  const target = actionSheetCookie;
+                  setActionSheetCookie(null);
+                  setEditingCookieProduct(target);
+                }}
+              >
+                <View style={[styles.actionSheetIconBox, { backgroundColor: colors.purpleBg }]}>
+                  <Ionicons name="camera" size={19} color={colors.purpleLight} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.actionSheetItemTitle, { color: colors.textMain }]}>Cambiar Foto</Text>
+                  <Text style={[styles.actionSheetItemSub, { color: colors.textDim }]}>
+                    Tomar foto con la cámara o seleccionar de galería
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={17} color={colors.textDim} />
+              </TouchableOpacity>
+
+              {/* Option 5: Eliminar Galleta */}
+              <TouchableOpacity
+                style={[
+                  styles.actionSheetItem,
+                  {
+                    backgroundColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2',
+                    borderColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.35)' : '#FECDD3',
+                  },
+                ]}
+                onPress={() => {
+                  const target = actionSheetCookie;
+                  setActionSheetCookie(null);
+                  confirmAction({
+                    title: '¿Eliminar Galleta?',
+                    message: `¿Estás seguro de eliminar permanentemente "${target.name}" del catálogo?`,
+                    confirmText: 'Sí, Eliminar',
+                    type: 'danger',
+                    onConfirm: async () => {
+                      await deleteCookieProduct(target.id);
+                    },
+                  });
+                }}
+              >
+                <View style={[styles.actionSheetIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.22)' }]}>
+                  <Ionicons name="trash" size={19} color="#EF4444" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#EF4444' }}>Eliminar Galleta</Text>
+                  <Text style={{ fontSize: 11, lineHeight: 16, color: theme === 'dark' ? '#FCA5A5' : '#991B1B', marginTop: 2 }}>
+                    Quitar permanentemente del catálogo y recetas
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={17} color="#EF4444" />
+              </TouchableOpacity>
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
+      </Modal>
 
       {/* Sale Detail Receipt Modal */}
       <SaleDetailModal
@@ -884,11 +1136,16 @@ export default function CookiesScreen() {
         onAddCookie={addCookieProduct}
       />
 
-      {/* Add Ingredient Modal */}
+      {/* Add / Edit Ingredient Modal */}
       <AddIngredientModal
         visible={isAddIngredientOpen}
-        onClose={() => setIsAddIngredientOpen(false)}
+        onClose={() => {
+          setIsAddIngredientOpen(false);
+          setEditingIngredient(null);
+        }}
         onAddIngredient={addIngredient}
+        onUpdateIngredient={updateIngredient}
+        editingIngredient={editingIngredient}
       />
 
       {/* Add / Edit Promotion Modal */}
@@ -1065,7 +1322,6 @@ export default function CookiesScreen() {
           </View>
         </View>
       </Modal>
-      </SwipeTabWrapper>
     </SafeAreaView>
   );
 }
@@ -1137,16 +1393,18 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   economicsMiniBar: {
-    marginTop: 12,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderSubtle,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    marginTop: 10,
   },
   economicsMiniText: {
     fontSize: 11,
-    color: colors.textDim,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: '700',
   },
   tabToggleWrapper: {
     marginBottom: 12,
@@ -1399,5 +1657,105 @@ const styles = StyleSheet.create({
     color: colors.textMain,
     fontSize: 13,
     marginBottom: 10,
+  },
+  editTandaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: radii.pill,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+  },
+  editTandaText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  actionSheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'flex-end',
+  },
+  actionSheetDialog: {
+    width: '100%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 36 : 28,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 20,
+  },
+  sheetHandleWrapper: {
+    alignItems: 'center',
+    paddingVertical: 4,
+    marginBottom: 6,
+  },
+  sheetHandleBar: {
+    width: 44,
+    height: 4,
+    borderRadius: 2,
+  },
+  actionSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 6,
+  },
+  actionSheetImg: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  actionSheetTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  actionSheetCloseCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionSheetDivider: {
+    height: 1,
+    marginVertical: 4,
+  },
+  actionSheetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    borderWidth: 1,
+    borderRadius: radii.md,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  actionSheetIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionSheetItemTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  actionSheetItemSub: {
+    fontSize: 11,
+    marginTop: 2,
+    lineHeight: 15,
   },
 });
