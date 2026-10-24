@@ -20,6 +20,7 @@ import { Button } from '../../src/components/ui/Button';
 import { ExpenseDetailModal } from '../../src/components/expenses/ExpenseDetailModal';
 import { BackendHeartbeat } from '../../src/components/ui/BackendHeartbeat';
 import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
+import { FadeSlideIn } from '../../src/components/ui/FadeSlideIn';
 import { useAppStore } from '../../src/stores/app.store';
 import { Expense, CookieProduct } from '../../src/lib/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -179,251 +180,261 @@ export default function DashboardScreen() {
         </View>
 
         {/* Global Net Balance Luxury Gradient Card */}
-        <DoubleBezelCard
-          gradient={
-            theme === 'dark'
-              ? ['#192338', '#111724']
-              : ['#0284C7', '#0369A1']
-          }
-          style={styles.balanceCard}
-        >
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Animated.View
+        <FadeSlideIn delay={40}>
+          <DoubleBezelCard
+            gradient={
+              theme === 'dark'
+                ? ['#192338', '#111724']
+                : ['#0284C7', '#0369A1']
+            }
+            style={styles.balanceCard}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Animated.View
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: netBalance >= 0 ? '#4ADE80' : '#FB7185',
+                    transform: [{ scale: pulseAnim }],
+                  }}
+                />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                  Liquidez Neta en Caja
+                </Text>
+              </View>
+              <View
                 style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: netBalance >= 0 ? '#4ADE80' : '#FB7185',
-                  transform: [{ scale: pulseAnim }],
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                  paddingHorizontal: 8,
+                  paddingVertical: 3,
+                  borderRadius: radii.pill,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.25)',
                 }}
-              />
-              <Text style={{ fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: 0.6 }}>
-                Liquidez Neta en Caja
-              </Text>
+              >
+                <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
+                  {netBalance >= 0 ? '✓ Superávit' : '⚠ Déficit'}
+                </Text>
+              </View>
             </View>
+
+            <Text style={{ fontSize: 32, fontWeight: '900', color: '#FFFFFF', letterSpacing: -0.5 }}>
+              ${netBalance.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <Text style={{ fontSize: 15, fontWeight: '600', color: 'rgba(255,255,255,0.65)' }}> MXN</Text>
+            </Text>
+
+            {/* Micro Dual Ledger Indicators with Frosted Glass */}
             <View
               style={{
-                backgroundColor: 'rgba(255,255,255,0.18)',
-                paddingHorizontal: 8,
-                paddingVertical: 3,
-                borderRadius: radii.pill,
+                flexDirection: 'row',
+                marginTop: 14,
+                backgroundColor: 'rgba(0, 0, 0, 0.22)',
+                borderRadius: radii.md,
+                padding: 12,
                 borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.25)',
+                borderColor: 'rgba(255, 255, 255, 0.12)',
               }}
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
-                {netBalance >= 0 ? '✓ Superávit' : '⚠ Déficit'}
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' }}>
+                  Ingresos Galletas
+                </Text>
+                <Text style={{ fontSize: 15, fontWeight: '900', color: '#6EE7B7', marginTop: 2 }}>
+                  +${cookieRevenue.toFixed(2)}
+                </Text>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: '#A7F3D0', marginTop: 1 }}>
+                  +${cookieProfit.toFixed(2)} libres ({marginPct.toFixed(0)}%)
+                </Text>
+              </View>
+
+              <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.15)', marginHorizontal: 10 }} />
+
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' }}>
+                  Egresos Totales
+                </Text>
+                <Text style={{ fontSize: 15, fontWeight: '900', color: '#FDA4AF', marginTop: 2 }}>
+                  -${totalExpenses.toFixed(2)}
+                </Text>
+                <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)', marginTop: 1 }}>
+                  {expenses.length} movimientos
+                </Text>
+              </View>
             </View>
-          </View>
-
-          <Text style={{ fontSize: 32, fontWeight: '900', color: '#FFFFFF', letterSpacing: -0.5 }}>
-            ${netBalance.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            <Text style={{ fontSize: 15, fontWeight: '600', color: 'rgba(255,255,255,0.65)' }}> MXN</Text>
-          </Text>
-
-          {/* Micro Dual Ledger Indicators with Frosted Glass */}
-          <View
-            style={{
-              flexDirection: 'row',
-              marginTop: 14,
-              backgroundColor: 'rgba(0, 0, 0, 0.22)',
-              borderRadius: radii.md,
-              padding: 12,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.12)',
-            }}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' }}>
-                Ingresos Galletas
-              </Text>
-              <Text style={{ fontSize: 15, fontWeight: '900', color: '#6EE7B7', marginTop: 2 }}>
-                +${cookieRevenue.toFixed(2)}
-              </Text>
-              <Text style={{ fontSize: 10, fontWeight: '700', color: '#A7F3D0', marginTop: 1 }}>
-                +${cookieProfit.toFixed(2)} libres ({marginPct.toFixed(0)}%)
-              </Text>
-            </View>
-
-            <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.15)', marginHorizontal: 10 }} />
-
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' }}>
-                Egresos Totales
-              </Text>
-              <Text style={{ fontSize: 15, fontWeight: '900', color: '#FDA4AF', marginTop: 2 }}>
-                -${totalExpenses.toFixed(2)}
-              </Text>
-              <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)', marginTop: 1 }}>
-                {expenses.length} movimientos
-              </Text>
-            </View>
-          </View>
-        </DoubleBezelCard>
+          </DoubleBezelCard>
+        </FadeSlideIn>
 
         {/* Quick Bento Stats (2 Clickable Columns) */}
-        <View style={styles.bentoRow}>
-          {/* Cookie Business Profit */}
-          <TouchableOpacity
-            style={styles.bentoHalf}
-            activeOpacity={0.8}
-            onPress={() => router.push('/cookies')}
-          >
-            <DoubleBezelCard>
-              <View style={styles.statHeader}>
-                <Text style={[styles.statMiniTitle, { color: colors.textMuted }]}>Ganancia Galletas</Text>
-                <Ionicons name="cafe" size={16} color={colors.amberLight} />
-              </View>
-              <Text style={[styles.statValue, { color: colors.emeraldLight }]}>
-                +${cookieProfit.toFixed(2)}
-              </Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                <Text style={[styles.statSub, { color: colors.textDim }]}>{marginPct.toFixed(1)}% margen neto</Text>
-                <Ionicons name="chevron-forward" size={13} color={colors.textDim} />
-              </View>
-            </DoubleBezelCard>
-          </TouchableOpacity>
-
-          {/* General Expenses */}
-          <TouchableOpacity
-            style={styles.bentoHalf}
-            activeOpacity={0.8}
-            onPress={() => router.push('/expenses')}
-          >
-            <DoubleBezelCard>
-              <View style={styles.statHeader}>
-                <Text style={[styles.statMiniTitle, { color: colors.textMuted }]}>Gastos Totales</Text>
-                <Ionicons name="receipt" size={16} color={colors.rose} />
-              </View>
-              <Text style={[styles.statValue, { color: colors.rose }]}>
-                -${totalExpenses.toFixed(2)}
-              </Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                <Text style={[styles.statSub, { color: colors.textDim }]}>{expenses.length} movimientos</Text>
-                <Ionicons name="chevron-forward" size={13} color={colors.textDim} />
-              </View>
-            </DoubleBezelCard>
-          </TouchableOpacity>
-        </View>
-
-        {/* Action Shortcuts with Tactical Gradients */}
-        <View style={styles.shortcutsRow}>
-          <Button
-            title="Escanear"
-            variant="primary"
-            icon={<Ionicons name="camera" size={15} color="#fff" />}
-            onPress={() => router.push('/scanner')}
-            style={{ flex: 1 }}
-          />
-          <Button
-            title="+ Gasto"
-            variant="danger"
-            icon={<Ionicons name="receipt" size={15} color="#fff" />}
-            onPress={() => setIsQuickExpenseOpen(true)}
-            style={{ flex: 1 }}
-          />
-          <Button
-            title="+ Venta"
-            variant="amber"
-            icon={<Ionicons name="cart" size={15} color="#fff" />}
-            onPress={() => router.push('/cookies')}
-            style={{ flex: 1 }}
-          />
-        </View>
-
-        {/* Star Cookie Highlight */}
-        <DoubleBezelCard style={styles.starCookieCard}>
-          <View style={styles.starCookieRow}>
-            <View
-              style={{
-                width: 46,
-                height: 46,
-                borderRadius: 23,
-                backgroundColor: colors.amberBg,
-                borderWidth: 1.5,
-                borderColor: colors.amberBorder,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Ionicons name="sparkles" size={20} color={colors.amberLight} />
-            </View>
-
-            <View style={{ flex: 1, marginHorizontal: 10 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                <Text style={{ fontSize: 10, fontWeight: '800', color: colors.amberLight, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  ⭐ Joya de la Casa
-                </Text>
-                <Badge label="Top 1" variant="amber" />
-              </View>
-              <Text style={{ fontSize: 14, fontWeight: '800', color: colors.textMain }} numberOfLines={1}>
-                {starCookie.name}
-              </Text>
-              <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>
-                Costo: ${starCookie.recipe_cost.toFixed(2)} • Ganas <Text style={{ color: colors.emerald, fontWeight: '800' }}>+${starCookie.profit_per_unit.toFixed(2)}</Text> c/u
-              </Text>
-            </View>
-
-            <Button
-              title="Vender"
-              variant="amber"
-              icon={<Ionicons name="flash" size={13} color="#fff" />}
-              onPress={() => {
-                setQuickSaleQty(1);
-                setQuickSalePromo(false);
-                setIsQuickSaleOpen(true);
-              }}
-              style={{ paddingVertical: 6, paddingHorizontal: 12 }}
-            />
-          </View>
-        </DoubleBezelCard>
-
-        {/* Recent Transactions List */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.textMain }]}>Egresos Recientes</Text>
-          <TouchableOpacity onPress={() => router.push('/expenses')}>
-            <Text style={[styles.sectionLink, { color: colors.brandLight }]}>Ver todos ({expenses.length})</Text>
-          </TouchableOpacity>
-        </View>
-
-        {expenses.length === 0 ? (
-          <View style={[styles.emptyRecentBox, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
-            <Text style={[styles.emptyRecentText, { color: colors.textMuted }]}>No hay egresos registrados.</Text>
-            <Button
-              title="+ Registrar Primer Gasto"
-              variant="primary"
-              onPress={() => setIsQuickExpenseOpen(true)}
-              style={{ marginTop: 8 }}
-            />
-          </View>
-        ) : (
-          expenses.slice(0, 4).map((exp) => (
+        <FadeSlideIn delay={90}>
+          <View style={styles.bentoRow}>
+            {/* Cookie Business Profit */}
             <TouchableOpacity
-              key={exp.id}
-              activeOpacity={0.75}
-              onPress={() => setSelectedExpense(exp)}
+              style={styles.bentoHalf}
+              activeOpacity={0.8}
+              onPress={() => router.push('/cookies')}
             >
-              <DoubleBezelCard style={{ marginBottom: 10 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <View style={{ flex: 1, paddingRight: 8 }}>
-                    <Text style={{ color: colors.textMain, fontWeight: '700', fontSize: 14 }}>{exp.title}</Text>
-                    <Text style={{ color: colors.textDim, fontSize: 11, marginTop: 2 }}>
-                      {exp.date} • {exp.category} • {exp.payment_method}
-                    </Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-                    <Text style={{ color: colors.rose, fontWeight: '800', fontSize: 15 }}>
-                      -${exp.amount.toFixed(2)}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={14} color={colors.textDim} />
-                  </View>
+              <DoubleBezelCard>
+                <View style={styles.statHeader}>
+                  <Text style={[styles.statMiniTitle, { color: colors.textMuted }]}>Ganancia Galletas</Text>
+                  <Ionicons name="cafe" size={16} color={colors.amberLight} />
+                </View>
+                <Text style={[styles.statValue, { color: colors.emeraldLight }]}>
+                  +${cookieProfit.toFixed(2)}
+                </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                  <Text style={[styles.statSub, { color: colors.textDim }]}>{marginPct.toFixed(1)}% margen neto</Text>
+                  <Ionicons name="chevron-forward" size={13} color={colors.textDim} />
                 </View>
               </DoubleBezelCard>
             </TouchableOpacity>
-          ))
-        )}
+
+            {/* General Expenses */}
+            <TouchableOpacity
+              style={styles.bentoHalf}
+              activeOpacity={0.8}
+              onPress={() => router.push('/expenses')}
+            >
+              <DoubleBezelCard>
+                <View style={styles.statHeader}>
+                  <Text style={[styles.statMiniTitle, { color: colors.textMuted }]}>Gastos Totales</Text>
+                  <Ionicons name="receipt" size={16} color={colors.rose} />
+                </View>
+                <Text style={[styles.statValue, { color: colors.rose }]}>
+                  -${totalExpenses.toFixed(2)}
+                </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                  <Text style={[styles.statSub, { color: colors.textDim }]}>{expenses.length} movimientos</Text>
+                  <Ionicons name="chevron-forward" size={13} color={colors.textDim} />
+                </View>
+              </DoubleBezelCard>
+            </TouchableOpacity>
+          </View>
+        </FadeSlideIn>
+
+        {/* Action Shortcuts with Tactical Gradients */}
+        <FadeSlideIn delay={140}>
+          <View style={styles.shortcutsRow}>
+            <Button
+              title="Escanear"
+              variant="primary"
+              icon={<Ionicons name="camera" size={15} color="#fff" />}
+              onPress={() => router.push('/scanner')}
+              style={{ flex: 1 }}
+            />
+            <Button
+              title="+ Gasto"
+              variant="danger"
+              icon={<Ionicons name="receipt" size={15} color="#fff" />}
+              onPress={() => setIsQuickExpenseOpen(true)}
+              style={{ flex: 1 }}
+            />
+            <Button
+              title="+ Venta"
+              variant="amber"
+              icon={<Ionicons name="cart" size={15} color="#fff" />}
+              onPress={() => router.push('/cookies')}
+              style={{ flex: 1 }}
+            />
+          </View>
+        </FadeSlideIn>
+
+        {/* Star Cookie Highlight */}
+        <FadeSlideIn delay={190}>
+          <DoubleBezelCard style={styles.starCookieCard}>
+            <View style={styles.starCookieRow}>
+              <View
+                style={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: 23,
+                  backgroundColor: colors.amberBg,
+                  borderWidth: 1.5,
+                  borderColor: colors.amberBorder,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="sparkles" size={20} color={colors.amberLight} />
+              </View>
+
+              <View style={{ flex: 1, marginHorizontal: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: colors.amberLight, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    ⭐ Joya de la Casa
+                  </Text>
+                  <Badge label="Top 1" variant="amber" />
+                </View>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: colors.textMain }} numberOfLines={1}>
+                  {starCookie.name}
+                </Text>
+                <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>
+                  Costo: ${starCookie.recipe_cost.toFixed(2)} • Ganas <Text style={{ color: colors.emerald, fontWeight: '800' }}>+${starCookie.profit_per_unit.toFixed(2)}</Text> c/u
+                </Text>
+              </View>
+
+              <Button
+                title="Vender"
+                variant="amber"
+                icon={<Ionicons name="flash" size={13} color="#fff" />}
+                onPress={() => {
+                  setQuickSaleQty(1);
+                  setQuickSalePromo(false);
+                  setIsQuickSaleOpen(true);
+                }}
+                style={{ paddingVertical: 6, paddingHorizontal: 12 }}
+              />
+            </View>
+          </DoubleBezelCard>
+        </FadeSlideIn>
+
+        {/* Recent Transactions List */}
+        <FadeSlideIn delay={240}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.textMain }]}>Egresos Recientes</Text>
+            <TouchableOpacity onPress={() => router.push('/expenses')}>
+              <Text style={[styles.sectionLink, { color: colors.brandLight }]}>Ver todos ({expenses.length})</Text>
+            </TouchableOpacity>
+          </View>
+
+          {expenses.length === 0 ? (
+            <View style={[styles.emptyRecentBox, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
+              <Text style={[styles.emptyRecentText, { color: colors.textMuted }]}>No hay egresos registrados.</Text>
+              <Button
+                title="+ Registrar Primer Gasto"
+                variant="primary"
+                onPress={() => setIsQuickExpenseOpen(true)}
+                style={{ marginTop: 8 }}
+              />
+            </View>
+          ) : (
+            expenses.slice(0, 4).map((exp) => (
+              <TouchableOpacity
+                key={exp.id}
+                activeOpacity={0.75}
+                onPress={() => setSelectedExpense(exp)}
+              >
+                <DoubleBezelCard style={{ marginBottom: 10 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View style={{ flex: 1, paddingRight: 8 }}>
+                      <Text style={{ color: colors.textMain, fontWeight: '700', fontSize: 14 }}>{exp.title}</Text>
+                      <Text style={{ color: colors.textDim, fontSize: 11, marginTop: 2 }}>
+                        {exp.date} • {exp.category} • {exp.payment_method}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                      <Text style={{ color: colors.rose, fontWeight: '800', fontSize: 15 }}>
+                        -${exp.amount.toFixed(2)}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={14} color={colors.textDim} />
+                    </View>
+                  </View>
+                </DoubleBezelCard>
+              </TouchableOpacity>
+            ))
+          )}
+        </FadeSlideIn>
       </ScrollView>
 
       {/* Expense Detail Modal */}

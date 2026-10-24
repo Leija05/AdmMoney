@@ -1,15 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Animated, Easing, TouchableOpacity, Text } from 'react-native';
-import Svg, { G, Path, Defs, ClipPath, Rect } from 'react-native-svg';
+import Svg, { Path, G, Circle } from 'react-native-svg';
 
-export const SIGNATURE_PATH_1 =
-  "m 4180,5321 c -134,-29 -302,-166 -450,-366 -75,-101 -140,-201 -140,-214 0,-5 -3,-11 -7,-13 -15,-6 -159,-293 -228,-453 -26,-60 -58,-134 -71,-163 -13,-29 -24,-56 -24,-61 0,-28 -106,-67 -225,-83 -149,-20 -203,-21 -276,-4 -94,22 -146,51 -184,105 -26,37 -30,51 -30,110 0,55 6,78 32,132 31,62 121,164 183,206 14,9 27,19 30,22 25,28 190,105 283,132 47,13 77,27 77,36 0,30 -142,-3 -262,-62 -214,-106 -356,-259 -389,-420 -10,-51 -10,-68 4,-116 28,-94 99,-152 230,-186 82,-21 288,-12 401,17 44,11 81,18 83,16 3,-2 -9,-34 -26,-71 -17,-36 -31,-69 -31,-72 0,-16 -171,-350 -232,-453 l -73,-122 -50,8 c -27,5 -118,9 -200,9 -150,0 -151,0 -216,-32 -126,-62 -209,-166 -209,-261 0,-91 96,-161 203,-149 134,16 247,80 377,212 89,90 52,88 320,20 297,-75 490,-94 621,-60 142,37 248,133 266,240 7,39 13,50 33,56 14,4 59,17 100,29 41,13 79,26 85,31 17,17 45,9 55,-15 24,-64 128,-101 213,-77 162,48 357,182 557,385 46,47 87,86 91,86 4,0 -6,-34 -23,-76 -16,-41 -32,-104 -35,-139 -5,-59 -4,-67 21,-100 24,-31 33,-35 70,-35 87,0 216,80 360,226 81,80 159,166 206,227 68,87 73,79 34,-46 -156,-500 -145,-479 -264,-496 -182,-26 -343,-51 -445,-70 -169,-30 -276,-50 -320,-60 -22,-5 -65,-14 -95,-20 -82,-17 -274,-70 -314,-86 -138,-58 -142,-168 -8,-227 88,-39 202,0 202,69 0,15 -7,36 -14,46 -18,24 -74,43 -88,29 -15,-15 -2,-42 20,-42 24,0 46,-25 39,-44 -9,-24 -81,-39 -126,-26 -43,11 -91,54 -91,80 0,44 114,96 310,139 25,5 65,14 90,20 25,5 81,17 125,26 44,9 100,20 125,25 25,5 119,21 210,35 91,14 185,30 210,35 25,5 72,12 105,15 l 60,7 -75,-72 c -240,-230 -365,-357 -440,-445 -49,-58 -162,-209 -168,-225 -3,-8 -13,-27 -23,-41 -40,-57 -101,-194 -119,-267 -33,-131 -24,-234 28,-305 117,-162 321,-68 526,242 107,162 195,338 308,611 27,65 93,243 109,295 6,22 18,54 26,72 7,17 13,36 13,42 0,6 4,19 9,29 5,9 14,36 20,58 11,40 13,42 58,48 107,14 365,45 468,56 61,6 144,15 185,21 136,17 448,48 710,69 74,6 196,17 270,25 74,8 200,19 280,25 80,6 190,15 245,20 55,6 165,14 245,20 80,5 173,13 208,16 70,7 79,-3 33,-35 -60,-43 -88,-123 -57,-163 55,-73 281,-77 399,-8 44,26 77,77 77,118 0,48 -50,99 -116,118 -30,8 -54,17 -54,18 0,2 25,20 55,40 53,35 95,86 95,114 0,30 -32,78 -67,101 -48,31 -170,40 -225,17 -41,-17 -78,-59 -78,-87 0,-50 109,-111 118,-66 2,11 -3,17 -16,17 -23,0 -52,30 -52,54 0,42 148,62 216,30 67,-32 69,-83 7,-131 -64,-50 -138,-73 -258,-83 -60,-5 -137,-12 -170,-15 -33,-3 -172,-14 -310,-25 -137,-11 -295,-25 -350,-30 -55,-5 -181,-17 -280,-25 -99,-8 -223,-20 -275,-25 -52,-5 -147,-14 -210,-20 -219,-19 -435,-40 -510,-50 -293,-38 -601,-72 -607,-67 -3,4 -2,19 3,35 8,25 43,60 159,161 17,14 77,68 134,119 56,52 105,91 108,89 2,-3 -1,-24 -7,-47 -16,-58 -4,-113 31,-151 28,-30 33,-31 84,-26 84,9 164,57 272,165 l 93,93 v -76 c 0,-61 5,-86 22,-116 40,-71 127,-82 229,-28 67,36 203,161 197,181 -9,27 -35,17 -92,-38 -77,-73 -128,-104 -169,-104 -103,0 -99,160 9,384 24,50 19,56 -40,56 h -54 l -36,-64 c -71,-127 -250,-322 -330,-360 -71,-34 -112,-10 -102,60 17,126 173,331 330,434 74,49 122,65 170,56 31,-6 38,-12 43,-37 4,-23 10,-29 27,-27 28,4 35,62 10,89 -65,71 -197,63 -340,-22 -69,-41 -199,-165 -245,-234 -18,-27 -38,-54 -44,-60 -108,-103 -394,-359 -406,-363 -13,-5 -11,8 10,74 10,32 38,124 61,204 23,80 46,154 51,165 4,11 17,50 27,87 22,76 17,88 -37,88 -33,-1 -39,-6 -78,-68 -108,-172 -360,-449 -482,-530 -80,-54 -104,-64 -137,-60 -28,3 -29,4 -28,58 1,33 10,75 23,105 27,59 140,286 170,339 26,46 26,53 0,66 -35,19 -72,3 -107,-48 -17,-26 -44,-61 -59,-77 -16,-17 -55,-62 -88,-100 -136,-159 -318,-321 -450,-401 -114,-69 -211,-84 -259,-39 -36,33 -35,70 4,90 127,66 307,232 354,328 57,113 15,199 -88,183 -98,-16 -213,-100 -304,-223 -65,-89 -98,-160 -118,-252 -8,-41 -16,-76 -17,-77 -8,-7 -197,-73 -216,-76 -20,-2 -26,3 -38,37 -37,107 -179,176 -270,130 -48,-24 -68,-52 -68,-97 0,-34 7,-46 41,-78 45,-42 106,-60 199,-60 65,0 68,-9 27,-66 -29,-40 -82,-71 -159,-94 -86,-26 -332,-5 -523,45 -99,26 -184,47 -232,58 -27,6 -48,16 -48,22 0,7 22,43 49,82 47,67 112,169 154,243 11,19 33,58 48,85 31,53 166,325 180,362 5,14 44,40 110,73 91,46 313,186 350,222 8,7 41,35 74,62 131,108 278,269 358,394 108,167 166,359 138,454 -15,48 -44,93 -69,107 -26,14 -103,20 -142,12 z m 137,-86 c 46,-52 36,-184 -24,-312 -74,-159 -244,-374 -398,-503 -42,-36 -82,-70 -89,-75 -74,-68 -379,-256 -392,-243 -3,4 36,107 66,173 36,79 205,422 233,472 150,266 323,453 462,502 71,25 111,21 142,-14 z m 391,-1347 c 50,-50 -79,-225 -258,-348 -69,-47 -75,-49 -78,-30 -2,12 17,62 42,113 53,108 155,227 219,257 50,23 59,24 75,8 z m 3989,-385 c 145,-68 -12,-205 -220,-191 -69,4 -127,35 -127,67 0,28 58,86 120,120 50,28 61,30 124,26 38,-3 84,-13 103,-22 z m -4849,-70 c 34,-25 72,-80 72,-104 0,-17 -9,-19 -70,-19 -80,0 -142,21 -164,55 -21,32 -20,44 7,73 19,21 29,23 75,20 31,-3 64,-13 80,-25 z m 1707,-220 c -8,-36 -126,-356 -162,-443 -8,-19 -19,-44 -23,-55 -156,-397 -396,-777 -526,-831 -50,-21 -97,-18 -122,9 -29,31 -52,100 -52,156 0,46 22,158 39,196 61,141 158,294 270,429 83,99 287,306 416,422 154,138 160,143 164,144 2,0 0,-12 -4,-27 z m -2847,-83 c 24,-4 46,-10 49,-14 15,-14 -172,-178 -245,-215 -132,-67 -272,-37 -272,58 0,85 99,165 225,184 37,6 184,-2 243,-13 z";
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
-export const SIGNATURE_PATH_2 =
-  "m 5966,4414 c -47,-48 -28,-108 33,-106 42,1 71,30 71,71 0,61 -58,81 -104,35 z";
+// Calibrated cursive stroke paths for handwritten "Le" + flourish underline
+const L_PATH = "M 55 60 C 65 35, 82 15, 96 18 C 108 21, 108 42, 98 62 C 86 86, 70 88, 74 94 C 78 100, 95 94, 125 84";
+const L_LENGTH = 195;
 
-export const SIGNATURE_PATH_3 =
-  "m 5431,4334 c -42,-35 -44,-89 -5,-105 32,-11 53,-6 82,22 29,26 30,84 3,99 -30,16 -47,12 -80,-16 z";
+const E_PATH = "M 125 84 C 136 78, 148 54, 154 55 C 160 56, 154 72, 142 76 C 130 80, 145 86, 172 82 C 190 79, 206 72, 222 70";
+const E_LENGTH = 145;
+
+const FLOURISH_PATH = "M 52 104 C 95 106, 155 108, 195 101 C 215 97, 230 92, 238 90";
+const FLOURISH_LENGTH = 190;
 
 interface AnimatedSignatureProps {
   visible: boolean;
@@ -20,112 +23,227 @@ interface AnimatedSignatureProps {
 
 export const AnimatedSignature: React.FC<AnimatedSignatureProps> = ({
   visible,
-  color = '#881337',
+  color = '#FDA4AF',
   width = 280,
-  height = 115,
+  height = 125,
 }) => {
-  const [animKey, setAnimKey] = useState(0);
-  const drawAnim = useRef(new Animated.Value(1)).current;
+  // Stroke Dashoffset animators (draws each stroke sequentially from pathLength to 0)
+  const lAnim = useRef(new Animated.Value(L_LENGTH)).current;
+  const eAnim = useRef(new Animated.Value(E_LENGTH)).current;
+  const flourishAnim = useRef(new Animated.Value(FLOURISH_LENGTH)).current;
+
+  // Accents and pen tip
+  const sparkleScale = useRef(new Animated.Value(0)).current;
   const penOpacity = useRef(new Animated.Value(0)).current;
+  const penX = useRef(new Animated.Value(55)).current;
+  const penY = useRef(new Animated.Value(60)).current;
 
-  const runAnimation = () => {
-    drawAnim.setValue(0);
+  const [activeStep, setActiveStep] = useState<string>('Listo');
+
+  const runDrawingSequence = () => {
+    // Reset all paths to hidden
+    lAnim.setValue(L_LENGTH);
+    eAnim.setValue(E_LENGTH);
+    flourishAnim.setValue(FLOURISH_LENGTH);
+    sparkleScale.setValue(0);
     penOpacity.setValue(1);
+    penX.setValue(55);
+    penY.setValue(60);
 
+    setActiveStep('Trazando "L"...');
+
+    // 1. Draw "L" stroke (0 - 900ms) while moving pen
     Animated.parallel([
-      Animated.timing(drawAnim, {
-        toValue: 1,
-        duration: 2100,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+      Animated.timing(lAnim, {
+        toValue: 0,
+        duration: 900,
+        easing: Easing.bezier(0.35, 0.1, 0.25, 1),
+        useNativeDriver: true,
+      }),
+      Animated.timing(penX, {
+        toValue: 125,
+        duration: 900,
+        easing: Easing.bezier(0.35, 0.1, 0.25, 1),
         useNativeDriver: false,
       }),
-      Animated.sequence([
-        Animated.delay(1800),
-        Animated.timing(penOpacity, {
+      Animated.timing(penY, {
+        toValue: 84,
+        duration: 900,
+        easing: Easing.bezier(0.35, 0.1, 0.25, 1),
+        useNativeDriver: false,
+      }),
+    ]).start(() => {
+      setActiveStep('Trazando "e"...');
+
+      // 2. Draw "e" stroke (900ms - 1700ms)
+      Animated.parallel([
+        Animated.timing(eAnim, {
           toValue: 0,
-          duration: 350,
+          duration: 800,
+          easing: Easing.bezier(0.35, 0.1, 0.25, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(penX, {
+          toValue: 222,
+          duration: 800,
+          easing: Easing.bezier(0.35, 0.1, 0.25, 1),
           useNativeDriver: false,
         }),
-      ]),
-    ]).start();
+        Animated.timing(penY, {
+          toValue: 70,
+          duration: 800,
+          easing: Easing.bezier(0.35, 0.1, 0.25, 1),
+          useNativeDriver: false,
+        }),
+      ]).start(() => {
+        setActiveStep('Flourish final...');
+
+        // Pen moves down to flourish start
+        penX.setValue(52);
+        penY.setValue(104);
+
+        // 3. Draw Flourish Underline (1700ms - 2400ms)
+        Animated.parallel([
+          Animated.timing(flourishAnim, {
+            toValue: 0,
+            duration: 700,
+            easing: Easing.bezier(0.2, 0.8, 0.3, 1),
+            useNativeDriver: true,
+          }),
+          Animated.timing(penX, {
+            toValue: 238,
+            duration: 700,
+            easing: Easing.bezier(0.2, 0.8, 0.3, 1),
+            useNativeDriver: false,
+          }),
+          Animated.timing(penY, {
+            toValue: 90,
+            duration: 700,
+            easing: Easing.bezier(0.2, 0.8, 0.3, 1),
+            useNativeDriver: false,
+          }),
+        ]).start(() => {
+          // 4. Sparkle pop & fade pen
+          setActiveStep('Completado ✨');
+          Animated.parallel([
+            Animated.spring(sparkleScale, {
+              toValue: 1,
+              friction: 4,
+              tension: 80,
+              useNativeDriver: true,
+            }),
+            Animated.timing(penOpacity, {
+              toValue: 0,
+              duration: 350,
+              useNativeDriver: true,
+            }),
+          ]).start();
+        });
+      });
+    });
   };
 
   useEffect(() => {
     if (visible) {
-      setAnimKey((k) => k + 1);
-      runAnimation();
+      const timer = setTimeout(() => {
+        runDrawingSequence();
+      }, 300);
+      return () => clearTimeout(timer);
+    } else {
+      lAnim.setValue(L_LENGTH);
+      eAnim.setValue(E_LENGTH);
+      flourishAnim.setValue(FLOURISH_LENGTH);
+      sparkleScale.setValue(0);
+      penOpacity.setValue(0);
     }
   }, [visible]);
 
-  // Reveal width from 0 to full width
-  const revealWidth = drawAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, width],
-  });
-
-  // Sparkle follows the leading edge
-  const penLeft = drawAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, width - 18],
-  });
+  // Scaled coordinates for the floating pen tip
+  const scaleRatioX = width / 280;
+  const scaleRatioY = height / 125;
 
   return (
     <View style={[styles.container, { width, height }]}>
-      {/* Container-based progressive reveal: 100% reliable on Android, iOS and Web */}
+      <Svg
+        viewBox="30 10 230 110"
+        width={width}
+        height={height}
+        style={styles.svgCanvas}
+      >
+        <G fill="none" strokeLinecap="round" strokeLinejoin="round">
+          {/* Stroke 1: "L" */}
+          <AnimatedPath
+            d={L_PATH}
+            stroke={color}
+            strokeWidth={4.5}
+            strokeDasharray={[L_LENGTH, L_LENGTH]}
+            strokeDashoffset={lAnim}
+          />
+
+          {/* Stroke 2: "e" */}
+          <AnimatedPath
+            d={E_PATH}
+            stroke={color}
+            strokeWidth={4}
+            strokeDasharray={[E_LENGTH, E_LENGTH]}
+            strokeDashoffset={eAnim}
+          />
+
+          {/* Stroke 3: Underline Flourish */}
+          <AnimatedPath
+            d={FLOURISH_PATH}
+            stroke={color}
+            strokeWidth={3}
+            strokeDasharray={[FLOURISH_LENGTH, FLOURISH_LENGTH]}
+            strokeDashoffset={flourishAnim}
+          />
+
+          {/* Little ink accent dot */}
+          <Circle cx="178" cy="85" r="2.2" fill={color} />
+        </G>
+      </Svg>
+
+      {/* Decorative Golden Sparkles pop after drawing */}
       <Animated.View
-        key={`sig-wrapper-${animKey}`}
         style={[
-          styles.clipWindow,
+          styles.sparkleBadge,
           {
-            width: revealWidth,
-            height,
+            left: 216 * scaleRatioX - 10,
+            top: 42 * scaleRatioY - 10,
+            transform: [{ scale: sparkleScale }],
           },
         ]}
+        pointerEvents="none"
       >
-        <Svg
-          viewBox="200 135 695 380"
-          width={width}
-          height={height}
-          preserveAspectRatio="xMidYMid meet"
-          style={{ width, height }}
-        >
-          <G
-            transform="matrix(0.1, 0, 0, -0.1, -1.665427, 676.99629)"
-            fill={color}
-            stroke="none"
-          >
-            {/* Main signature stroke */}
-            <Path d={SIGNATURE_PATH_1} fill={color} />
-            {/* Dot 1 */}
-            <Path d={SIGNATURE_PATH_3} fill={color} />
-            {/* Dot 2 */}
-            <Path d={SIGNATURE_PATH_2} fill={color} />
-          </G>
-        </Svg>
+        <Text style={styles.sparklePopIcon}>✨</Text>
       </Animated.View>
 
-      {/* Sparkling fountain pen tip following the drawing stroke */}
+      {/* Floating Glowing Pen Tip following the active stroke */}
       <Animated.View
         style={[
-          styles.penTip,
+          styles.penGlow,
           {
-            left: penLeft,
+            left: Animated.multiply(penX, scaleRatioX),
+            top: Animated.multiply(penY, scaleRatioY),
             opacity: penOpacity,
           },
         ]}
         pointerEvents="none"
       >
-        <Text style={styles.sparkleEmoji}>✨</Text>
+        <View style={[styles.penCore, { backgroundColor: color }]} />
+        <Text style={styles.sparkleIcon}>✨</Text>
       </Animated.View>
 
-      {/* Replay button */}
-      <TouchableOpacity
-        onPress={runAnimation}
-        style={styles.replayButton}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
-        <Text style={[styles.replayText, { color }]}>✍️ Repetir firma</Text>
-      </TouchableOpacity>
+      {/* Status & Replay Button */}
+      <View style={styles.bottomControls}>
+        <TouchableOpacity
+          onPress={runDrawingSequence}
+          style={styles.replayButton}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.replayText, { color }]}>✍️ Repetir trazo en vivo</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -133,45 +251,67 @@ export const AnimatedSignature: React.FC<AnimatedSignatureProps> = ({
 const styles = StyleSheet.create({
   container: {
     position: 'relative',
-    overflow: 'hidden',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'center',
     marginVertical: 4,
   },
-  clipWindow: {
-    overflow: 'hidden',
-    position: 'absolute',
-    left: 0,
-    top: 0,
+  svgCanvas: {
+    overflow: 'visible',
   },
-  penTip: {
+  penGlow: {
     position: 'absolute',
-    top: '40%',
-    width: 24,
-    height: 24,
-    marginTop: -12,
+    width: 22,
+    height: 22,
+    marginLeft: -11,
+    marginTop: -11,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 10,
   },
-  sparkleEmoji: {
-    fontSize: 16,
+  penCore: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    opacity: 0.9,
+    shadowColor: '#F43F5E',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  sparkleIcon: {
+    fontSize: 14,
+    marginTop: -12,
+    marginLeft: 12,
+  },
+  bottomControls: {
+    position: 'absolute',
+    bottom: -6,
+    right: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   replayButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    paddingVertical: 2,
-    paddingHorizontal: 7,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
     borderWidth: 1,
-    borderColor: 'rgba(244, 63, 94, 0.2)',
-    zIndex: 20,
+    borderColor: 'rgba(244, 63, 94, 0.25)',
   },
   replayText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '700',
-    opacity: 0.9,
+  },
+  sparkleBadge: {
+    position: 'absolute',
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 15,
+  },
+  sparklePopIcon: {
+    fontSize: 18,
   },
 });

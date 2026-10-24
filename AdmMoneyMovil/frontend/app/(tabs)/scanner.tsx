@@ -270,16 +270,35 @@ export default function ScannerScreen() {
     }
   };
 
-  // Process ticket with real OCR
+  // Process ticket with real OCR & guaranteed modal popup
   const processTicket = async (uri: string) => {
     setIsScanning(true);
     try {
-      const parsed = await MobileApiService.scanReceipt(uri);
-      setScanResult(parsed);
+      const fallbackData: ReceiptScanResult = {
+        merchant: 'Ticket de Compra',
+        date: new Date().toISOString().split('T')[0],
+        total_amount: 0,
+        subtotal: 0,
+        tax: 0,
+        items: [],
+        suggested_category: 'Insumos Galletas',
+        confidence: 0.5,
+        raw_text: 'Ticket capturado listo para confirmar',
+      };
+
+      const timeoutPromise = new Promise<ReceiptScanResult>((resolve) => {
+        setTimeout(() => resolve(fallbackData), 8500);
+      });
+
+      const parsed = await Promise.race([
+        MobileApiService.scanReceipt(uri),
+        timeoutPromise,
+      ]);
+
+      setScanResult(parsed || fallbackData);
       setIsModalVisible(true);
     } catch (err) {
       console.warn('Scan processing error:', err);
-      // Clean fallback with the real captured image ready for user input
       setScanResult({
         merchant: 'Ticket de Compra',
         date: new Date().toISOString().split('T')[0],
@@ -342,7 +361,28 @@ export default function ScannerScreen() {
             innerStyle={styles.viewfinderInner}
           >
             {imageUri ? (
-              <View style={styles.previewContainer}>
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => {
+                  if (!isScanning) {
+                    if (!scanResult) {
+                      setScanResult({
+                        merchant: 'Ticket de Compra',
+                        date: new Date().toISOString().split('T')[0],
+                        total_amount: 0,
+                        subtotal: 0,
+                        tax: 0,
+                        items: [],
+                        suggested_category: 'Insumos Galletas',
+                        confidence: 0.5,
+                        raw_text: 'Ticket capturado',
+                      });
+                    }
+                    setIsModalVisible(true);
+                  }
+                }}
+                style={styles.previewContainer}
+              >
                 <Image source={{ uri: imageUri }} style={styles.previewImage} resizeMode="contain" />
                 {isScanning ? (
                   <View style={styles.scanningOverlay}>
@@ -363,15 +403,24 @@ export default function ScannerScreen() {
                     </View>
                   </View>
                 ) : (
-                  <TouchableOpacity
-                    style={[styles.reScanBadge, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}
-                    onPress={() => processTicket(imageUri)}
-                  >
-                    <Ionicons name="refresh" size={14} color={colors.brand} />
-                    <Text style={[styles.reScanText, { color: colors.brand }]}>Re-escanear</Text>
-                  </TouchableOpacity>
+                  <>
+                    <View style={[styles.openModalPill, { backgroundColor: colors.brand }]}>
+                      <Ionicons name="sparkles" size={13} color="#fff" />
+                      <Text style={styles.openModalPillText}>Toca para Ver / Confirmar</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.reScanBadge, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        processTicket(imageUri);
+                      }}
+                    >
+                      <Ionicons name="refresh" size={14} color={colors.brand} />
+                      <Text style={[styles.reScanText, { color: colors.brand }]}>Re-escanear</Text>
+                    </TouchableOpacity>
+                  </>
                 )}
-              </View>
+              </TouchableOpacity>
             ) : (
               <View style={styles.placeholderContainer}>
                 {/* HUD Target Corner Brackets */}
@@ -393,10 +442,34 @@ export default function ScannerScreen() {
 
           {/* Action Buttons */}
           <View style={styles.actionColumn}>
+            {imageUri && !isScanning && (
+              <Button
+                title="Ver y Confirmar Ticket Escaneado"
+                variant="primary"
+                icon={<Ionicons name="checkmark-circle-outline" size={20} color="#fff" />}
+                onPress={() => {
+                  if (!scanResult) {
+                    setScanResult({
+                      merchant: 'Ticket de Compra',
+                      date: new Date().toISOString().split('T')[0],
+                      total_amount: 0,
+                      subtotal: 0,
+                      tax: 0,
+                      items: [],
+                      suggested_category: 'Insumos Galletas',
+                      confidence: 0.5,
+                      raw_text: 'Ticket capturado',
+                    });
+                  }
+                  setIsModalVisible(true);
+                }}
+              />
+            )}
+
             <Button
               title="Tomar Foto con Cámara"
-              variant="primary"
-              icon={<Ionicons name="camera" size={20} color="#fff" />}
+              variant={imageUri ? "secondary" : "primary"}
+              icon={<Ionicons name="camera" size={20} color={imageUri ? colors.textMain : "#fff"} />}
               onPress={handleTakePhoto}
               disabled={isScanning}
             />
@@ -460,16 +533,16 @@ export default function ScannerScreen() {
             </View>
           </View>
         </ScrollView>
-
-        {/* Receipt Modal */}
-        <ReceiptPreviewModal
-          visible={isModalVisible}
-          onClose={() => setIsModalVisible(false)}
-          scanResult={scanResult}
-          imageUri={imageUri}
-          onConfirm={handleConfirmExpense}
-        />
       </SwipeTabWrapper>
+
+      {/* Receipt Modal Mounted Directly at Root (Never suppressed by animated swipe wrapper) */}
+      <ReceiptPreviewModal
+        visible={isModalVisible}
+        onClose={() => setIsModalVisible(false)}
+        scanResult={scanResult}
+        imageUri={imageUri}
+        onConfirm={handleConfirmExpense}
+      />
     </SafeAreaView>
   );
 }
@@ -634,6 +707,23 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   reScanText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  openModalPill: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: radii.pill,
+    elevation: 4,
+  },
+  openModalPillText: {
+    color: '#ffffff',
     fontSize: 11,
     fontWeight: '700',
   },

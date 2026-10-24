@@ -71,10 +71,15 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
       setNotes(`Ticket escaneado (${scanResult.items?.length || 0} artículos)`);
       setShowRawText(false);
       setShowAddProduct(false);
+    } else {
+      setMerchant('Ticket de Compra');
+      setAmount('0.00');
+      setCategory(CATEGORIES[0]);
+      setPaymentMethod('Efectivo');
+      setItems([]);
+      setNotes('Ticket capturado');
     }
   }, [scanResult]);
-
-  if (!scanResult) return null;
 
   const handleRemoveItem = (index: number) => {
     const next = [...items];
@@ -396,11 +401,12 @@ const styles = StyleSheet.create({
   dialog: {
     borderTopLeftRadius: radii.outer,
     borderTopRightRadius: radii.outer,
-    maxHeight: '92%',
+    height: '88%',
     borderWidth: 1,
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
+    justifyContent: 'space-between',
   },
   header: {
     flexDirection: 'row',

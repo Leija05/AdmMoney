@@ -1,32 +1,32 @@
 import { useAppStore } from '../stores/app.store';
 
 // ==============================================================================
-// 1. PALETA DE COLORES CLARA (Pasteles suaves sobre lienzo porcelana)
+// 1. PALETA DE COLORES CLARA (Porcelana Cálida & Zafiro Real de Alta Gama)
 // ==============================================================================
 export const lightColors = {
   // Lienzo & Superficies
-  bgPrimary: '#F8F9FB',        // Soft porcelain canvas
-  bgSecondary: '#FFFFFF',      // Crisp pure white card
-  bgTertiary: '#F1F3F7',       // Soft neutral shelf & pill
-  bgCard: '#FFFFFF',           // Card surface
-  bgSurface: '#F8F9FA',        // Sub-surface
-  bgModal: '#FFFFFF',          // Modal dialog surface
+  bgPrimary: '#F6F8FA',        // Alabastro suave, descansado y elegante
+  bgSecondary: '#FFFFFF',      // Tarjeta blanca pura con relieve
+  bgTertiary: '#EEF2F6',       // Pastillas, inputs y contenedores suaves
+  bgCard: '#FFFFFF',           // Tarjeta principal
+  bgSurface: '#F8FAFC',        // Sub-superficie de listas
+  bgModal: '#FFFFFF',          // Modal blanco inmaculado
 
   // Tipografía
-  textMain: '#181A1F',         // Charcoal headline & body
-  textMuted: '#5E6472',        // Balanced slate
-  textDim: '#8B92A2',          // Subtle caption
+  textMain: '#0F172A',         // Carbón pizarra profundo y nítido
+  textMuted: '#475569',        // Grafito equilibrado
+  textDim: '#828F9E',          // Subtítulo sutil
 
-  // Marca Principal: Azul Cielo Pastel
+  // Marca Principal: Zafiro Real / Azul Cielo Eléctrico
   brand: '#0284C7',
-  brandLight: '#38BDF8',
+  brandLight: '#0EA5E9',
   brandDark: '#0369A1',
   brandBg: '#E0F2FE',
   brandText: '#0369A1',
   brandBorder: '#BAE6FD',
-  brandGlow: 'rgba(2, 132, 199, 0.15)',
+  brandGlow: 'rgba(2, 132, 199, 0.16)',
 
-  // Pastel Miel / Ámbar (Galletas & Ventas)
+  // Pastel Miel / Ámbar Cálido (Galletas & Ventas)
   amber: '#D97706',
   amberLight: '#F59E0B',
   amberBg: '#FEF3C7',
@@ -35,25 +35,25 @@ export const lightColors = {
   caramel: '#D97706',
   caramelLight: '#F59E0B',
 
-  // Pastel Menta / Salvia (Utilidad limpia)
-  emerald: '#16A34A',
-  emeraldLight: '#22C55E',
-  emeraldBg: '#DCFCE7',
-  emeraldText: '#15803D',
-  emeraldBorder: '#BBF7D0',
-  sage: '#16A34A',
-  sageLight: '#22C55E',
+  // Menta / Esmeralda Jade (Ganancias & Utilidad limpia)
+  emerald: '#059669',
+  emeraldLight: '#10B981',
+  emeraldBg: '#D1FAE5',
+  emeraldText: '#065F46',
+  emeraldBorder: '#A7F3D0',
+  sage: '#059669',
+  sageLight: '#10B981',
 
-  // Pastel Rosa / Rubor (Gastos & Costos)
+  // Rubor Frambuesa / Rosa Gastos
   rose: '#E11D48',
   roseLight: '#F43F5E',
   roseBg: '#FFE4E6',
-  roseText: '#BE123C',
+  roseText: '#9F1239',
   roseBorder: '#FECDD3',
   rust: '#E11D48',
   rustLight: '#F43F5E',
 
-  // Pastel Lavanda & Cyan
+  // Lavanda / Violeta & Cyan
   purple: '#7C3AED',
   purpleLight: '#8B5CF6',
   purpleBg: '#EDE9FE',
@@ -68,83 +68,83 @@ export const lightColors = {
   whatsappBg: '#D1FAE5',
   whatsappText: '#047857',
 
-  // Bordes & Separadores
-  borderSubtle: '#E5E7EB',
-  borderHighlight: '#D1D5DB',
+  // Bordes & Separadores Suaves
+  borderSubtle: '#E2E8F0',
+  borderHighlight: '#CBD5E1',
   borderFocus: '#0284C7',
 };
 
 // ==============================================================================
-// 2. PALETA DE COLORES OSCURA ("Medio Apagado" - Cálido, pizarra suave, no OLED)
+// 2. PALETA DE COLORES OSCURA (Obsidiana Profunda, Pizarra & Aurora Neón)
 // ==============================================================================
 export const darkColors: typeof lightColors = {
   // Lienzo & Superficies
-  bgPrimary: '#14171F',        // Pizarra profunda, suave y descansada
-  bgSecondary: '#1C202A',      // Superficie de tarjetas
-  bgTertiary: '#242936',       // Contenedores elevados y pastillas
-  bgCard: '#1C202A',           // Tarjetas
-  bgSurface: '#242936',        // Sub-superficie de listas
-  bgModal: '#1C202A',          // Modales
+  bgPrimary: '#0A0D14',        // Obsidiana profunda con tinte azul espacial
+  bgSecondary: '#121620',      // Tarjetas elevadas de alta gama
+  bgTertiary: '#1A202E',       // Contenedores interactivos y pastillas
+  bgCard: '#121620',           // Superficie de tarjetas
+  bgSurface: '#161B28',        // Sub-superficie de listas
+  bgModal: '#121620',          // Modales oscuros premium
 
   // Tipografía
-  textMain: '#F1F3F7',         // Blanco cálido y descansado
-  textMuted: '#9BA3AF',        // Gris pizarra secundario
-  textDim: '#64748B',          // Texto sutil
+  textMain: '#F8FAFC',         // Blanco titanio de máxima legibilidad
+  textMuted: '#94A3B8',        // Pizarra claro secundario
+  textDim: '#64748B',          // Texto tenue y pies de foto
 
-  // Marca Principal: Azul Cielo Pastel Luminoso
-  brand: '#38BDF8',
-  brandLight: '#7DD3FC',
+  // Marca Principal: Azul Cielo Eléctrico Luminoso
+  brand: '#0EA5E9',
+  brandLight: '#38BDF8',
   brandDark: '#0284C7',
-  brandBg: 'rgba(56, 189, 248, 0.15)',
-  brandText: '#7DD3FC',
-  brandBorder: 'rgba(56, 189, 248, 0.28)',
-  brandGlow: 'rgba(56, 189, 248, 0.22)',
+  brandBg: 'rgba(14, 165, 233, 0.16)',
+  brandText: '#38BDF8',
+  brandBorder: 'rgba(56, 189, 248, 0.32)',
+  brandGlow: 'rgba(56, 189, 248, 0.25)',
 
-  // Pastel Miel / Ámbar Cálido
+  // Ámbar / Miel Dorado Cálido
   amber: '#F59E0B',
   amberLight: '#FBBF24',
-  amberBg: 'rgba(245, 158, 11, 0.16)',
+  amberBg: 'rgba(245, 158, 11, 0.18)',
   amberText: '#FDE047',
-  amberBorder: 'rgba(245, 158, 11, 0.28)',
+  amberBorder: 'rgba(245, 158, 11, 0.32)',
   caramel: '#F59E0B',
   caramelLight: '#FBBF24',
 
-  // Pastel Menta / Esmeralda
-  emerald: '#22C55E',
-  emeraldLight: '#4ADE80',
-  emeraldBg: 'rgba(34, 197, 94, 0.16)',
+  // Menta / Esmeralda Aurora
+  emerald: '#10B981',
+  emeraldLight: '#34D399',
+  emeraldBg: 'rgba(16, 185, 129, 0.18)',
   emeraldText: '#6EE7B7',
-  emeraldBorder: 'rgba(34, 197, 94, 0.28)',
-  sage: '#22C55E',
-  sageLight: '#4ADE80',
+  emeraldBorder: 'rgba(16, 185, 129, 0.32)',
+  sage: '#10B981',
+  sageLight: '#34D399',
 
-  // Pastel Rosa / Rubor Suave
+  // Rubor / Carmesí Neón Suave
   rose: '#F43F5E',
   roseLight: '#FB7185',
-  roseBg: 'rgba(244, 63, 94, 0.16)',
+  roseBg: 'rgba(244, 63, 94, 0.18)',
   roseText: '#FDA4AF',
-  roseBorder: 'rgba(244, 63, 94, 0.28)',
+  roseBorder: 'rgba(244, 63, 94, 0.32)',
   rust: '#F43F5E',
   rustLight: '#FB7185',
 
-  // Pastel Lavanda & Cyan
+  // Lavanda Neón & Cyan
   purple: '#A855F7',
   purpleLight: '#C084FC',
-  purpleBg: 'rgba(168, 85, 247, 0.16)',
+  purpleBg: 'rgba(168, 85, 247, 0.18)',
   purpleText: '#D8B4FE',
-  purpleBorder: 'rgba(168, 85, 247, 0.28)',
-  cyan: '#38BDF8',
+  purpleBorder: 'rgba(168, 85, 247, 0.32)',
+  cyan: '#06B6D4',
   cyanLight: '#67E8F9',
-  cyanBg: 'rgba(56, 189, 248, 0.16)',
+  cyanBg: 'rgba(6, 182, 212, 0.18)',
 
   // WhatsApp Pastel
   whatsapp: '#10B981',
-  whatsappBg: 'rgba(16, 185, 129, 0.16)',
+  whatsappBg: 'rgba(16, 185, 129, 0.18)',
   whatsappText: '#6EE7B7',
 
-  // Bordes Maquinados Suaves
-  borderSubtle: '#2A303C',
-  borderHighlight: '#3B4353',
+  // Bordes Maquinados Finos
+  borderSubtle: '#1E2536',
+  borderHighlight: '#2A3449',
   borderFocus: '#38BDF8',
 };
 

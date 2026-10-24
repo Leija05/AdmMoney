@@ -232,33 +232,54 @@ export class MobileApiService {
 
   // --- ESCÁNER DE TICKETS CON CÁMARA / FOTO ---
   static async scanReceipt(imageUri: string): Promise<ReceiptScanResult> {
-    // 1. Intentar enviar a backend principal
+    const fallbackResult: ReceiptScanResult = {
+      merchant: 'Ticket de Compra',
+      date: new Date().toISOString().split('T')[0],
+      total_amount: 0.00,
+      subtotal: 0.00,
+      tax: 0.00,
+      items: [],
+      suggested_category: 'Insumos Galletas',
+      confidence: 0.50,
+      raw_text: 'Ticket capturado listo para ingresar monto'
+    };
+
+    // Helper con timeout forzado para evitar bloqueos
+    const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs: number) => {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(id);
+        return response;
+      } catch (e) {
+        clearTimeout(id);
+        throw e;
+      }
+    };
+
+    // 1. Intentar enviar a backend principal con timeout de 5 segundos
     try {
       const formData = new FormData();
       const filename = imageUri.split('/').pop() || 'ticket.jpg';
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : 'image/jpeg';
-
       const cleanUri = Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri;
+
       formData.append('file', {
         uri: cleanUri,
         name: filename,
         type
       } as any);
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
-
-      const res = await fetch(`${API_HOST}/scanner/upload`, {
+      const res = await fetchWithTimeout(`${API_HOST}/scanner/upload`, {
         method: 'POST',
         body: formData,
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
+      }, 5000);
 
-      if (res.ok) {
+      if (res && res.ok) {
         const json = await res.json();
-        if (json && (json.total_amount > 0 || json.merchant)) {
+        if (json && (json.total_amount > 0 || (json.items && json.items.length > 0))) {
           return json;
         }
       }
@@ -266,7 +287,7 @@ export class MobileApiService {
       console.warn('Backend OCR call timeout or error, trying direct OCR:', backendErr);
     }
 
-    // 2. Fallback de OCR directo vía OCR.space (en caso de que el backend esté en suspensión en Render)
+    // 2. Fallback de OCR directo vía OCR.space con timeout de 6 segundos
     try {
       const ocrFormData = new FormData();
       ocrFormData.append('apikey', 'K88346086088957');
@@ -279,34 +300,27 @@ export class MobileApiService {
         type: 'image/jpeg',
       } as any);
 
-      const ocrRes = await fetch('https://api.ocr.space/parse/image', {
+      const ocrRes = await fetchWithTimeout('https://api.ocr.space/parse/image', {
         method: 'POST',
         body: ocrFormData,
-      });
+      }, 6000);
 
-      if (ocrRes.ok) {
+      if (ocrRes && ocrRes.ok) {
         const data = await ocrRes.json();
         const rawText = data?.ParsedResults?.[0]?.ParsedText;
         if (rawText && rawText.trim().length > 3) {
-          return parseReceiptText(rawText);
+          const parsed = parseReceiptText(rawText);
+          if (parsed && (parsed.total_amount > 0 || parsed.items.length > 0 || parsed.merchant !== 'Ticket de Compra')) {
+            return parsed;
+          }
         }
       }
     } catch (ocrErr) {
       console.warn('Direct OCR fallback error:', ocrErr);
     }
 
-    // 3. Si no hay OCR disponible, retornar ticket limpio sin inventar productos de Costco
-    return {
-      merchant: 'Ticket de Compra',
-      date: new Date().toISOString().split('T')[0],
-      total_amount: 0.00,
-      subtotal: 0.00,
-      tax: 0.00,
-      items: [],
-      suggested_category: 'Insumos Galletas',
-      confidence: 0.50,
-      raw_text: 'Ticket capturado listo para ingresar monto'
-    };
+    // 3. Si no hay OCR disponible o falló la conexión, retornar ticket limpio listo para ingresar monto
+    return fallbackResult;
   }
 
   static async confirmReceipt(expenseData: Partial<Expense>): Promise<Expense> {

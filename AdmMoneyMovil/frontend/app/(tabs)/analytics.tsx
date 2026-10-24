@@ -13,6 +13,7 @@ import { colors, useThemeColors, radii, spacing, gradients } from '../../src/the
 import { DoubleBezelCard } from '../../src/components/ui/DoubleBezelCard';
 import { Badge } from '../../src/components/ui/Badge';
 import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
+import { FadeSlideIn } from '../../src/components/ui/FadeSlideIn';
 import { useAppStore } from '../../src/stores/app.store';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -160,40 +161,42 @@ export default function AnalyticsScreen() {
           </View>
 
           {/* Time Filter Controls Bar */}
-          <View style={[styles.periodControlBar, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
-            {(['all', 'month', 'week', 'today'] as PeriodFilter[]).map((pKey) => {
-              const label =
-                pKey === 'all'
-                  ? 'Todo'
-                  : pKey === 'month'
-                  ? 'Este Mes'
-                  : pKey === 'week'
-                  ? '7 Días'
-                  : 'Hoy';
-              const isSelected = period === pKey;
-              return (
-                <TouchableOpacity
-                  key={pKey}
-                  onPress={() => setPeriod(pKey)}
-                  style={[
-                    styles.periodTab,
-                    isSelected && { backgroundColor: colors.brandBg, borderColor: colors.brandBorder },
-                  ]}
-                  activeOpacity={0.7}
-                >
-                  <Text
+          <FadeSlideIn delay={30}>
+            <View style={[styles.periodControlBar, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
+              {(['all', 'month', 'week', 'today'] as PeriodFilter[]).map((pKey) => {
+                const label =
+                  pKey === 'all'
+                    ? 'Todo'
+                    : pKey === 'month'
+                    ? 'Este Mes'
+                    : pKey === 'week'
+                    ? '7 Días'
+                    : 'Hoy';
+                const isSelected = period === pKey;
+                return (
+                  <TouchableOpacity
+                    key={pKey}
+                    onPress={() => setPeriod(pKey)}
                     style={[
-                      styles.periodTabText,
-                      { color: isSelected ? colors.brandText : colors.textDim },
-                      isSelected && { fontWeight: '800' },
+                      styles.periodTab,
+                      isSelected && { backgroundColor: colors.brand, borderColor: colors.brand },
                     ]}
+                    activeOpacity={0.75}
                   >
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                    <Text
+                      style={[
+                        styles.periodTabText,
+                        { color: isSelected ? '#FFFFFF' : colors.textMuted },
+                        isSelected && { fontWeight: '800' },
+                      ]}
+                    >
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </FadeSlideIn>
 
           {/* 4 KPI Summary Grid (Fixed 2x2 without flex wrap overlap bugs) */}
           <View style={styles.kpiGrid}>
@@ -291,76 +294,81 @@ export default function AnalyticsScreen() {
           </DoubleBezelCard>
 
           {/* Report Tab Selector */}
-          <View style={[styles.reportSelectorRow, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
-            <TouchableOpacity
-              onPress={() => setActiveReport('cookies')}
-              style={[
-                styles.reportTabBtn,
-                activeReport === 'cookies' && { backgroundColor: colors.brandBg, borderColor: colors.brandBorder },
-              ]}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name="trophy"
-                size={14}
-                color={activeReport === 'cookies' ? colors.brandText : colors.textDim}
-              />
-              <Text
+          <FadeSlideIn delay={120}>
+            <View style={[styles.reportSelectorRow, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
+              <TouchableOpacity
+                onPress={() => setActiveReport('cookies')}
                 style={[
-                  styles.reportTabText,
-                  { color: activeReport === 'cookies' ? colors.brandText : colors.textDim },
+                  styles.reportTabBtn,
+                  activeReport === 'cookies' && { backgroundColor: colors.brand, borderColor: colors.brand },
                 ]}
+                activeOpacity={0.75}
               >
-                Top Galletas
-              </Text>
-            </TouchableOpacity>
+                <Ionicons
+                  name="trophy"
+                  size={14}
+                  color={activeReport === 'cookies' ? '#FFFFFF' : colors.textMuted}
+                />
+                <Text
+                  style={[
+                    styles.reportTabText,
+                    { color: activeReport === 'cookies' ? '#FFFFFF' : colors.textMuted },
+                    activeReport === 'cookies' && { fontWeight: '800' },
+                  ]}
+                >
+                  Top Galletas
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => setActiveReport('categories')}
-              style={[
-                styles.reportTabBtn,
-                activeReport === 'categories' && { backgroundColor: colors.brandBg, borderColor: colors.brandBorder },
-              ]}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name="pie-chart"
-                size={14}
-                color={activeReport === 'categories' ? colors.brandText : colors.textDim}
-              />
-              <Text
+              <TouchableOpacity
+                onPress={() => setActiveReport('categories')}
                 style={[
-                  styles.reportTabText,
-                  { color: activeReport === 'categories' ? colors.brandText : colors.textDim },
+                  styles.reportTabBtn,
+                  activeReport === 'categories' && { backgroundColor: colors.brand, borderColor: colors.brand },
                 ]}
+                activeOpacity={0.75}
               >
-                Gastos
-              </Text>
-            </TouchableOpacity>
+                <Ionicons
+                  name="pie-chart"
+                  size={14}
+                  color={activeReport === 'categories' ? '#FFFFFF' : colors.textMuted}
+                />
+                <Text
+                  style={[
+                    styles.reportTabText,
+                    { color: activeReport === 'categories' ? '#FFFFFF' : colors.textMuted },
+                    activeReport === 'categories' && { fontWeight: '800' },
+                  ]}
+                >
+                  Gastos
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => setActiveReport('payments')}
-              style={[
-                styles.reportTabBtn,
-                activeReport === 'payments' && { backgroundColor: colors.brandBg, borderColor: colors.brandBorder },
-              ]}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name="card"
-                size={14}
-                color={activeReport === 'payments' ? colors.brandText : colors.textDim}
-              />
-              <Text
+              <TouchableOpacity
+                onPress={() => setActiveReport('payments')}
                 style={[
-                  styles.reportTabText,
-                  { color: activeReport === 'payments' ? colors.brandText : colors.textDim },
+                  styles.reportTabBtn,
+                  activeReport === 'payments' && { backgroundColor: colors.brand, borderColor: colors.brand },
                 ]}
+                activeOpacity={0.75}
               >
-                Cobros
-              </Text>
-            </TouchableOpacity>
-          </View>
+                <Ionicons
+                  name="card"
+                  size={14}
+                  color={activeReport === 'payments' ? '#FFFFFF' : colors.textMuted}
+                />
+                <Text
+                  style={[
+                    styles.reportTabText,
+                    { color: activeReport === 'payments' ? '#FFFFFF' : colors.textMuted },
+                    activeReport === 'payments' && { fontWeight: '800' },
+                  ]}
+                >
+                  Cobros
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </FadeSlideIn>
 
           {/* Dynamic Report Content based on selected tab */}
           {activeReport === 'cookies' && (

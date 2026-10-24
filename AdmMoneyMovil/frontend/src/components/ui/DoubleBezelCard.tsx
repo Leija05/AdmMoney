@@ -1,14 +1,16 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { View, StyleSheet, ViewStyle, Animated, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeColors, radii } from '../../theme';
 
 interface DoubleBezelCardProps {
   children: React.ReactNode;
-  style?: ViewStyle;
-  innerStyle?: ViewStyle;
+  style?: ViewStyle | ViewStyle[];
+  innerStyle?: ViewStyle | ViewStyle[];
   gradient?: readonly [string, string, ...string[]] | string[];
   onPress?: () => void;
+  animateEntrance?: boolean;
+  delay?: number;
 }
 
 export const DoubleBezelCard: React.FC<DoubleBezelCardProps> = ({
@@ -17,9 +19,34 @@ export const DoubleBezelCard: React.FC<DoubleBezelCardProps> = ({
   innerStyle,
   gradient,
   onPress,
+  animateEntrance = false,
+  delay = 0,
 }) => {
   const colors = useThemeColors();
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const entranceOpacity = useRef(new Animated.Value(animateEntrance ? 0 : 1)).current;
+  const entranceY = useRef(new Animated.Value(animateEntrance ? 14 : 0)).current;
+
+  useEffect(() => {
+    if (animateEntrance) {
+      const timer = setTimeout(() => {
+        Animated.parallel([
+          Animated.timing(entranceOpacity, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.spring(entranceY, {
+            toValue: 0,
+            friction: 8,
+            tension: 70,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }, delay);
+      return () => clearTimeout(timer);
+    }
+  }, [animateEntrance, delay]);
 
   const handlePressIn = () => {
     if (!onPress) return;
@@ -58,20 +85,30 @@ export const DoubleBezelCard: React.FC<DoubleBezelCardProps> = ({
     </View>
   );
 
+  const containerStyle = [
+    styles.outerShell,
+    {
+      backgroundColor: colors.bgCard,
+      borderColor: colors.borderSubtle,
+    },
+    style,
+  ];
+
   if (onPress) {
     return (
-      <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, style]}>
+      <Animated.View
+        style={[
+          {
+            opacity: entranceOpacity,
+            transform: [{ translateY: entranceY }, { scale: scaleAnim }],
+          },
+        ]}
+      >
         <Pressable
           onPress={onPress}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
-          style={[
-            styles.outerShell,
-            {
-              backgroundColor: colors.bgCard,
-              borderColor: colors.borderSubtle,
-            },
-          ]}
+          style={containerStyle}
         >
           {content}
         </Pressable>
@@ -79,17 +116,25 @@ export const DoubleBezelCard: React.FC<DoubleBezelCardProps> = ({
     );
   }
 
+  if (animateEntrance) {
+    return (
+      <Animated.View
+        style={[
+          {
+            opacity: entranceOpacity,
+            transform: [{ translateY: entranceY }],
+          },
+        ]}
+      >
+        <View style={containerStyle}>
+          {content}
+        </View>
+      </Animated.View>
+    );
+  }
+
   return (
-    <View
-      style={[
-        styles.outerShell,
-        {
-          backgroundColor: colors.bgCard,
-          borderColor: colors.borderSubtle,
-        },
-        style,
-      ]}
-    >
+    <View style={containerStyle}>
       {content}
     </View>
   );
@@ -99,15 +144,12 @@ const styles = StyleSheet.create({
   outerShell: {
     borderWidth: 1,
     borderRadius: radii.outer,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 2,
+    padding: 3,
     overflow: 'hidden',
   },
   innerCore: {
     borderRadius: radii.inner,
-    padding: 16,
+    padding: 14,
+    overflow: 'hidden',
   },
 });
