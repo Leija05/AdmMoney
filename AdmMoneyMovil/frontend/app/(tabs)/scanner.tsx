@@ -7,7 +7,9 @@ import {
   Image,
   ActivityIndicator,
   Alert,
-  ScrollView
+  ScrollView,
+  Platform,
+  Linking
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -56,22 +58,51 @@ export default function ScannerScreen() {
   // Take photo with mobile camera
   const handleTakePhoto = async () => {
     try {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) {
+      // 1. Proactively check current camera permission status
+      const currentPerm = await ImagePicker.getCameraPermissionsAsync();
+      let granted = currentPerm.granted;
+
+      // 2. Request if not granted yet and OS permits prompting
+      if (!granted) {
+        const req = await ImagePicker.requestCameraPermissionsAsync();
+        granted = req.granted;
+      }
+
+      // 3. If user denied or disabled in settings, offer direct link to app settings
+      if (!granted) {
         Alert.alert(
-          'Permiso de Cámara',
-          'Para tomar fotos de tickets, activa los permisos de cámara en tu dispositivo.',
-          [{ text: 'Entendido' }]
+          'Permiso de Cámara Requerido',
+          'Adm Money necesita acceso a la cámara para tomar fotos a los tickets. Por favor actívalo en los ajustes de la aplicación.',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+              text: 'Abrir Ajustes',
+              onPress: () => {
+                Linking.openSettings().catch(() => {
+                  Alert.alert('Ajustes', 'Abre la app de Ajustes de tu dispositivo y concede el permiso de Cámara a Adm Money.');
+                });
+              }
+            }
+          ]
         );
         return;
       }
 
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        quality: 0.85,
-      });
+      let result: ImagePicker.ImagePickerResult;
+      try {
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ['images'],
+          allowsEditing: false,
+          quality: 0.85,
+        });
+      } catch (camErr: any) {
+        console.warn('Primary launchCameraAsync failed, retrying with fallback:', camErr);
+        result = await ImagePicker.launchCameraAsync({
+          quality: 0.85,
+        });
+      }
 
-      if (!result.canceled && result.assets[0]) {
+      if (!result.canceled && result.assets && result.assets[0]) {
         const uri = result.assets[0].uri;
         setImageUri(uri);
         addScannedTicket({
@@ -83,11 +114,15 @@ export default function ScannerScreen() {
         });
         processTicket(uri);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Camera error:', err);
       Alert.alert(
-        'Cámara no disponible',
-        'Si estás en navegador web o simulador, puedes elegir una imagen de la galería de tus archivos.'
+        'Aviso de Cámara',
+        `No se pudo abrir la cámara: ${err?.message || 'Error al iniciar la aplicación de cámara'}. Puedes seleccionar el ticket directamente desde la Galería.`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Abrir Ajustes', onPress: () => Linking.openSettings().catch(() => {}) }
+        ]
       );
     }
   };
@@ -95,22 +130,55 @@ export default function ScannerScreen() {
   // Pick from gallery
   const handlePickGallery = async () => {
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
+      // Check current media library permission status
+      let granted = true;
+      try {
+        const currentPerm = await ImagePicker.getMediaLibraryPermissionsAsync();
+        granted = currentPerm.granted;
+
+        if (!granted && currentPerm.canAskAgain) {
+          const req = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          granted = req.granted;
+        }
+      } catch (permErr) {
+        console.warn('Media library permission check fallback:', permErr);
+      }
+
+      // On iOS, permission is strictly mandatory before opening picker
+      if (!granted && Platform.OS === 'ios') {
         Alert.alert(
-          'Permiso de Galería',
-          'Se necesita acceso a tus fotos para cargar el ticket.'
+          'Permiso de Galería Requerido',
+          'Adm Money necesita acceso a tus fotos para seleccionar el ticket. Por favor actívalo en Ajustes.',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Abrir Ajustes', onPress: () => Linking.openSettings().catch(() => {}) }
+          ]
         );
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        quality: 0.85,
-      });
+      // On Android devices (particularly Xiaomi / HyperOS / MIUI), Android's new PhotoPicker
+      // can throw ActivityNotFoundException / SecurityException.
+      // We use legacy: true (ACTION_GET_CONTENT) as standard on Android for 100% universal compatibility.
+      let result: ImagePicker.ImagePickerResult;
+      try {
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          allowsEditing: false,
+          quality: 0.85,
+          legacy: Platform.OS === 'android',
+        });
+      } catch (pickerErr: any) {
+        console.warn('First picker attempt failed, trying alternate mode:', pickerErr);
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          allowsEditing: false,
+          quality: 0.85,
+          legacy: Platform.OS !== 'android',
+        });
+      }
 
-      if (!result.canceled && result.assets[0]) {
+      if (!result.canceled && result.assets && result.assets[0]) {
         const uri = result.assets[0].uri;
         setImageUri(uri);
         addScannedTicket({
@@ -122,11 +190,15 @@ export default function ScannerScreen() {
         });
         processTicket(uri);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Gallery error:', err);
       Alert.alert(
         'Error de Galería',
-        'No se pudo abrir la galería. Por favor revisa los permisos de tu navegador o dispositivo.'
+        `No se pudo abrir la galería: ${err?.message || 'Error de acceso a imágenes'}. Revisa los permisos en Ajustes si el problema persiste.`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Abrir Ajustes', onPress: () => Linking.openSettings().catch(() => {}) }
+        ]
       );
     }
   };

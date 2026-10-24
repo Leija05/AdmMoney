@@ -55,15 +55,19 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
     ? `${apiBase}/orders/${targetId}/pdf${encodedNote}`
     : `${apiBase}/cookies/sales/${targetId}/pdf${encodedNote}`;
 
+  const paymentText = isOrder
+    ? `${order?.payment_method || 'Efectivo'}`
+    : `${sale?.payment_method || 'Efectivo'}`;
+
   // Build clean, detailed, and easy-to-read formatted message
   const lines: string[] = [
-    `🍪 *lucky cookies Galletas y postres* 🍪`,
-    `¡Hola *${customerName}*! Muchas gracias por tu compra. Te compartimos tu comprobante:\n`,
+    `🍪 *Lucky Cookies • Galletas y Postres* 🍪\n`,
+    `¡Hola *${customerName}*! Muchas gracias por tu compra. Te compartimos el comprobante de tu ${isOrder ? 'pedido' : 'venta'}:\n`,
     `📋 *Comprobante Oficial • Ticket #${targetId}*`,
-    `📅 *Fecha:* ${deliveryDate}`,
-    `🍪 *Tu Pedido:*`,
-    itemsSummary,
+    `📅 *Fecha: ${deliveryDate}*`,
+    `🍪 *Detalle del Pedido:* ${isOrder && order?.items ? order.items.map(i => `${i.quantity}x ${i.product_name}`).join(', ') : itemsSummary.replace(/^[•\s]+/g, '')}`,
     `💰 *Total a Cobrar:* $${totalAmount.toFixed(2)} MXN`,
+    `💳 *Método de Pago:* ${paymentText}`,
   ];
 
   if (customNote.trim()) {
@@ -71,11 +75,10 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
   }
 
   if (includePdf) {
-    lines.push(`\n📄 *Descarga tu comprobante oficial en PDF con logo:*`);
-    lines.push(pdfUrl);
+    lines.push(`\n📄 *Descarga tu comprobante oficial en PDF con logo:*\n${pdfUrl}`);
   }
 
-  lines.push(`\n¡Muchas gracias por tu preferencia y que lo disfrutes mucho! ✨❤️`);
+  lines.push(`\n✨ ¡Muchas gracias por tu preferencia y que disfrutes mucho tus galletas! ❤️🍪`);
 
   const fullMessage = lines.join('\n');
 
@@ -92,7 +95,10 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
     const cleanPhone = `52${cleanPhoneDigits}`;
     const encoded = encodeURIComponent(fullMessage);
     const target = `https://wa.me/${cleanPhone}?text=${encoded}`;
-    window.open(target, '_blank', 'noopener,noreferrer');
+    const win = window.open(target, '_blank', 'noopener,noreferrer');
+    if (!win || win.closed || typeof win.closed === 'undefined') {
+      window.location.href = target;
+    }
     onClose();
   };
 

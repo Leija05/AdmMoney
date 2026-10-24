@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import {
   Expense,
   CookieProduct,
@@ -87,22 +88,21 @@ export class MobileApiService {
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : 'image/jpeg';
 
+      const cleanUri = Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri;
       formData.append('file', {
-        uri: imageUri,
+        uri: cleanUri,
         name: filename,
         type
       } as any);
 
+      // Do NOT set explicit 'Content-Type' header so fetch automatically adds the multipart boundary
       const res = await fetch(`${API_HOST}/scanner/upload`, {
         method: 'POST',
         body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        }
       });
 
       if (!res.ok) {
-        throw new Error('Error al procesar ticket');
+        throw new Error(`Error al procesar ticket (HTTP ${res.status})`);
       }
 
       return await res.json();

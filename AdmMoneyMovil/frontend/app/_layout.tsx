@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, Alert, Platform } from 'react-native';
+import { View, Alert, Platform, ActivityIndicator } from 'react-native';
 import { useThemeColors } from '../src/theme';
 import { useAppStore } from '../src/stores/app.store';
-
+import * as Font from 'expo-font';
+import { useFonts } from 'expo-font';
+import { Ionicons } from '@expo/vector-icons';
 import { ConfirmationModal } from '../src/components/ui/ConfirmationModal';
 import { confirmAction } from '../src/stores/confirmation.store';
 
@@ -47,12 +49,43 @@ if (Platform.OS === 'web' && typeof window !== 'undefined') {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    ...Ionicons.font,
+    'Ionicons': require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf'),
+    'ionicons': require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf'),
+  });
   const loadAllData = useAppStore((state) => state.loadAllData);
   const colors = useThemeColors();
 
   useEffect(() => {
+    async function loadFallbackFonts() {
+      try {
+        if (Platform.OS === 'android') {
+          // On Android release builds, ensure typeface is bound to both 'ionicons' and 'Ionicons'
+          await Font.loadAsync({
+            ionicons: 'asset://fonts/Ionicons.ttf',
+            Ionicons: 'asset://fonts/Ionicons.ttf',
+          }).catch(() => {});
+        }
+      } catch (err) {
+        console.warn('Fallback font load error:', err);
+      }
+    }
+    loadFallbackFonts();
+  }, []);
+
+  useEffect(() => {
     loadAllData();
   }, [loadAllData]);
+
+  // Prevent children from mounting before fonts are loaded so that icon sets don't mount in uninitialized empty state
+  if (!fontsLoaded && !fontError) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bgPrimary, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={colors.brand} />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>

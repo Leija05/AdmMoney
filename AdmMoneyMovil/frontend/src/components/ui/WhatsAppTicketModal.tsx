@@ -91,13 +91,13 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
     pdfUrl = `${pdfBaseUrl}/cookies/sales/${sale.id}/pdf${encodedNote}`;
   }
 
-  // Build the live preview text (clean, friendly, detailed and easy to read)
+  // Build the live preview text matching the exact requested structure
   const buildMessage = () => {
-    let msg = `🍪 *Lucky Cookies • Galletas y Postres* 🍪\n`;
+    let msg = `🍪 *Lucky Cookies • Galletas y Postres* 🍪\n\n`;
     msg += `¡Hola *${customerName}*! Muchas gracias por tu compra. Te compartimos el comprobante de tu ${ticketType.toLowerCase()}:\n\n`;
     msg += `📋 *Comprobante Oficial • Ticket #${ticketId}*\n`;
     msg += `📅 *${dateText}*\n`;
-    msg += `🍪 *Detalle del Pedido:*\n${itemsSummary}\n`;
+    msg += `🍪 *Detalle del Pedido:* ${itemsSummary}\n`;
     msg += `💰 *Total a Cobrar:* ${totalFormatted}\n`;
     msg += `💳 *Método de Pago:* ${paymentText}\n`;
 
@@ -106,28 +106,48 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
     }
 
     if (includePdf) {
-      msg += `\n📄 *Descarga tu comprobante oficial en PDF con logo:* \n${pdfUrl}\n`;
+      msg += `\n📄 *Descarga tu comprobante oficial en PDF con logo:*\n${pdfUrl}\n`;
     }
 
     msg += `\n✨ ¡Muchas gracias por tu preferencia y que disfrutes mucho tus galletas! ❤️🍪`;
     return msg;
   };
 
+  const handleOpenPdf = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        window.open(pdfUrl, '_blank');
+      } else {
+        await Linking.openURL(pdfUrl);
+      }
+    } catch {
+      Alert.alert('Error', 'No se pudo abrir el enlace del PDF.');
+    }
+  };
+
   const handleConfirmSend = async () => {
     const cleanPhone = phoneDigits.replace(/\D/g, '');
     if (!cleanPhone || cleanPhone.length === 0) {
-      Alert.alert(
-        'Número Requerido',
-        '⚠️ Por favor ingresa el número de WhatsApp del cliente para poder enviarle el ticket.'
-      );
+      if (Platform.OS === 'web') {
+        alert('⚠️ Por favor ingresa el número de WhatsApp del cliente para poder enviarle el ticket.');
+      } else {
+        Alert.alert(
+          'Número Requerido',
+          '⚠️ Por favor ingresa el número de WhatsApp del cliente para poder enviarle el ticket.'
+        );
+      }
       return;
     }
 
     if (cleanPhone.length < 10) {
-      Alert.alert(
-        'Número Incompleto',
-        '⚠️ Por favor ingresa los 10 dígitos del número telefónico (ej. 5512345678).'
-      );
+      if (Platform.OS === 'web') {
+        alert('⚠️ Por favor ingresa los 10 dígitos completos del número telefónico (ej. 5512345678).');
+      } else {
+        Alert.alert(
+          'Número Incompleto',
+          '⚠️ Por favor ingresa los 10 dígitos del número telefónico (ej. 5512345678).'
+        );
+      }
       return;
     }
 
@@ -136,17 +156,15 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
     const encoded = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${fullPhone}?text=${encoded}`;
 
-    // If PDF is selected on web, open PDF in a new tab for instant view/download
-    if (includePdf && Platform.OS === 'web') {
-      try {
-        window.open(pdfUrl, '_blank');
-      } catch {
-        // fallback
-      }
-    }
-
     try {
-      await Linking.openURL(whatsappUrl);
+      if (Platform.OS === 'web') {
+        const win = window.open(whatsappUrl, '_blank');
+        if (!win || win.closed || typeof win.closed === 'undefined') {
+          window.location.href = whatsappUrl;
+        }
+      } else {
+        await Linking.openURL(whatsappUrl);
+      }
       onClose();
     } catch {
       Alert.alert('Error', 'No se pudo abrir WhatsApp. Verifica que la aplicación esté instalada.');
@@ -313,9 +331,40 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
 
             {/* Live Message Preview */}
             <View style={styles.fieldGroup}>
-              <Text style={[styles.label, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>
-                VISTA PREVIA DEL MENSAJE WHATSAPP
-              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 6,
+                }}
+              >
+                <Text style={[styles.label, { color: isDark ? '#9BA3AF' : '#5E6472', marginBottom: 0 }]}>
+                  VISTA PREVIA DEL MENSAJE WHATSAPP
+                </Text>
+                {includePdf && (
+                  <TouchableOpacity
+                    onPress={handleOpenPdf}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF',
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 6,
+                      borderWidth: 1,
+                      borderColor: isDark ? 'rgba(59, 130, 246, 0.3)' : '#BFDBFE',
+                    }}
+                  >
+                    <Ionicons name="document-text-outline" size={13} color="#3B82F6" />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#3B82F6' }}>
+                      Probar / Ver PDF
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
               <View
                 style={[
                   styles.previewBox,

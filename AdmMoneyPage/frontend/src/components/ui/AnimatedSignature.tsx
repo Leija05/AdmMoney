@@ -44,100 +44,67 @@ export const AnimatedSignature: React.FC<AnimatedSignatureProps> = ({
       }}
     >
       <style>{`
-        @keyframes drawStrokeWidth {
-          0% { width: 0; }
+        @keyframes revealSignature {
+          0% { width: 0%; }
           100% { width: 100%; }
-        }
-        @keyframes stampDot1 {
-          0%, 82% { opacity: 0; transform: scale(0); }
-          86% { opacity: 1; transform: scale(1.3); }
-          90%, 100% { opacity: 1; transform: scale(1); }
-        }
-        @keyframes stampDot2 {
-          0%, 89% { opacity: 0; transform: scale(0); }
-          93% { opacity: 1; transform: scale(1.3); }
-          97%, 100% { opacity: 1; transform: scale(1); }
         }
         @keyframes penSparkle {
           0% { left: 0%; opacity: 0; }
-          4% { opacity: 1; }
-          82% { left: 100%; opacity: 1; }
-          90% { opacity: 0; }
-          100% { opacity: 0; }
+          5% { opacity: 1; }
+          85% { left: 95%; opacity: 1; }
+          100% { left: 100%; opacity: 0; }
         }
       `}</style>
 
       <div
-        key={`sig-wrapper-${animKey}`}
         style={{
-          width: '100%',
-          height: '100%',
+          width: `${width}px`,
+          height: `${height}px`,
           position: 'relative',
           overflow: 'hidden',
         }}
       >
-        <svg
-          viewBox="190 125 720 380"
-          width="100%"
-          height="100%"
-          preserveAspectRatio="xMidYMid meet"
-          style={{ display: 'block' }}
+        <div
+          key={`sig-wrapper-${animKey}`}
+          style={{
+            height: '100%',
+            overflow: 'hidden',
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            animation: 'revealSignature 2.1s cubic-bezier(0.25, 0.1, 0.25, 1) forwards',
+          }}
         >
-          <defs>
-            <clipPath id={`web-sig-clip-${animKey}`}>
-              <rect
-                x="0"
-                y="0"
-                height="672"
-                style={{
-                  animation: 'drawStrokeWidth 2.2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards',
-                  width: '100%',
-                }}
-              />
-            </clipPath>
-          </defs>
-
-          <g
-            transform="matrix(0.1,0,0,-0.1,-1.665427,676.99629)"
-            fill={color}
-            stroke="none"
+          <svg
+            viewBox="200 135 695 380"
+            width={`${width}px`}
+            height={`${height}px`}
+            preserveAspectRatio="xMidYMid meet"
+            style={{ width: `${width}px`, height: `${height}px`, display: 'block', minWidth: `${width}px` }}
           >
-            {/* Main signature stroke */}
-            <g clipPath={`url(#web-sig-clip-${animKey})`}>
+            <g
+              transform="matrix(0.1,0,0,-0.1,-1.665427,676.99629)"
+              fill={color}
+              stroke="none"
+            >
               <path d={SIGNATURE_PATH_1} fill={color} />
-            </g>
-
-            {/* Dot 1 */}
-            <g
-              style={{
-                transformOrigin: '541px 244px',
-                animation: 'stampDot1 2.6s ease-out forwards',
-              }}
-            >
               <path d={SIGNATURE_PATH_3} fill={color} />
-            </g>
-
-            {/* Dot 2 */}
-            <g
-              style={{
-                transformOrigin: '595px 236px',
-                animation: 'stampDot2 2.6s ease-out forwards',
-              }}
-            >
               <path d={SIGNATURE_PATH_2} fill={color} />
             </g>
-          </g>
-        </svg>
+          </svg>
+        </div>
 
         {/* Sparkle nib */}
         <div
+          key={`sparkle-${animKey}`}
           style={{
             position: 'absolute',
-            top: '50%',
+            top: '40%',
             transform: 'translateY(-50%)',
-            animation: 'penSparkle 2.2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards',
+            animation: 'penSparkle 2.1s cubic-bezier(0.25, 0.1, 0.25, 1) forwards',
             pointerEvents: 'none',
             fontSize: '1rem',
+            zIndex: 10,
           }}
         >
           ✨

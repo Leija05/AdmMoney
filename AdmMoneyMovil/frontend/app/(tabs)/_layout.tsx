@@ -27,9 +27,12 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.brand,
         tabBarInactiveTintColor: colors.textDim,
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: '700',
-          letterSpacing: 0.2,
+          letterSpacing: -0.2,
+        },
+        tabBarItemStyle: {
+          paddingHorizontal: 0,
         },
       }}
     >
@@ -38,7 +41,7 @@ export default function TabLayout() {
         options={{
           title: 'Resumen',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="grid-outline" size={size} color={color} />
+            <Ionicons name="grid-outline" size={size - 2} color={color} />
           ),
         }}
       />
@@ -47,7 +50,16 @@ export default function TabLayout() {
         options={{
           title: 'Gastos',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="receipt-outline" size={size} color={color} />
+            <Ionicons name="receipt-outline" size={size - 2} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="orders"
+        options={{
+          title: 'Pedidos',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="bag-handle-outline" size={size - 1} color={color} />
           ),
         }}
       />
@@ -84,7 +96,7 @@ export default function TabLayout() {
         options={{
           title: 'Galletas',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="cafe-outline" size={size} color={color} />
+            <Ionicons name="cafe-outline" size={size - 2} color={color} />
           ),
         }}
       />
@@ -93,7 +105,7 @@ export default function TabLayout() {
         options={{
           title: 'Gráficas',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="bar-chart-outline" size={size} color={color} />
+            <Ionicons name="bar-chart-outline" size={size - 2} color={color} />
           ),
         }}
       />
@@ -102,7 +114,7 @@ export default function TabLayout() {
         options={{
           title: 'Ajustes',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
+            <Ionicons name="settings-outline" size={size - 2} color={color} />
           ),
         }}
       />

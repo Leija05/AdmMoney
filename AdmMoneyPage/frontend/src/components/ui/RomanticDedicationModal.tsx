@@ -164,8 +164,8 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
           }}
         >
           "Aplicación hecha con todo el amor y cariño del mundo para el amor de mi vida.
-          Te apoyo en tus emprendimientos, en tus galletas, en tus sueños y en todo lo que decidas emprender.
-          Nunca dudes de tu talento. ¡Te amo con todo mi corazón!"
+          Te apoyo en tus emprendimientos, en tus galletitas, en tus sueños y en todo lo que decidas emprender,
+          nunca dudes de tu talento, te amo con todo mi corazón"
         </p>
 
         {/* Animated handwritten signature */}

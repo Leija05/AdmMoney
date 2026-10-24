@@ -7,20 +7,31 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
       "backgroundColor": "#07080a"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Adm Money necesita acceso a tu cámara para tomar fotos a los tickets.",
+        "NSPhotoLibraryUsageDescription": "Adm Money necesita acceso a tu galería para escanear tickets.",
+        "NSPhotoLibraryAddUsageDescription": "Adm Money necesita guardar comprobantes en tu galería."
+      }
     },
     "android": {
       "package": "com.admmoney.app",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#07080a"
       },
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO",
+        "READ_MEDIA_VISUAL_USER_SELECTED"
       ]
     },
     "plugins": [

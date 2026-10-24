@@ -378,9 +378,11 @@ export default function CookiesScreen() {
         <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <View style={{ flex: 1, minWidth: 140, marginRight: 6 }}>
+          <View style={{ flex: 1, minWidth: 130, marginRight: 6 }}>
             <Text style={[styles.screenEyebrow, { color: colors.amberLight }]}>Repostería Artesanal</Text>
-            <Text style={[styles.screenTitle, { color: colors.textMain }]} numberOfLines={1}>Negocio de Galletas</Text>
+            <Text style={[styles.screenTitle, { color: colors.textMain }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+              Lucky Cookies
+            </Text>
           </View>
           <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center', flexShrink: 0 }}>
             <TouchableOpacity

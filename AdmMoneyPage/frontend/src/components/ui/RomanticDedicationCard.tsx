@@ -100,7 +100,7 @@ export const RomanticDedicationCard: React.FC = () => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#FDA4AF', fontWeight: 600 }}>
-            <span>♾️</span> Para Siempre Contigo • Hecho con Amor
+            <span>♾️</span> Para Siempre Contigo • Hecho con Amor de tu Jectorini
           </div>
           <div
             style={{

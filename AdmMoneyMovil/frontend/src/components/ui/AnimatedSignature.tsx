@@ -22,53 +22,31 @@ export const AnimatedSignature: React.FC<AnimatedSignatureProps> = ({
   visible,
   color = '#881337',
   width = 280,
-  height = 140,
+  height = 115,
 }) => {
   const [animKey, setAnimKey] = useState(0);
-  const [progressVal, setProgressVal] = useState(0);
-
-  const drawAnim = useRef(new Animated.Value(0)).current;
-  const dot1Scale = useRef(new Animated.Value(0)).current;
-  const dot2Scale = useRef(new Animated.Value(0)).current;
+  const drawAnim = useRef(new Animated.Value(1)).current;
   const penOpacity = useRef(new Animated.Value(0)).current;
 
   const runAnimation = () => {
     drawAnim.setValue(0);
-    dot1Scale.setValue(0);
-    dot2Scale.setValue(0);
     penOpacity.setValue(1);
-    setProgressVal(0);
 
-    Animated.sequence([
-      // 1. Fluid writing animation for main strokes
+    Animated.parallel([
       Animated.timing(drawAnim, {
         toValue: 1,
-        duration: 2200,
+        duration: 2100,
         easing: Easing.bezier(0.25, 0.1, 0.25, 1),
         useNativeDriver: false,
       }),
-      // 2. Dot 1 ink stamp
-      Animated.spring(dot1Scale, {
-        toValue: 1,
-        tension: 80,
-        friction: 6,
-        useNativeDriver: true,
-      }),
-      Animated.delay(120),
-      // 3. Dot 2 ink stamp
-      Animated.spring(dot2Scale, {
-        toValue: 1,
-        tension: 80,
-        friction: 6,
-        useNativeDriver: true,
-      }),
-      Animated.delay(200),
-      // 4. Soft fade out of pen tip sparkle
-      Animated.timing(penOpacity, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-      }),
+      Animated.sequence([
+        Animated.delay(1800),
+        Animated.timing(penOpacity, {
+          toValue: 0,
+          duration: 350,
+          useNativeDriver: false,
+        }),
+      ]),
     ]).start();
   };
 
@@ -76,90 +54,71 @@ export const AnimatedSignature: React.FC<AnimatedSignatureProps> = ({
     if (visible) {
       setAnimKey((k) => k + 1);
       runAnimation();
-    } else {
-      drawAnim.setValue(0);
-      dot1Scale.setValue(0);
-      dot2Scale.setValue(0);
-      penOpacity.setValue(0);
-      setProgressVal(0);
     }
   }, [visible]);
 
-  useEffect(() => {
-    const listener = drawAnim.addListener(({ value }) => {
-      setProgressVal(value);
-    });
-    return () => drawAnim.removeListener(listener);
-  }, [drawAnim]);
+  // Reveal width from 0 to full width
+  const revealWidth = drawAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, width],
+  });
 
-  // Width of the SVG viewBox bounding box is from ~200 to ~920 (dx ≈ 720)
-  // Dynamic revealed width in viewBox units
-  const minX = 180;
-  const maxX = 920;
-  const currentClipWidth = minX + (maxX - minX) * progressVal;
-
-  // Approximate pen tip position tracking the writing flow across the card
-  const penX = (progressVal * 100).toFixed(1) + '%';
-  const penY = (
-    50 + Math.sin(progressVal * Math.PI * 4.5) * 18 - progressVal * 8
-  ).toFixed(1) + '%';
+  // Sparkle follows the leading edge
+  const penLeft = drawAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, width - 18],
+  });
 
   return (
     <View style={[styles.container, { width, height }]}>
-      {/* Signature SVG with dynamic stroke reveal clip */}
-      <Svg
-        key={`sig-svg-${animKey}`}
-        viewBox="190 125 720 380"
-        width="100%"
-        height="100%"
-        preserveAspectRatio="xMidYMid meet"
+      {/* Container-based progressive reveal: 100% reliable on Android, iOS and Web */}
+      <Animated.View
+        key={`sig-wrapper-${animKey}`}
+        style={[
+          styles.clipWindow,
+          {
+            width: revealWidth,
+            height,
+          },
+        ]}
       >
-        <Defs>
-          <ClipPath id={`sig-reveal-clip-${animKey}`}>
-            <Rect x="0" y="0" width={currentClipWidth} height="672" />
-          </ClipPath>
-        </Defs>
-
-        <G
-          transform="matrix(0.1, 0, 0, -0.1, -1.665427, 676.99629)"
-          fill={color}
-          stroke="none"
+        <Svg
+          viewBox="200 135 695 380"
+          width={width}
+          height={height}
+          preserveAspectRatio="xMidYMid meet"
+          style={{ width, height }}
         >
-          {/* Main stroke clipped by dynamic drawing progress */}
-          <G clipPath={`url(#sig-reveal-clip-${animKey})`}>
+          <G
+            transform="matrix(0.1, 0, 0, -0.1, -1.665427, 676.99629)"
+            fill={color}
+            stroke="none"
+          >
+            {/* Main signature stroke */}
             <Path d={SIGNATURE_PATH_1} fill={color} />
-          </G>
-
-          {/* Dot 1 (path3) stamped after stroke finishes */}
-          {progressVal >= 0.96 && (
+            {/* Dot 1 */}
             <Path d={SIGNATURE_PATH_3} fill={color} />
-          )}
-
-          {/* Dot 2 (path2) stamped after dot 1 */}
-          {progressVal >= 0.99 && (
+            {/* Dot 2 */}
             <Path d={SIGNATURE_PATH_2} fill={color} />
-          )}
-        </G>
-      </Svg>
+          </G>
+        </Svg>
+      </Animated.View>
 
       {/* Sparkling fountain pen tip following the drawing stroke */}
-      {progressVal > 0.02 && progressVal < 0.98 && (
-        <Animated.View
-          style={[
-            styles.penTip,
-            {
-              left: penX as any,
-              top: penY as any,
-              opacity: penOpacity,
-            },
-          ]}
-          pointerEvents="none"
-        >
-          <Text style={styles.sparkleEmoji}>✨</Text>
-        </Animated.View>
-      )}
+      <Animated.View
+        style={[
+          styles.penTip,
+          {
+            left: penLeft,
+            opacity: penOpacity,
+          },
+        ]}
+        pointerEvents="none"
+      >
+        <Text style={styles.sparkleEmoji}>✨</Text>
+      </Animated.View>
 
-      {/* Optional replay button for interactive delight */}
+      {/* Replay button */}
       <TouchableOpacity
         onPress={runAnimation}
         style={styles.replayButton}
@@ -173,35 +132,46 @@ export const AnimatedSignature: React.FC<AnimatedSignatureProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
-    justifyContent: 'center',
     position: 'relative',
+    overflow: 'hidden',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
     marginVertical: 4,
+  },
+  clipWindow: {
+    overflow: 'hidden',
+    position: 'absolute',
+    left: 0,
+    top: 0,
   },
   penTip: {
     position: 'absolute',
+    top: '40%',
     width: 24,
     height: 24,
-    marginLeft: -12,
     marginTop: -12,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 10,
   },
   sparkleEmoji: {
     fontSize: 16,
   },
   replayButton: {
     position: 'absolute',
-    bottom: -6,
-    right: 4,
+    bottom: 0,
+    right: 0,
     paddingVertical: 2,
-    paddingHorizontal: 6,
+    paddingHorizontal: 7,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+    borderWidth: 1,
+    borderColor: 'rgba(244, 63, 94, 0.2)',
+    zIndex: 20,
   },
   replayText: {
     fontSize: 9,
     fontWeight: '700',
-    opacity: 0.75,
+    opacity: 0.9,
   },
 });

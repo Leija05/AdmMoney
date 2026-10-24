@@ -216,13 +216,13 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
               ]}
             >
               <Text style={[styles.quoteText, { color: isDark ? '#FFE4E6' : '#4C0519' }]}>
-                “Aplicación hecha con amor y mucho cariño para el amor de mi vida, te apoyo en tus emprendimientos, te apoyo en todo lo que tú quieras hacer y siempre será así. ¡Te amo demasiado!”
+                “Aplicación hecha con amor y mucho cariño para el amor de mi vida, te apoyo en tus emprendimientos, te apoyo en todo lo que tú quieras hacer y siempre será así, Te amo demasiado”
               </Text>
 
               <View style={styles.noteDivider} />
 
               <Text style={[styles.subNote, { color: isDark ? '#FDA4AF' : '#9F1239' }]}>
-                Cada línea de código, cada cálculo y cada pantalla fueron diseñados pensando en ti y en tu éxito. ¡Sigamos construyendo grandes metas juntos! ♾️
+                Cada línea de código y cada pantalla fueron diseñados pensando en ti y en tu éxito, sigamos construyendo grandes metas juntos My Natycitaa
               </Text>
 
               {/* Animated Handwritten Signature */}
