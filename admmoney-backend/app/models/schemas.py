@@ -270,6 +270,7 @@ class CookieSaleCreate(BaseModel):
     promotion_id: Optional[int] = None
     promotion_name: Optional[str] = None
     discount_amount: Optional[float] = 0.0
+    order_id: Optional[int] = None
 
 class CookieSaleResponse(BaseModel):
     id: int
@@ -289,6 +290,7 @@ class CookieSaleResponse(BaseModel):
     promotion_id: Optional[int] = None
     promotion_name: Optional[str] = None
     discount_amount: Optional[float] = 0.0
+    order_id: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -426,3 +428,21 @@ class FinancialSummaryResponse(BaseModel):
     category_breakdown: List[Dict[str, Any]]
     daily_trend: List[Dict[str, Any]]
     cookie_performance: List[Dict[str, Any]]
+
+# ----------------- Directorio / Registro de Clientes ----------------- #
+class CustomerBase(BaseModel):
+    name: str
+    phone: Optional[str] = ""
+    notes: Optional[str] = ""
+
+class CustomerCreate(CustomerBase):
+    pass
+
+class CustomerResponse(CustomerBase):
+    id: int
+    total_orders: Optional[int] = 0
+    last_order_date: Optional[str] = None
+    created_at: str
+
+    class Config:
+        from_attributes = True

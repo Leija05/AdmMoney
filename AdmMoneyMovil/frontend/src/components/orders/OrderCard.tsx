@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Order } from '../../lib/types';
 import { colors, useThemeColors, radii, spacing } from '../../theme';
@@ -11,6 +11,7 @@ interface OrderCardProps {
   onEdit: (order: Order) => void;
   onDelete: (id: number) => void;
   onStatusChange: (id: number, nextStatus: Order['status']) => void;
+  onPaymentStatusChange?: (id: number, nextStatus: Order['payment_status']) => void;
 }
 
 export const OrderCard: React.FC<OrderCardProps> = ({
@@ -18,8 +19,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   onEdit,
   onDelete,
   onStatusChange,
+  onPaymentStatusChange,
 }) => {
   const colors = useThemeColors();
+  const [isPaymentPickerOpen, setIsPaymentPickerOpen] = useState(false);
+  const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
   const getStatusBadge = (status: Order['status']) => {
     switch (status) {
       case 'Completado':
@@ -53,8 +57,6 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
   const statusStyle = getStatusBadge(order.status);
   const totalUnits = order.items.reduce((sum, item) => sum + item.quantity, 0);
-
-  const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
 
   const handleOpenWhatsApp = () => {
     setIsWhatsAppOpen(true);
@@ -98,7 +100,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           <Text style={[styles.metaText, { color: colors.textMuted }]}>Entrega: {order.delivery_date}</Text>
         </View>
 
-        <View
+        <TouchableOpacity
+          onPress={() => setIsPaymentPickerOpen(true)}
           style={[
             styles.paymentBadge,
             {
@@ -116,6 +119,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                   : colors.borderSubtle,
             },
           ]}
+          activeOpacity={0.7}
         >
           <Text
             style={[
@@ -133,9 +137,9 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             {order.payment_status}
             {order.deposit_amount > 0 && order.payment_status === 'Anticipo'
               ? ` ($${order.deposit_amount})`
-              : ''}
+              : ''} ▾
           </Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Items List */}
@@ -211,6 +215,142 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         onClose={() => setIsWhatsAppOpen(false)}
         order={order}
       />
+
+      {/* Quick Payment Status Picker Modal */}
+      <Modal
+        visible={isPaymentPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsPaymentPickerOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsPaymentPickerOpen(false)}
+        >
+          <View
+            style={[styles.paymentModalCard, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}
+            onStartShouldSetResponder={() => true}
+          >
+            <View style={styles.paymentModalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.paymentModalEyebrow, { color: colors.brandLight }]}>Estatus de Cobro</Text>
+                <Text style={[styles.paymentModalTitle, { color: colors.textMain }]}>Cambiar Estado de Pago</Text>
+                <Text style={[styles.paymentModalSubtitle, { color: colors.textMuted }]}>
+                  {order.customer_name} • Total: ${order.total_amount.toFixed(2)} MXN
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setIsPaymentPickerOpen(false)} style={styles.paymentModalCloseBtn}>
+                <Ionicons name="close" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.paymentOptionsList}>
+              {/* Option 1: Pagado */}
+              <TouchableOpacity
+                onPress={() => {
+                  setIsPaymentPickerOpen(false);
+                  if (order.payment_status !== 'Pagado') {
+                    onPaymentStatusChange?.(order.id, 'Pagado');
+                  }
+                }}
+                style={[
+                  styles.paymentOptionCard,
+                  {
+                    backgroundColor: order.payment_status === 'Pagado' ? colors.emeraldBg : colors.bgTertiary,
+                    borderColor: order.payment_status === 'Pagado' ? colors.emeraldBorder : colors.borderSubtle,
+                  },
+                ]}
+              >
+                <View style={[styles.paymentOptionIconWrap, { backgroundColor: colors.emeraldBg, borderColor: colors.emeraldBorder }]}>
+                  <Ionicons name="checkmark-circle" size={20} color={colors.emeraldLight} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <Text style={[styles.paymentOptionTitle, { color: colors.textMain }]}>Pagado</Text>
+                    <View style={[styles.paymentMiniBadge, { backgroundColor: colors.emeraldBg }]}>
+                      <Text style={[styles.paymentMiniBadgeText, { color: colors.emeraldText }]}>Suma a Ventas Cobradas</Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.paymentOptionDesc, { color: colors.textMuted }]}>
+                    Pedido 100% cobrado. Se registrará en ingresos y ganancias de hoy.
+                  </Text>
+                </View>
+                {order.payment_status === 'Pagado' && (
+                  <Ionicons name="radio-button-on" size={18} color={colors.emeraldLight} />
+                )}
+              </TouchableOpacity>
+
+              {/* Option 2: Anticipo */}
+              <TouchableOpacity
+                onPress={() => {
+                  setIsPaymentPickerOpen(false);
+                  if (order.payment_status !== 'Anticipo') {
+                    onPaymentStatusChange?.(order.id, 'Anticipo');
+                  }
+                }}
+                style={[
+                  styles.paymentOptionCard,
+                  {
+                    backgroundColor: order.payment_status === 'Anticipo' ? colors.amberBg : colors.bgTertiary,
+                    borderColor: order.payment_status === 'Anticipo' ? colors.amberBorder : colors.borderSubtle,
+                  },
+                ]}
+              >
+                <View style={[styles.paymentOptionIconWrap, { backgroundColor: colors.amberBg, borderColor: colors.amberBorder }]}>
+                  <Ionicons name="cash-outline" size={20} color={colors.amberLight} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.paymentOptionTitle, { color: colors.textMain }]}>Anticipo</Text>
+                  <Text style={[styles.paymentOptionDesc, { color: colors.textMuted }]}>
+                    Cobro parcial recibido. Saldo restante pendiente de liquidar.
+                  </Text>
+                </View>
+                {order.payment_status === 'Anticipo' && (
+                  <Ionicons name="radio-button-on" size={18} color={colors.amberLight} />
+                )}
+              </TouchableOpacity>
+
+              {/* Option 3: Pendiente */}
+              <TouchableOpacity
+                onPress={() => {
+                  setIsPaymentPickerOpen(false);
+                  if (order.payment_status !== 'Pendiente') {
+                    onPaymentStatusChange?.(order.id, 'Pendiente');
+                  }
+                }}
+                style={[
+                  styles.paymentOptionCard,
+                  {
+                    backgroundColor: order.payment_status === 'Pendiente' ? colors.bgSecondary : colors.bgTertiary,
+                    borderColor: order.payment_status === 'Pendiente' ? colors.brandBorder : colors.borderSubtle,
+                  },
+                ]}
+              >
+                <View style={[styles.paymentOptionIconWrap, { backgroundColor: colors.bgSecondary, borderColor: colors.borderSubtle }]}>
+                  <Ionicons name="time-outline" size={20} color={colors.textDim} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.paymentOptionTitle, { color: colors.textMain }]}>Pendiente</Text>
+                  <Text style={[styles.paymentOptionDesc, { color: colors.textMuted }]}>
+                    Aún sin cobro. Se pagará al momento de la entrega.
+                  </Text>
+                </View>
+                {order.payment_status === 'Pendiente' && (
+                  <Ionicons name="radio-button-on" size={18} color={colors.textMain} />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => setIsPaymentPickerOpen(false)}
+              style={[styles.paymentModalCancelBtn, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+            >
+              <Text style={[styles.paymentModalCancelText, { color: colors.textMuted }]}>Cerrar</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </DoubleBezelCard>
   );
 };
@@ -362,5 +502,97 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(5, 6, 9, 0.72)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.md,
+  },
+  paymentModalCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    padding: spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  paymentModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  paymentModalEyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  paymentModalTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  paymentModalSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  paymentModalCloseBtn: {
+    padding: 6,
+  },
+  paymentOptionsList: {
+    gap: 10,
+    marginBottom: spacing.md,
+  },
+  paymentOptionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    gap: 12,
+  },
+  paymentOptionIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paymentOptionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  paymentMiniBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  paymentMiniBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  paymentOptionDesc: {
+    fontSize: 11,
+    marginTop: 2,
+    lineHeight: 15,
+  },
+  paymentModalCancelBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+  },
+  paymentModalCancelText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

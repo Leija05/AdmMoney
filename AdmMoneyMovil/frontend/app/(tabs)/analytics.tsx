@@ -22,20 +22,50 @@ export default function AnalyticsScreen() {
   const colors = useThemeColors();
   const { summary, expenses, sales, loadAllData, isLoading, theme, toggleTheme } = useAppStore();
 
-  const totalRev = summary?.total_cookie_revenue ?? sales.reduce((acc, s) => acc + s.total_revenue, 0);
-  const totalProfit = summary?.net_cookie_profit ?? sales.reduce((acc, s) => acc + s.net_profit, 0);
-  const totalUnits = summary?.total_cookies_sold ?? sales.reduce((acc, s) => acc + s.quantity, 0);
+  // Métricas reales calculadas directamente de las ventas cobradas registradas
+  const totalRev = sales.length > 0
+    ? sales.reduce((acc, s) => acc + (s.total_revenue || 0), 0)
+    : (summary?.total_cookie_revenue ?? 0);
+
+  const totalProfit = sales.length > 0
+    ? sales.reduce((acc, s) => acc + (s.net_profit || 0), 0)
+    : (summary?.net_cookie_profit ?? 0);
+
+  const totalUnits = sales.length > 0
+    ? sales.reduce((acc, s) => acc + (s.quantity || 0), 0)
+    : (summary?.total_cookies_sold ?? 0);
+
   const avgMargin = totalRev > 0 ? (totalProfit / totalRev) * 100 : 0;
-  const totalExpenses = summary?.total_all_expenses ?? expenses.reduce((acc, e) => acc + e.amount, 0);
+  const totalExpenses = expenses.reduce((acc, e) => acc + (e.amount || 0), 0);
   const netBalance = totalRev - totalExpenses;
 
-  const performance = summary?.cookie_performance && summary.cookie_performance.length > 0
-    ? summary.cookie_performance
-    : [
-        { cookie_id: 1, cookie_name: 'Galleta Artesanal Oreo & Chispas', units_sold: 14, revenue: 490, profit: 354.6, margin_pct: 72.4 },
-        { cookie_id: 2, cookie_name: 'Chispas Clásicas NY Style', units_sold: 9, revenue: 315, profit: 227.9, margin_pct: 72.4 },
-        { cookie_id: 3, cookie_name: 'Red Velvet Cheesecake', units_sold: 6, revenue: 270, profit: 195.0, margin_pct: 72.2 },
-      ];
+  // Rendimiento real por receta agrupado directamente de las ventas
+  const perfMap = new Map<string, { cookie_id: number; cookie_name: string; units_sold: number; revenue: number; profit: number }>();
+  sales.forEach((s) => {
+    const name = s.cookie_name || 'Galleta';
+    const curr = perfMap.get(name) || {
+      cookie_id: s.cookie_id,
+      cookie_name: name,
+      units_sold: 0,
+      revenue: 0,
+      profit: 0,
+    };
+    curr.units_sold += (s.quantity || 0);
+    curr.revenue += (s.total_revenue || 0);
+    curr.profit += (s.net_profit || 0);
+    perfMap.set(name, curr);
+  });
+
+  const realPerformance = Array.from(perfMap.values()).map((p) => ({
+    ...p,
+    margin_pct: p.revenue > 0 ? (p.profit / p.revenue) * 100 : 0,
+  })).sort((a, b) => b.revenue - a.revenue);
+
+  const performance = realPerformance.length > 0
+    ? realPerformance
+    : (summary?.cookie_performance && summary.cookie_performance.length > 0
+        ? summary.cookie_performance
+        : []);
 
   const maxUnits = Math.max(...performance.map((p) => p.units_sold), 1);
 

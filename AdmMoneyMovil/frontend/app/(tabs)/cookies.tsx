@@ -43,6 +43,8 @@ export default function CookiesScreen() {
     ingredients,
     promotions,
     orders,
+    customers,
+    addCustomer,
     togglePromotion,
     deletePromotion,
     addPromotion,
@@ -218,11 +220,124 @@ export default function CookiesScreen() {
 
   const handleSaveOrder = async (orderData: Partial<Order>) => {
     if (editingOrder) {
+      const prevStatus = editingOrder.payment_status;
       await updateOrder(editingOrder.id, orderData);
+
+      // Si el pedido pasó o está en Pagado, registrar en ventas cobradas
+      if (orderData.payment_status === 'Pagado') {
+        const alreadyRegistered = sales.some(
+          (s) => (s as any).order_id === editingOrder.id || (s.notes && s.notes.includes(`Pedido #${editingOrder.id}`))
+        );
+        if (!alreadyRegistered && orderData.items && orderData.items.length > 0) {
+          for (const item of orderData.items) {
+            await addCookieSale({
+              cookie_id: item.product_id,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              customer_name: orderData.customer_name,
+              payment_method: orderData.payment_method || 'Efectivo',
+              notes: `Pedido #${editingOrder.id} • ${orderData.customer_name}${orderData.promotion_name ? ` (${orderData.promotion_name})` : ''}`,
+              promotion_id: orderData.promotion_id,
+              promotion_name: orderData.promotion_name,
+              discount_amount: orderData.discount_amount,
+              sale_date: orderData.delivery_date || new Date().toISOString().split('T')[0],
+              order_id: editingOrder.id,
+            } as any);
+          }
+        }
+      } else if (prevStatus === 'Pagado') {
+        const salesToDelete = sales.filter(
+          (s) => (s as any).order_id === editingOrder.id || (s.notes && s.notes.includes(`Pedido #${editingOrder.id}`))
+        );
+        for (const s of salesToDelete) {
+          await deleteCookieSale(s.id);
+        }
+      }
+
+      await loadAllData();
       Alert.alert('Pedido Actualizado', `El pedido de ${orderData.customer_name} ha sido modificado.`);
     } else {
-      await addOrder(orderData);
-      Alert.alert('¡Pedido Agendado!', `Se agendó el pedido para ${orderData.customer_name}.`);
+      const created = await addOrder(orderData);
+      if (orderData.payment_status === 'Pagado' && created) {
+        if (orderData.items && orderData.items.length > 0) {
+          for (const item of orderData.items) {
+            await addCookieSale({
+              cookie_id: item.product_id,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              customer_name: orderData.customer_name,
+              payment_method: orderData.payment_method || 'Efectivo',
+              notes: `Pedido #${created.id} • ${orderData.customer_name}${orderData.promotion_name ? ` (${orderData.promotion_name})` : ''}`,
+              promotion_id: orderData.promotion_id,
+              promotion_name: orderData.promotion_name,
+              discount_amount: orderData.discount_amount,
+              sale_date: orderData.delivery_date || new Date().toISOString().split('T')[0],
+              order_id: created.id,
+            } as any);
+          }
+        }
+      }
+      await loadAllData();
+      Alert.alert(
+        '¡Pedido Agendado!',
+        orderData.payment_status === 'Pagado'
+          ? `Se agendó el pedido de ${orderData.customer_name} y se registró en Ventas Cobradas e Ingresos.`
+          : `Se agendó el pedido para ${orderData.customer_name}.`
+      );
+    }
+  };
+
+  const handlePaymentStatusChange = async (id: number, nextPaymentStatus: Order['payment_status']) => {
+    const order = orders.find((o) => o.id === id);
+    if (!order) return;
+
+    if (order.payment_status === nextPaymentStatus) return;
+    const prevPaymentStatus = order.payment_status;
+
+    await updateOrder(id, { payment_status: nextPaymentStatus });
+
+    // Cuando pasa a PAGADO:
+    if (nextPaymentStatus === 'Pagado') {
+      const alreadyRegistered = sales.some(
+        (s) => (s as any).order_id === id || (s.notes && s.notes.includes(`Pedido #${id}`))
+      );
+
+      if (!alreadyRegistered && order.items && order.items.length > 0) {
+        for (const item of order.items) {
+          await addCookieSale({
+            cookie_id: item.product_id,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            customer_name: order.customer_name,
+            payment_method: order.payment_method || 'Efectivo',
+            notes: `Pedido #${order.id} • ${order.customer_name}${order.promotion_name ? ` (${order.promotion_name})` : ''}`,
+            promotion_id: order.promotion_id,
+            promotion_name: order.promotion_name,
+            discount_amount: order.discount_amount,
+            sale_date: order.delivery_date || new Date().toISOString().split('T')[0],
+            order_id: order.id,
+          } as any);
+        }
+      }
+
+      await loadAllData();
+      Alert.alert(
+        '¡Pedido Pagado!',
+        `El pedido de ${order.customer_name} pasó a Pagado y sus galletas se registraron en Ventas Cobradas e Ingresos.`
+      );
+    } else if (prevPaymentStatus === 'Pagado') {
+      // Cuando cambia de Pagado a Pendiente o Anticipo:
+      const salesToDelete = sales.filter(
+        (s) => (s as any).order_id === id || (s.notes && s.notes.includes(`Pedido #${id}`))
+      );
+      for (const s of salesToDelete) {
+        await deleteCookieSale(s.id);
+      }
+      await loadAllData();
+      Alert.alert(
+        'Estatus Actualizado',
+        `El cobro del pedido se cambió a ${nextPaymentStatus}. Se ajustó el historial de ventas.`
+      );
     }
   };
 
@@ -234,6 +349,13 @@ export default function CookiesScreen() {
       confirmText: 'Sí, Eliminar',
       type: 'danger',
       onConfirm: async () => {
+        // Eliminar ventas asociadas si estuviera pagado
+        const salesToDelete = sales.filter(
+          (s) => (s as any).order_id === id || (s.notes && s.notes.includes(`Pedido #${id}`))
+        );
+        for (const s of salesToDelete) {
+          await deleteCookieSale(s.id);
+        }
         await deleteOrder(id);
       },
     });
@@ -679,6 +801,7 @@ export default function CookiesScreen() {
                   onEdit={handleEditOrder}
                   onDelete={handleDeleteOrder}
                   onStatusChange={handleStatusChange}
+                  onPaymentStatusChange={handlePaymentStatusChange}
                 />
               )}
               contentContainerStyle={{ paddingBottom: 40 }}
@@ -745,8 +868,10 @@ export default function CookiesScreen() {
         onClose={() => setIsOrderModalOpen(false)}
         cookies={cookies}
         promotions={promotions}
+        customers={customers}
         editingOrder={editingOrder}
         onSave={handleSaveOrder}
+        onSaveCustomer={addCustomer}
       />
 
       {/* Quick Sale Stepper Modal */}

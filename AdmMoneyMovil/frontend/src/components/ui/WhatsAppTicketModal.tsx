@@ -34,17 +34,15 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
   const colors = useThemeColors();
   const isDark = colors.isDark;
 
-  const extract8Digits = (raw: string) => {
+  const extract10Digits = (raw: string) => {
     let digits = raw.replace(/\D/g, '');
-    if (digits.startsWith('5255')) {
-      digits = digits.slice(4);
-    } else if (digits.startsWith('55')) {
+    if (digits.startsWith('52') && digits.length >= 12) {
       digits = digits.slice(2);
     }
-    return digits.slice(0, 8);
+    return digits.slice(0, 10);
   };
 
-  const [phoneSuffix, setPhoneSuffix] = useState('');
+  const [phoneDigits, setPhoneDigits] = useState('');
   const [includePdf, setIncludePdf] = useState(true);
   const [customNote, setCustomNote] = useState('');
 
@@ -53,7 +51,7 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
 
   useEffect(() => {
     if (visible) {
-      setPhoneSuffix(extract8Digits(initialPhone));
+      setPhoneDigits(extract10Digits(initialPhone));
       setCustomNote('');
       setIncludePdf(true);
     }
@@ -95,11 +93,11 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
 
   // Build the live preview text (clean, friendly, detailed and easy to read)
   const buildMessage = () => {
-    let msg = `🍪 *lucky cookies Galletas y postres* 🍪\n`;
-    msg += `¡Hola *${customerName}*! Muchas gracias por tu compra. Te compartimos tu comprobante:\n\n`;
+    let msg = `🍪 *Lucky Cookies • Galletas y Postres* 🍪\n`;
+    msg += `¡Hola *${customerName}*! Muchas gracias por tu compra. Te compartimos el comprobante de tu ${ticketType.toLowerCase()}:\n\n`;
     msg += `📋 *Comprobante Oficial • Ticket #${ticketId}*\n`;
     msg += `📅 *${dateText}*\n`;
-    msg += `🍪 *Tu Pedido:* ${itemsSummary}\n`;
+    msg += `🍪 *Detalle del Pedido:*\n${itemsSummary}\n`;
     msg += `💰 *Total a Cobrar:* ${totalFormatted}\n`;
     msg += `💳 *Método de Pago:* ${paymentText}\n`;
 
@@ -111,13 +109,13 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
       msg += `\n📄 *Descarga tu comprobante oficial en PDF con logo:* \n${pdfUrl}\n`;
     }
 
-    msg += `\n¡Muchas gracias por tu preferencia y que lo disfrutes mucho! ✨❤️`;
+    msg += `\n✨ ¡Muchas gracias por tu preferencia y que disfrutes mucho tus galletas! ❤️🍪`;
     return msg;
   };
 
   const handleConfirmSend = async () => {
-    const cleanSuffix = phoneSuffix.replace(/\D/g, '');
-    if (!cleanSuffix || cleanSuffix.length === 0) {
+    const cleanPhone = phoneDigits.replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length === 0) {
       Alert.alert(
         'Número Requerido',
         '⚠️ Por favor ingresa el número de WhatsApp del cliente para poder enviarle el ticket.'
@@ -125,15 +123,15 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
       return;
     }
 
-    if (cleanSuffix.length < 8) {
+    if (cleanPhone.length < 10) {
       Alert.alert(
         'Número Incompleto',
-        '⚠️ Por favor ingresa los 8 dígitos después del 55 para completar el número (10 dígitos en total).'
+        '⚠️ Por favor ingresa los 10 dígitos del número telefónico (ej. 5512345678).'
       );
       return;
     }
 
-    const fullPhone = `5255${cleanSuffix}`;
+    const fullPhone = `52${cleanPhone}`;
     const message = buildMessage();
     const encoded = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${fullPhone}?text=${encoded}`;
@@ -213,34 +211,32 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
                     borderRightColor: isDark ? '#374151' : '#D1D5DB',
                   }}
                 >
-                  <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
-                  <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#E5E7EB' : '#1F2937' }}>
-                    +52 55
-                  </Text>
+                    <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#E5E7EB' : '#1F2937' }}>
+                      +52
+                    </Text>
+                  </View>
+                  <TextInput
+                    style={[styles.inputField, { color: isDark ? '#F1F3F7' : '#181A1F', marginLeft: 10 }]}
+                    placeholder="55 1234 5678 (10 dígitos)"
+                    placeholderTextColor={colors.textDim}
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    value={phoneDigits}
+                    onChangeText={(val) => {
+                      const cleaned = val.replace(/\D/g, '');
+                      if (cleaned.startsWith('52') && cleaned.length > 10) {
+                        setPhoneDigits(cleaned.slice(2).slice(0, 10));
+                      } else {
+                        setPhoneDigits(cleaned.slice(0, 10));
+                      }
+                    }}
+                  />
                 </View>
-                <TextInput
-                  style={[styles.inputField, { color: isDark ? '#F1F3F7' : '#181A1F', marginLeft: 10 }]}
-                  placeholder="1234 5678 (8 dígitos)"
-                  placeholderTextColor={colors.textDim}
-                  keyboardType="phone-pad"
-                  maxLength={10}
-                  value={phoneSuffix}
-                  onChangeText={(val) => {
-                    const cleaned = val.replace(/\D/g, '');
-                    if (cleaned.startsWith('5255')) {
-                      setPhoneSuffix(cleaned.slice(4).slice(0, 8));
-                    } else if (cleaned.startsWith('55') && cleaned.length > 8) {
-                      setPhoneSuffix(cleaned.slice(2).slice(0, 8));
-                    } else {
-                      setPhoneSuffix(cleaned.slice(0, 8));
-                    }
-                  }}
-                />
+                <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 4 }}>
+                  Ingresa los 10 dígitos del número telefónico o celular.
+                </Text>
               </View>
-              <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 4 }}>
-                El 55 es fijo. Ingresa los 8 dígitos que van después.
-              </Text>
-            </View>
 
             {/* Toggle PDF Ticket */}
             <View

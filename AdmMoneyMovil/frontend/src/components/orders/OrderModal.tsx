@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Order, OrderItem, CookieProduct, Promotion } from '../../lib/types';
+import { Order, OrderItem, CookieProduct, Promotion, Customer } from '../../lib/types';
 import { colors, useThemeColors, radii, spacing } from '../../theme';
 import { DoubleBezelCard } from '../ui/DoubleBezelCard';
 
@@ -19,8 +19,10 @@ interface OrderModalProps {
   onClose: () => void;
   cookies: CookieProduct[];
   promotions: Promotion[];
+  customers?: Customer[];
   editingOrder?: Order | null;
   onSave: (data: Partial<Order>) => Promise<void>;
+  onSaveCustomer?: (data: Partial<Customer>) => Promise<any>;
 }
 
 export const OrderModal: React.FC<OrderModalProps> = ({
@@ -28,8 +30,10 @@ export const OrderModal: React.FC<OrderModalProps> = ({
   onClose,
   cookies,
   promotions,
+  customers = [],
   editingOrder,
   onSave,
+  onSaveCustomer,
 }) => {
   const colors = useThemeColors();
   const isDark = colors.isDark;
@@ -37,6 +41,9 @@ export const OrderModal: React.FC<OrderModalProps> = ({
 
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+  const [isNewCustomerMode, setIsNewCustomerMode] = useState(false);
+  const [saveCustomerCheckbox, setSaveCustomerCheckbox] = useState(true);
   const [deliveryDate, setDeliveryDate] = useState(tomorrowStr);
   const [paymentMethod, setPaymentMethod] = useState('Transferencia');
   const [paymentStatus, setPaymentStatus] = useState<'Pagado' | 'Pendiente' | 'Anticipo'>('Pendiente');
@@ -52,6 +59,12 @@ export const OrderModal: React.FC<OrderModalProps> = ({
     if (editingOrder) {
       setCustomerName(editingOrder.customer_name || '');
       setCustomerPhone(editingOrder.customer_phone || '');
+      const matched = customers.find(
+        (c) => c.name.trim().toLowerCase() === (editingOrder.customer_name || '').trim().toLowerCase()
+      );
+      setSelectedCustomerId(matched ? matched.id : null);
+      setIsNewCustomerMode(!matched);
+      setSaveCustomerCheckbox(false);
       setDeliveryDate(editingOrder.delivery_date || tomorrowStr);
       setPaymentMethod(editingOrder.payment_method || 'Transferencia');
       setPaymentStatus(editingOrder.payment_status || 'Pendiente');
@@ -64,6 +77,9 @@ export const OrderModal: React.FC<OrderModalProps> = ({
     } else {
       setCustomerName('');
       setCustomerPhone('');
+      setSelectedCustomerId(null);
+      setIsNewCustomerMode(false);
+      setSaveCustomerCheckbox(true);
       setDeliveryDate(tomorrowStr);
       setPaymentMethod('Transferencia');
       setPaymentStatus('Pendiente');
@@ -85,7 +101,23 @@ export const OrderModal: React.FC<OrderModalProps> = ({
         setItems([]);
       }
     }
-  }, [editingOrder, visible, cookies, tomorrowStr]);
+  }, [editingOrder, visible, cookies, tomorrowStr, customers]);
+
+  const handleSelectCustomer = (cust: Customer) => {
+    setSelectedCustomerId(cust.id);
+    setIsNewCustomerMode(false);
+    setCustomerName(cust.name);
+    setCustomerPhone(cust.phone || '');
+    setSaveCustomerCheckbox(false);
+  };
+
+  const handleStartNewCustomer = () => {
+    setSelectedCustomerId(null);
+    setIsNewCustomerMode(true);
+    setCustomerName('');
+    setCustomerPhone('');
+    setSaveCustomerCheckbox(true);
+  };
 
   const handleAddItem = () => {
     const firstCookie = cookies[0];
@@ -212,6 +244,13 @@ export const OrderModal: React.FC<OrderModalProps> = ({
 
     setIsSubmitting(true);
     try {
+      if (saveCustomerCheckbox && customerName.trim()) {
+        onSaveCustomer?.({
+          name: customerName.trim(),
+          phone: customerPhone.trim(),
+        });
+      }
+
       await onSave({
         customer_name: customerName.trim(),
         customer_phone: customerPhone.trim(),
@@ -257,7 +296,97 @@ export const OrderModal: React.FC<OrderModalProps> = ({
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {/* Customer info card */}
           <DoubleBezelCard style={styles.card}>
-            <Text style={[styles.sectionTitle, { color: colors.textMain }]}>👤 Datos del Cliente</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <Text style={[styles.sectionTitle, { color: colors.textMain }]}>👤 Datos del Cliente</Text>
+              {customers.length > 0 && (
+                <TouchableOpacity
+                  onPress={handleStartNewCustomer}
+                  style={[
+                    styles.newCustomerToggleBtn,
+                    {
+                      backgroundColor: isNewCustomerMode ? colors.brandBg : colors.bgTertiary,
+                      borderColor: isNewCustomerMode ? colors.brandBorder : colors.borderSubtle,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="person-add"
+                    size={12}
+                    color={isNewCustomerMode ? colors.brandText : colors.textMuted}
+                  />
+                  <Text
+                    style={[
+                      styles.newCustomerToggleText,
+                      { color: isNewCustomerMode ? colors.brandText : colors.textMuted },
+                    ]}
+                  >
+                    + Nuevo
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Registered customers quick selector */}
+            {customers.length > 0 && (
+              <View style={{ marginBottom: 12 }}>
+                <Text style={[styles.fieldSubLabel, { color: colors.textMuted }]}>
+                  Clientes Registrados (Toca para autocompletar):
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
+                >
+                  {customers.map((c) => {
+                    const isSelected =
+                      selectedCustomerId === c.id ||
+                      (!isNewCustomerMode && customerName.trim().toLowerCase() === c.name.trim().toLowerCase());
+                    return (
+                      <TouchableOpacity
+                        key={c.id}
+                        onPress={() => handleSelectCustomer(c)}
+                        style={[
+                          styles.customerChip,
+                          {
+                            backgroundColor: isSelected ? colors.brandBg : colors.bgSurface,
+                            borderColor: isSelected ? colors.brandBorder : colors.borderSubtle,
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name="person"
+                          size={13}
+                          color={isSelected ? colors.brandText : colors.textDim}
+                        />
+                        <View>
+                          <Text
+                            style={[
+                              styles.customerChipName,
+                              {
+                                color: isSelected ? colors.brandText : colors.textMain,
+                                fontWeight: isSelected ? '800' : '600',
+                              },
+                            ]}
+                          >
+                            {c.name}
+                          </Text>
+                          {Boolean(c.phone) && (
+                            <Text
+                              style={[
+                                styles.customerChipPhone,
+                                { color: isSelected ? colors.brandLight : colors.textDim },
+                              ]}
+                            >
+                              📞 {c.phone}
+                            </Text>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
 
             <View style={styles.fieldGroup}>
               <Text style={[styles.label, { color: colors.textMuted }]}>Nombre completo *</Text>
@@ -266,21 +395,50 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                 placeholder="Ej. Valeria Gómez"
                 placeholderTextColor={colors.textDim}
                 value={customerName}
-                onChangeText={setCustomerName}
+                onChangeText={(text) => {
+                  setCustomerName(text);
+                  setIsNewCustomerMode(true);
+                  setSelectedCustomerId(null);
+                }}
               />
             </View>
 
             <View style={styles.fieldGroup}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>Teléfono o WhatsApp</Text>
+              <Text style={[styles.label, { color: colors.textMuted }]}>Teléfono o WhatsApp (10 dígitos)</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.bgSurface, borderColor: colors.borderSubtle, color: colors.textMain }]}
                 placeholder="Ej. 5512345678"
                 placeholderTextColor={colors.textDim}
                 keyboardType="phone-pad"
                 value={customerPhone}
-                onChangeText={setCustomerPhone}
+                onChangeText={(text) => {
+                  setCustomerPhone(text);
+                  setIsNewCustomerMode(true);
+                }}
               />
             </View>
+
+            {/* Checkbox: Guardar cliente en registro */}
+            <TouchableOpacity
+              onPress={() => setSaveCustomerCheckbox(!saveCustomerCheckbox)}
+              style={styles.checkboxRow}
+              activeOpacity={0.8}
+            >
+              <View
+                style={[
+                  styles.checkboxBox,
+                  {
+                    borderColor: saveCustomerCheckbox ? colors.brand : colors.borderSubtle,
+                    backgroundColor: saveCustomerCheckbox ? colors.brand : 'transparent',
+                  },
+                ]}
+              >
+                {saveCustomerCheckbox && <Ionicons name="checkmark" size={13} color="#fff" />}
+              </View>
+              <Text style={[styles.checkboxLabel, { color: colors.textMain }]}>
+                Guardar este usuario en el registro para no volver a escribir sus datos
+              </Text>
+            </TouchableOpacity>
 
             <View style={styles.fieldGroup}>
               <Text style={[styles.label, { color: colors.textMuted }]}>Fecha programada de entrega (AAAA-MM-DD)</Text>
@@ -882,5 +1040,59 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     color: colors.emerald,
+  },
+  newCustomerToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+  },
+  newCustomerToggleText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  fieldSubLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  customerChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+  },
+  customerChipName: {
+    fontSize: 12,
+  },
+  customerChipPhone: {
+    fontSize: 10,
+    marginTop: 1,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginVertical: 8,
+    paddingVertical: 4,
+  },
+  checkboxBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
   },
 });

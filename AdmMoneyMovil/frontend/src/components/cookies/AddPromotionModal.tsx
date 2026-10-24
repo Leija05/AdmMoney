@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -19,6 +19,8 @@ interface AddPromotionModalProps {
   onClose: () => void;
   cookies: CookieProduct[];
   onAddPromotion: (data: Partial<Promotion>) => Promise<Promotion>;
+  promotionToEdit?: Promotion | null;
+  onUpdatePromotion?: (id: number, data: Partial<Promotion>) => Promise<Promotion>;
 }
 
 export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
@@ -26,6 +28,8 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
   onClose,
   cookies,
   onAddPromotion,
+  promotionToEdit,
+  onUpdatePromotion,
 }) => {
   const colors = useThemeColors();
   const isDark = colors.isDark;
@@ -40,6 +44,32 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
   const [badgeText, setBadgeText] = useState('3 x $90');
   const [colorTag, setColorTag] = useState('#F59E0B');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (promotionToEdit) {
+      setName(promotionToEdit.name || '');
+      setDescription(promotionToEdit.description || '');
+      setPromoType(promotionToEdit.promo_type || 'combo_fixed_price');
+      setDiscountValue(String(promotionToEdit.discount_value ?? 90));
+      setTargetType(promotionToEdit.target_type || 'all_products');
+      setSelectedProductIds(promotionToEdit.target_product_ids || []);
+      setMinQuantity(String(promotionToEdit.min_quantity ?? 3));
+      setMinOrderAmount(String(promotionToEdit.min_order_amount ?? 0));
+      setBadgeText(promotionToEdit.badge_text || 'PROMO');
+      setColorTag(promotionToEdit.color_tag || '#F59E0B');
+    } else {
+      setName('');
+      setDescription('');
+      setPromoType('combo_fixed_price');
+      setDiscountValue('90');
+      setTargetType('all_products');
+      setSelectedProductIds([]);
+      setMinQuantity('3');
+      setMinOrderAmount('0');
+      setBadgeText('3 x $90');
+      setColorTag('#F59E0B');
+    }
+  }, [promotionToEdit, visible]);
 
   const handleTypeSelect = (type: PromoType) => {
     setPromoType(type);
@@ -77,7 +107,7 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
 
     try {
       setIsSubmitting(true);
-      await onAddPromotion({
+      const payload: Partial<Promotion> = {
         name: name.trim(),
         description: description.trim(),
         promo_type: promoType,
@@ -88,12 +118,15 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
         min_order_amount: parseFloat(minOrderAmount) || 0,
         badge_text: badgeText.trim() || 'PROMO',
         color_tag: colorTag,
-        is_active: true
-      });
+        is_active: promotionToEdit ? promotionToEdit.is_active : true,
+      };
+
+      if (promotionToEdit && onUpdatePromotion) {
+        await onUpdatePromotion(promotionToEdit.id, payload);
+      } else {
+        await onAddPromotion(payload);
+      }
       onClose();
-      // Reset
-      setName('');
-      setDescription('');
     } catch (err: any) {
       Alert.alert('Error', err.message || 'No fue posible guardar la promoción.');
     } finally {
@@ -117,7 +150,7 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
             <View>
               <Text style={[styles.eyebrow, { color: colors.amberLight }]}>Marketing & Ventas</Text>
               <Text style={[styles.title, { color: isDark ? '#F1F3F7' : '#181A1F' }]}>
-                Nueva Promoción / Oferta
+                {promotionToEdit ? 'Editar Promoción / Oferta' : 'Nueva Promoción / Oferta'}
               </Text>
             </View>
             <TouchableOpacity onPress={onClose}>
@@ -325,7 +358,7 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
               style={{ flex: 1, marginRight: 8 }}
             />
             <Button
-              title={isSubmitting ? 'Guardando...' : 'Crear Promoción'}
+              title={isSubmitting ? 'Guardando...' : (promotionToEdit ? 'Guardar Cambios' : 'Crear Promoción')}
               variant="primary"
               onPress={handleSubmit}
               disabled={isSubmitting}

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MessageCircle, FileText, Check, X, ExternalLink, Download, Sparkles } from 'lucide-react';
 import { Order, CookieSale } from '../../lib/types';
 import { Button } from '../ui/Button';
+import { APP_CONFIG } from '../../config/appConfig';
 
 interface WhatsAppTicketModalProps {
   isOpen: boolean;
@@ -19,19 +20,17 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
   const [includePdf, setIncludePdf] = useState(true);
   const [customNote, setCustomNote] = useState('');
 
-  const extract8Digits = (raw: string) => {
+  const extractDigits = (raw: string) => {
     let digits = raw.replace(/\D/g, '');
-    if (digits.startsWith('5255')) {
-      digits = digits.slice(4);
-    } else if (digits.startsWith('55')) {
+    if (digits.startsWith('52') && digits.length > 10) {
       digits = digits.slice(2);
     }
-    return digits.slice(0, 8);
+    return digits.slice(0, 10);
   };
 
-  // Customer phone initialization (only 8 digits after 55)
+  // Customer phone initialization (10 digits)
   const initialPhone = order?.customer_phone || '';
-  const [phoneSuffix, setPhoneSuffix] = useState(extract8Digits(initialPhone));
+  const [phoneDigits, setPhoneDigits] = useState(extractDigits(initialPhone));
 
   if (!isOpen || (!order && !sale)) return null;
 
@@ -50,9 +49,11 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
   }
 
   // PDF endpoint URL
+  const apiBase = APP_CONFIG.API_BASE_URL.replace(/\/+$/, '');
+  const encodedNote = customNote.trim() ? `?note=${encodeURIComponent(customNote.trim())}` : '';
   const pdfUrl = isOrder
-    ? `http://localhost:8000/api/orders/${targetId}/pdf`
-    : `http://localhost:8000/api/cookies/sales/${targetId}/pdf`;
+    ? `${apiBase}/orders/${targetId}/pdf${encodedNote}`
+    : `${apiBase}/cookies/sales/${targetId}/pdf${encodedNote}`;
 
   // Build clean, detailed, and easy-to-read formatted message
   const lines: string[] = [
@@ -79,16 +80,16 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
   const fullMessage = lines.join('\n');
 
   const handleSendWhatsApp = () => {
-    const cleanSuffix = phoneSuffix.replace(/\D/g, '');
-    if (!cleanSuffix || cleanSuffix.length === 0) {
+    const cleanPhoneDigits = phoneDigits.replace(/\D/g, '');
+    if (!cleanPhoneDigits || cleanPhoneDigits.length === 0) {
       alert('⚠️ Por favor ingresa el número de WhatsApp del cliente para poder enviar el ticket.');
       return;
     }
-    if (cleanSuffix.length < 8) {
-      alert('⚠️ Por favor ingresa los 8 dígitos completos que siguen al 55 (Total 10 dígitos).');
+    if (cleanPhoneDigits.length < 10) {
+      alert('⚠️ Por favor ingresa los 10 dígitos completos del número telefónico (ej. 55 1234 5678).');
       return;
     }
-    const cleanPhone = `5255${cleanSuffix}`;
+    const cleanPhone = `52${cleanPhoneDigits}`;
     const encoded = encodeURIComponent(fullMessage);
     const target = `https://wa.me/${cleanPhone}?text=${encoded}`;
     window.open(target, '_blank', 'noopener,noreferrer');
@@ -151,29 +152,27 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
 
         {/* Form Body */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Phone input with fixed 55 prefix */}
+          {/* Phone input with +52 prefix */}
           <div>
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted, #94A3B8)', marginBottom: '0.35rem' }}>
-              Número de Teléfono o WhatsApp del Cliente *
+              Número de Teléfono o WhatsApp (10 Dígitos) *
             </label>
             <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-tertiary, #242936)', border: '1px solid var(--border-subtle, rgba(255,255,255,0.12))', borderRadius: '10px', overflow: 'hidden' }}>
               <div style={{ padding: '0.65rem 0.85rem', background: 'rgba(37, 211, 102, 0.15)', borderRight: '1px solid var(--border-subtle, rgba(255,255,255,0.12))', fontWeight: 800, fontSize: '0.9rem', color: '#34D399', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>+52 55</span>
+                <span>+52</span>
               </div>
               <input
                 type="text"
-                value={phoneSuffix}
+                value={phoneDigits}
                 onChange={(e) => {
                   const cleaned = e.target.value.replace(/\D/g, '');
-                  if (cleaned.startsWith('5255')) {
-                    setPhoneSuffix(cleaned.slice(4).slice(0, 8));
-                  } else if (cleaned.startsWith('55') && cleaned.length > 8) {
-                    setPhoneSuffix(cleaned.slice(2).slice(0, 8));
+                  if (cleaned.startsWith('52') && cleaned.length > 10) {
+                    setPhoneDigits(cleaned.slice(2).slice(0, 10));
                   } else {
-                    setPhoneSuffix(cleaned.slice(0, 8));
+                    setPhoneDigits(cleaned.slice(0, 10));
                   }
                 }}
-                placeholder="1234 5678 (8 dígitos)"
+                placeholder="55 1234 5678 (10 dígitos)"
                 style={{
                   flex: 1,
                   padding: '0.65rem 0.85rem',
@@ -186,7 +185,7 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
               />
             </div>
             <span style={{ fontSize: '0.72rem', color: 'var(--text-dim, #64748B)', marginTop: '0.25rem', display: 'block' }}>
-              El 55 es fijo. Ingresa los 8 dígitos que van después.
+              Ingresa el número a 10 dígitos con su lada correspondiente.
             </span>
           </div>
 

@@ -6,7 +6,9 @@ import {
   CookieSale,
   Order,
   Promotion,
-  OverallSummary
+  OverallSummary,
+  Customer,
+  ScannedTicket
 } from '../lib/types';
 import { MobileApiService, setApiHost } from '../services/api';
 import { APP_CONFIG } from '../config/appConfig';
@@ -18,6 +20,8 @@ interface AppState {
   sales: CookieSale[];
   promotions: Promotion[];
   orders: Order[];
+  customers: Customer[];
+  scannedTickets: ScannedTicket[];
   summary: OverallSummary | null;
   isOnline: boolean;
   backendUrl: string;
@@ -45,6 +49,8 @@ interface AppState {
     promotion_id?: number;
     promotion_name?: string;
     discount_amount?: number;
+    order_id?: number;
+    sale_date?: string;
   }) => Promise<CookieSale>;
   deleteCookieSale: (id: number) => Promise<void>;
   addCookieProduct: (data: Partial<CookieProduct>) => Promise<CookieProduct>;
@@ -60,6 +66,9 @@ interface AppState {
   addOrder: (data: Partial<Order>) => Promise<Order>;
   updateOrder: (id: number, data: Partial<Order>) => Promise<Order>;
   deleteOrder: (id: number) => Promise<void>;
+  addCustomer: (data: Partial<Customer>) => Promise<Customer>;
+  deleteCustomer: (id: number) => Promise<void>;
+  addScannedTicket: (ticket: ScannedTicket) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -69,6 +78,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   sales: [],
   promotions: [],
   orders: [],
+  customers: [],
+  scannedTickets: [],
   summary: null,
   isOnline: false,
   backendUrl: APP_CONFIG.DEFAULT_API_HOST,
@@ -105,7 +116,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const online = await get().checkConnection();
       if (online) {
-        const [exp, cks, ings, sls, summ, prms, ords] = await Promise.all([
+        const [exp, cks, ings, sls, summ, prms, ords, custs] = await Promise.all([
           MobileApiService.getExpenses().catch(() => []),
           MobileApiService.getCookies().catch(() => []),
           MobileApiService.getIngredients().catch(() => []),
@@ -113,7 +124,27 @@ export const useAppStore = create<AppState>((set, get) => ({
           MobileApiService.getSummary().catch(() => null),
           MobileApiService.getPromotions().catch(() => []),
           MobileApiService.getOrders().catch(() => []),
+          MobileApiService.getCustomers().catch(() => []),
         ]);
+
+        let mergedCustomers: Customer[] = custs && custs.length > 0 ? [...custs] : [];
+        if (ords && ords.length > 0) {
+          const existingNames = new Set(mergedCustomers.map((c) => c.name.trim().toLowerCase()));
+          ords.forEach((o) => {
+            const clean = (o.customer_name || '').trim();
+            if (clean && !existingNames.has(clean.toLowerCase())) {
+              mergedCustomers.push({
+                id: Date.now() + Math.floor(Math.random() * 1000),
+                name: clean,
+                phone: o.customer_phone || '',
+                total_orders: 1,
+                last_order_date: o.delivery_date,
+              });
+              existingNames.add(clean.toLowerCase());
+            }
+          });
+        }
+
         set({
           expenses: exp || [],
           cookies: cks || [],
@@ -122,6 +153,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           summary: summ || null,
           promotions: prms || [],
           orders: ords || [],
+          customers: mergedCustomers,
           isOnline: true,
         });
       } else {
@@ -250,7 +282,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   addOrder: async (data: Partial<Order>) => {
     const created = await MobileApiService.createOrder(data);
     set((state) => ({ orders: [created, ...state.orders] }));
-    get().loadAllData();
+    await get().loadAllData();
     return created;
   },
 
@@ -259,13 +291,58 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => ({
       orders: state.orders.map((o) => (o.id === id ? updated : o)),
     }));
-    get().loadAllData();
+    await get().loadAllData();
     return updated;
   },
 
   deleteOrder: async (id: number) => {
     await MobileApiService.deleteOrder(id);
-    set((state) => ({ orders: state.orders.filter((o) => o.id !== id) }));
-    get().loadAllData();
+    set((state) => ({
+      orders: state.orders.filter((o) => o.id !== id),
+      sales: state.sales.filter((s) => (s as any).order_id !== id && (!s.notes || !s.notes.includes(`Pedido #${id}`))),
+    }));
+    await get().loadAllData();
+  },
+
+  addCustomer: async (data: Partial<Customer>) => {
+    try {
+      const created = await MobileApiService.createCustomer(data);
+      set((state) => {
+        const filtered = state.customers.filter((c) => c.name.toLowerCase() !== (data.name || '').toLowerCase());
+        return { customers: [created, ...filtered] };
+      });
+      return created;
+    } catch (err) {
+      const fallback: Customer = {
+        id: Date.now(),
+        name: data.name || '',
+        phone: data.phone || '',
+        notes: data.notes || '',
+        total_orders: 1,
+        created_at: new Date().toISOString(),
+      };
+      set((state) => {
+        const filtered = state.customers.filter((c) => c.name.toLowerCase() !== (data.name || '').toLowerCase());
+        return { customers: [fallback, ...filtered] };
+      });
+      return fallback;
+    }
+  },
+
+  deleteCustomer: async (id: number) => {
+    try {
+      await MobileApiService.deleteCustomer(id);
+    } catch (e) {
+      // Ignore
+    }
+    set((state) => ({ customers: state.customers.filter((c) => c.id !== id) }));
+  },
+
+  addScannedTicket: (ticket: ScannedTicket) => {
+    set((state) => {
+      const exists = state.scannedTickets.some((t) => t.id === ticket.id || (t.uri && t.uri === ticket.uri));
+      if (exists) return state;
+      return { scannedTickets: [ticket, ...state.scannedTickets] };
+    });
   },
 }));

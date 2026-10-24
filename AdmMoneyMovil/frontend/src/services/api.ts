@@ -8,7 +8,8 @@ import {
   PromoCalculationRequest,
   PromoCalculationResult,
   ReceiptScanResult,
-  OverallSummary
+  OverallSummary,
+  Customer
 } from '../lib/types';
 
 // Default backend host (supports Render URL, local network IP, or localhost)
@@ -275,5 +276,41 @@ export class MobileApiService {
     if (toDate) params.append('to_date', toDate);
     const qs = params.toString();
     return this.request<any>(`/orders/baking-sheet${qs ? `?${qs}` : ''}`);
+  }
+
+  // --- REGISTRO Y DIRECTORIO DE CLIENTES ---
+  static async getCustomers(): Promise<Customer[]> {
+    try {
+      return await this.request<Customer[]>('/customers');
+    } catch {
+      // Fallback silencioso si Render aún no tiene desplegado el router /api/customers
+      return [];
+    }
+  }
+
+  static async createCustomer(data: Partial<Customer>): Promise<Customer> {
+    try {
+      return await this.request<Customer>('/customers', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    } catch {
+      // Generación local provisional si el backend remoto responde 404
+      return {
+        id: Date.now(),
+        name: data.name || '',
+        phone: data.phone || '',
+        notes: data.notes || '',
+        created_at: new Date().toISOString(),
+      };
+    }
+  }
+
+  static async deleteCustomer(id: number): Promise<void> {
+    try {
+      await this.request(`/customers/${id}`, { method: 'DELETE' });
+    } catch {
+      // Silencioso
+    }
   }
 }

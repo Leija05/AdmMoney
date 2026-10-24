@@ -57,15 +57,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 }) => {
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
 
-  const totalExpenses = summary?.total_all_expenses ?? expenses.reduce((acc, e) => acc + e.amount, 0);
-  const cookieRevenue = summary?.total_cookie_revenue ?? sales.reduce((acc, s) => acc + s.total_revenue, 0);
-  const cookieProfit = summary?.gross_cookie_profit ?? summary?.net_cookie_profit ?? sales.reduce((acc, s) => acc + s.net_profit, 0);
-  const reinvestmentFund = summary?.reinvestment_fund ?? summary?.total_cookie_cost ?? sales.reduce((acc, s) => acc + s.total_cost, 0);
+  const totalExpenses = expenses.length > 0 ? expenses.reduce((acc, e) => acc + (e.amount || 0), 0) : (summary?.total_all_expenses ?? 0);
+  const cookieRevenue = sales.length > 0 ? sales.reduce((acc, s) => acc + (s.total_revenue || 0), 0) : (summary?.total_cookie_revenue ?? 0);
+  const cookieProfit = sales.length > 0 ? sales.reduce((acc, s) => acc + (s.net_profit || 0), 0) : (summary?.gross_cookie_profit ?? summary?.net_cookie_profit ?? 0);
+  const reinvestmentFund = sales.length > 0 ? sales.reduce((acc, s) => acc + (s.total_cost || 0), 0) : (summary?.reinvestment_fund ?? summary?.total_cookie_cost ?? 0);
   const operationalExpenses = summary?.total_operational_expenses ?? totalExpenses * 0.7;
   const cleanNetProfit = summary?.clean_net_profit ?? (cookieRevenue - (reinvestmentFund + operationalExpenses));
   const netBalance = cookieRevenue - totalExpenses;
-  const marginPct = summary?.cookie_profit_margin_pct ?? (cookieRevenue > 0 ? (cookieProfit / cookieRevenue) * 100 : 0);
-  const cookiesSold = summary?.total_cookies_sold ?? sales.reduce((acc, s) => acc + s.quantity, 0);
+  const marginPct = cookieRevenue > 0 ? (cookieProfit / cookieRevenue) * 100 : (summary?.cookie_profit_margin_pct ?? 0);
+  const cookiesSold = sales.length > 0 ? sales.reduce((acc, s) => acc + (s.quantity || 0), 0) : (summary?.total_cookies_sold ?? 0);
 
   const dailyTrendData = summary?.daily_trend && summary.daily_trend.length > 0
     ? summary.daily_trend

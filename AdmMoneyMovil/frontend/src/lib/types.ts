@@ -79,6 +79,7 @@ export interface CookieSale {
   promotion_id?: number;
   promotion_name?: string;
   discount_amount?: number;
+  order_id?: number;
   created_at?: string;
 }
 
@@ -113,6 +114,7 @@ export interface Order {
   whatsapp_message: string;
   whatsapp_url: string;
   stock_deducted: boolean;
+  sale_registered?: boolean;
   created_at?: string;
 }
 
@@ -286,5 +288,25 @@ export interface PromoCalculationResult {
   original_subtotal: number;
   discount_amount: number;
   final_total: number;
+}
+
+export interface Customer {
+  id: number;
+  name: string;
+  phone: string;
+  notes?: string;
+  total_orders?: number;
+  last_order_date?: string;
+  created_at?: string;
+}
+
+export interface ScannedTicket {
+  id: string | number;
+  uri: string;
+  merchant: string;
+  amount: number;
+  date: string;
+  category?: string;
+  scanResult?: ReceiptScanResult;
 }
 

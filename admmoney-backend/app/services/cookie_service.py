@@ -517,7 +517,7 @@ class CookieService:
     def get_cookie_analytics() -> Dict[str, Any]:
         db = get_db()
 
-        # 1. Totales agregados de ventas de mostrador + pedidos completados
+        # 1. Totales agregados de ventas reales (Fuente de verdad única: cookie_sales)
         sales_totals = list(db.cookie_sales.aggregate([
             {
                 "$group": {
@@ -531,29 +531,10 @@ class CookieService:
         ]))
         sales_t = sales_totals[0] if sales_totals else {}
 
-        # 2. Agregar pedidos completados
-        completed_orders = list(db.orders.aggregate([
-            {"$match": {"status": "Completado"}},
-            {
-                "$group": {
-                    "_id": None,
-                    "total_revenue": {"$sum": "$total_amount"},
-                    "total_cost": {"$sum": "$total_cost"},
-                    "total_profit": {"$sum": "$net_profit"}
-                }
-            }
-        ]))
-        orders_t = completed_orders[0] if completed_orders else {}
-
         total_units = int(sales_t.get("total_units", 0))
-        # Contar unidades de pedidos completados
-        for ord_doc in db.orders.find({"status": "Completado"}):
-            for it in ord_doc.get("items", []):
-                total_units += int(it.get("quantity", 0))
-
-        rev = float(sales_t.get("total_revenue", 0.0)) + float(orders_t.get("total_revenue", 0.0))
-        cost = float(sales_t.get("total_cost", 0.0)) + float(orders_t.get("total_cost", 0.0))
-        prof = float(sales_t.get("total_profit", 0.0)) + float(orders_t.get("total_profit", 0.0))
+        rev = float(sales_t.get("total_revenue", 0.0))
+        cost = float(sales_t.get("total_cost", 0.0))
+        prof = float(sales_t.get("total_profit", 0.0))
         margin_pct = round((prof / rev * 100), 2) if rev > 0 else 0.0
 
         # Desglose por galleta

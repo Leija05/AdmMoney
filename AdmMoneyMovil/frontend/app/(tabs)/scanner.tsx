@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  Alert
+  Alert,
+  ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -17,7 +18,7 @@ import { ReceiptPreviewModal } from '../../src/components/scanner/ReceiptPreview
 import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
 import { MobileApiService } from '../../src/services/api';
 import { useAppStore } from '../../src/stores/app.store';
-import { ReceiptScanResult, Expense } from '../../src/lib/types';
+import { ReceiptScanResult, Expense, ScannedTicket } from '../../src/lib/types';
 import { MOCK_MOBILE_RECEIPTS } from '../../src/services/mockData';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -25,12 +26,32 @@ import { useRouter } from 'expo-router';
 export default function ScannerScreen() {
   const router = useRouter();
   const colors = useThemeColors();
-  const { addExpense, useMockData } = useAppStore();
+  const { addExpense, expenses, scannedTickets, addScannedTicket, useMockData } = useAppStore();
 
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<ReceiptScanResult | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+
+  // Combine tickets captured or uploaded with expenses that have tickets
+  const userTickets = React.useMemo(() => {
+    const list: ScannedTicket[] = [...scannedTickets];
+    expenses.forEach((e) => {
+      const hasReceipt = Boolean(e.receipt_url || e.receipt_data || (e.notes && e.notes.toLowerCase().includes('ticket')));
+      if (hasReceipt && !list.some((t) => t.id === `exp-${e.id}` || (t.uri && t.uri === e.receipt_url))) {
+        list.push({
+          id: `exp-${e.id}`,
+          uri: e.receipt_url || '',
+          merchant: e.title || (e.receipt_data as any)?.merchant || 'Ticket Registrado',
+          amount: e.amount,
+          date: e.date,
+          category: e.category,
+          scanResult: e.receipt_data ? (e.receipt_data as any) : undefined,
+        });
+      }
+    });
+    return list;
+  }, [scannedTickets, expenses]);
 
   // Take photo with mobile camera
   const handleTakePhoto = async () => {
@@ -39,7 +60,7 @@ export default function ScannerScreen() {
       if (!permission.granted) {
         Alert.alert(
           'Permiso de Cámara',
-          'Para tomar fotos de tickets, activa los permisos o usa los tickets de muestra abajo.',
+          'Para tomar fotos de tickets, activa los permisos de cámara en tu dispositivo.',
           [{ text: 'Entendido' }]
         );
         return;
@@ -53,13 +74,20 @@ export default function ScannerScreen() {
       if (!result.canceled && result.assets[0]) {
         const uri = result.assets[0].uri;
         setImageUri(uri);
+        addScannedTicket({
+          id: `scan-${Date.now()}`,
+          uri: uri,
+          merchant: 'Foto Tomada',
+          amount: 0,
+          date: new Date().toISOString().split('T')[0],
+        });
         processTicket(uri);
       }
     } catch (err) {
       console.warn('Camera error:', err);
       Alert.alert(
         'Cámara no disponible',
-        'Si estás en navegador web o simulador, puedes elegir una imagen de la galería o usar los tickets de muestra directos.'
+        'Si estás en navegador web o simulador, puedes elegir una imagen de la galería de tus archivos.'
       );
     }
   };
@@ -71,7 +99,7 @@ export default function ScannerScreen() {
       if (!permission.granted) {
         Alert.alert(
           'Permiso de Galería',
-          'Se necesita acceso a tus fotos para cargar el ticket o usa los tickets de muestra abajo.'
+          'Se necesita acceso a tus fotos para cargar el ticket.'
         );
         return;
       }
@@ -85,34 +113,54 @@ export default function ScannerScreen() {
       if (!result.canceled && result.assets[0]) {
         const uri = result.assets[0].uri;
         setImageUri(uri);
+        addScannedTicket({
+          id: `scan-${Date.now()}`,
+          uri: uri,
+          merchant: 'Ticket Galería',
+          amount: 0,
+          date: new Date().toISOString().split('T')[0],
+        });
         processTicket(uri);
       }
     } catch (err) {
       console.warn('Gallery error:', err);
       Alert.alert(
         'Error de Galería',
-        'No se pudo abrir la galería. Puedes probar con los tickets de muestra.'
+        'No se pudo abrir la galería. Por favor revisa los permisos de tu navegador o dispositivo.'
       );
     }
   };
 
-  // Test with demo tickets
-  const handleDemoTicket = (type: 'costco' | 'walmart' | 'oxxo' = 'costco') => {
-    const demoUrls: Record<string, string> = {
-      costco: 'https://images.unsplash.com/photo-1554415707-9e49018a382b?auto=format&fit=crop&w=600&q=80',
-      walmart: 'https://images.unsplash.com/photo-1534452203293-494d7ddbf7e0?auto=format&fit=crop&w=600&q=80',
-      oxxo: 'https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?auto=format&fit=crop&w=600&q=80',
-    };
-
-    const chosenUri = demoUrls[type];
-    setImageUri(chosenUri);
-
-    setIsScanning(true);
-    setTimeout(() => {
-      setScanResult(MOCK_MOBILE_RECEIPTS[type]);
-      setIsScanning(false);
+  // View or re-scan an existing captured/uploaded ticket
+  const handleSelectUploadedTicket = (ticket: ScannedTicket) => {
+    if (ticket.uri) {
+      setImageUri(ticket.uri);
+    }
+    if (ticket.scanResult) {
+      setScanResult(ticket.scanResult);
       setIsModalVisible(true);
-    }, 700);
+    } else if (ticket.uri) {
+      processTicket(ticket.uri);
+    } else {
+      setScanResult({
+        merchant: ticket.merchant,
+        total_amount: ticket.amount,
+        subtotal: ticket.amount,
+        tax: 0,
+        date: ticket.date,
+        suggested_category: ticket.category || 'Insumos Galletas',
+        confidence: 0.95,
+        raw_text: `${ticket.merchant} - Total: $${ticket.amount}`,
+        items: [
+          {
+            name: ticket.merchant,
+            quantity: 1,
+            price: ticket.amount,
+          },
+        ],
+      });
+      setIsModalVisible(true);
+    }
   };
 
   // Process ticket with backend OCR
@@ -143,6 +191,17 @@ export default function ScannerScreen() {
 
   const handleConfirmExpense = async (data: Partial<Expense>) => {
     await addExpense(data);
+    if (imageUri) {
+      addScannedTicket({
+        id: `exp-${Date.now()}`,
+        uri: imageUri,
+        merchant: data.title || scanResult?.merchant || 'Ticket Registrado',
+        amount: data.amount || scanResult?.total_amount || 0,
+        date: data.date || new Date().toISOString().split('T')[0],
+        category: data.category,
+        scanResult: scanResult || undefined,
+      });
+    }
     setIsModalVisible(false);
     setImageUri(null);
     setScanResult(null);
@@ -215,37 +274,42 @@ export default function ScannerScreen() {
             disabled={isScanning}
           />
 
-          {/* Quick Demo Tickets Bar */}
+          {/* Real Uploaded / Captured Tickets Bar */}
           <View style={[styles.demoTicketsBox, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
-            <Text style={[styles.demoTicketsTitle, { color: colors.textMuted }]}>Tickets de Muestra (1 toque):</Text>
-            <View style={styles.demoButtonsRow}>
-              <TouchableOpacity
-                onPress={() => handleDemoTicket('costco')}
-                style={[styles.demoTicketChip, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}
-                disabled={isScanning}
-              >
-                <Ionicons name="receipt" size={12} color={colors.amberLight} />
-                <Text style={[styles.demoTicketText, { color: colors.textMain }]}>Costco ($1,687)</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => handleDemoTicket('walmart')}
-                style={[styles.demoTicketChip, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}
-                disabled={isScanning}
-              >
-                <Ionicons name="cart" size={12} color={colors.emeraldLight} />
-                <Text style={[styles.demoTicketText, { color: colors.textMain }]}>Walmart ($540)</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => handleDemoTicket('oxxo')}
-                style={[styles.demoTicketChip, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}
-                disabled={isScanning}
-              >
-                <Ionicons name="flash" size={12} color={colors.roseLight} />
-                <Text style={[styles.demoTicketText, { color: colors.textMain }]}>OXXO ($145)</Text>
-              </TouchableOpacity>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <Text style={[styles.demoTicketsTitle, { color: colors.textMuted }]}>
+                Tickets Subidos y Capturados ({userTickets.length}):
+              </Text>
             </View>
+
+            {userTickets.length === 0 ? (
+              <View style={styles.emptyTicketsContainer}>
+                <Ionicons name="receipt-outline" size={16} color={colors.textDim} />
+                <Text style={[styles.emptyTicketsText, { color: colors.textDim }]}>
+                  Aún no has tomado ni subido tickets. Usa los botones de arriba para capturar uno real.
+                </Text>
+              </View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.demoButtonsRow}
+              >
+                {userTickets.map((ticket, idx) => (
+                  <TouchableOpacity
+                    key={ticket.id || idx}
+                    onPress={() => handleSelectUploadedTicket(ticket)}
+                    style={[styles.demoTicketChip, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}
+                    disabled={isScanning}
+                  >
+                    <Ionicons name="receipt" size={13} color={colors.brand} />
+                    <Text style={[styles.demoTicketText, { color: colors.textMain }]} numberOfLines={1}>
+                      {ticket.merchant} (${ticket.amount > 0 ? ticket.amount.toFixed(0) : 'Pendiente'})
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
           </View>
         </View>
 
@@ -437,5 +501,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: colors.textMain,
+  },
+  emptyTicketsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  emptyTicketsText: {
+    fontSize: 11,
+    lineHeight: 15,
+    flex: 1,
   },
 });

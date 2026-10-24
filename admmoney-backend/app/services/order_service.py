@@ -85,8 +85,76 @@ class OrderService:
         }
 
         db.orders.insert_one(doc)
+
+        # Si se crea como Pagado, sumar automáticamente a ventas cobradas
+        if doc.get("payment_status") == "Pagado":
+            OrderService._register_sales_for_order(doc)
+
+        # Auto-guardar cliente en el directorio si tiene nombre
+        if data.customer_name and data.customer_name.strip():
+            try:
+                from .customer_service import CustomerService
+                from ..models.schemas import CustomerCreate
+                CustomerService.create_customer(CustomerCreate(
+                    name=data.customer_name.strip(),
+                    phone=data.customer_phone or ""
+                ))
+            except Exception:
+                pass
+
         doc.pop("_id", None)
         return doc
+
+    @staticmethod
+    def _register_sales_for_order(order_dict: Dict[str, Any]):
+        db = get_db()
+        order_id = order_dict["id"]
+        # Evitar duplicados si ya existen ventas de este pedido
+        if db.cookie_sales.find_one({"order_id": order_id}):
+            return
+
+        cust_name = order_dict.get("customer_name") or "Cliente"
+        deliv_date = order_dict.get("delivery_date") or date.today().isoformat()
+        pay_method = order_dict.get("payment_method") or "Efectivo"
+        promo_id = order_dict.get("promotion_id")
+        promo_name = order_dict.get("promotion_name")
+        discount = order_dict.get("discount_amount", 0.0)
+
+        for it in order_dict.get("items", []):
+            cookie_id = it.get("product_id")
+            cookie = db.cookie_products.find_one({"id": cookie_id})
+            cookie_name = cookie["name"] if cookie else it.get("product_name", "Galleta")
+            recipe_cost = float(cookie["recipe_cost"]) if cookie else float(it.get("unit_cost", 0.0))
+            sale_id = get_next_sequence("cookie_sales")
+            qty = int(it.get("quantity", 1))
+            unit_p = float(it.get("unit_price", 35.0))
+            tot_rev = round(unit_p * qty, 2)
+            tot_c = round(recipe_cost * qty, 2)
+            db.cookie_sales.insert_one({
+                "id": sale_id,
+                "order_id": order_id,
+                "cookie_id": cookie_id,
+                "cookie_name": cookie_name,
+                "quantity": qty,
+                "unit_price": unit_p,
+                "unit_cost": recipe_cost,
+                "total_revenue": tot_rev,
+                "total_cost": tot_c,
+                "net_profit": round(tot_rev - tot_c, 2),
+                "sale_date": deliv_date,
+                "customer_name": cust_name,
+                "payment_method": pay_method,
+                "notes": f"Pedido #{order_id} • {cust_name}{f' ({promo_name})' if promo_name else ''}",
+                "promotion_id": promo_id,
+                "promotion_name": promo_name,
+                "discount_amount": discount,
+                "created_at": datetime.utcnow().isoformat()
+            })
+
+    @staticmethod
+    def _remove_sales_for_order(order_id: int):
+        db = get_db()
+        db.cookie_sales.delete_many({"order_id": order_id})
 
     @staticmethod
     def update_order(order_id: int, data: OrderUpdate) -> Optional[Dict[str, Any]]:
@@ -126,6 +194,16 @@ class OrderService:
         clean_phone = "".join(c for c in phone if c.isdigit())
         update_dict["whatsapp_message"] = whatsapp_message
         update_dict["whatsapp_url"] = f"https://wa.me/{clean_phone}?text={urllib.parse.quote(whatsapp_message)}" if clean_phone else ""
+
+        # Manejo de cambio de estado de pago (Pagado <-> Pendiente / Anticipo)
+        new_payment_status = update_dict.get("payment_status")
+        old_payment_status = existing.get("payment_status", "Pendiente")
+
+        if new_payment_status == "Pagado" and old_payment_status != "Pagado":
+            merged = {**existing, **update_dict}
+            OrderService._register_sales_for_order(merged)
+        elif new_payment_status in ["Pendiente", "Anticipo"] and old_payment_status == "Pagado":
+            OrderService._remove_sales_for_order(order_id)
 
         # Manejo de cambio de estado y deducción automática de stock
         new_status = update_dict.get("status")
@@ -173,6 +251,8 @@ class OrderService:
         if existing.get("stock_deducted", False):
             OrderService._restore_stock_for_order(existing)
 
+        # Eliminar ventas vinculadas si las hubiera
+        OrderService._remove_sales_for_order(order_id)
         res = db.orders.delete_one({"id": order_id})
         return res.deleted_count > 0
 
