@@ -81,66 +81,66 @@ export const RomanticDedicationCard: React.FC = () => {
   return (
     <>
       <TouchableOpacity activeOpacity={0.88} onPress={handleCardPress}>
-      <View
-        style={[
-          styles.container,
-          {
-            borderColor: isDark ? 'rgba(244, 63, 94, 0.4)' : 'rgba(251, 113, 133, 0.5)',
-            backgroundColor: isDark ? '#1F151B' : '#FFF1F2',
-          },
-        ]}
-      >
-        <LinearGradient
-          colors={
-            isDark
-              ? ['rgba(244, 63, 94, 0.16)', 'rgba(236, 72, 153, 0.08)', 'rgba(28, 20, 25, 0.95)']
-              : ['rgba(255, 241, 242, 0.95)', 'rgba(253, 242, 248, 0.9)', 'rgba(255, 255, 255, 0.95)']
-          }
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradient}
+        <View
+          style={[
+            styles.container,
+            {
+              borderColor: isDark ? 'rgba(244, 63, 94, 0.4)' : 'rgba(251, 113, 133, 0.5)',
+              backgroundColor: isDark ? '#1F151B' : '#FFF1F2',
+            },
+          ]}
         >
-          {/* Header Row with Animated Beating Red Heart */}
-          <View style={styles.topRow}>
-            <View style={styles.badge}>
-              <Text style={styles.sparkle}>✨</Text>
-              <Text style={styles.badgeText}>DEDICATORIA ESPECIAL</Text>
-              <Text style={styles.sparkle}>✨</Text>
+          <LinearGradient
+            colors={
+              isDark
+                ? ['rgba(244, 63, 94, 0.16)', 'rgba(236, 72, 153, 0.08)', 'rgba(28, 20, 25, 0.95)']
+                : ['rgba(255, 241, 242, 0.95)', 'rgba(253, 242, 248, 0.9)', 'rgba(255, 255, 255, 0.95)']
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradient}
+          >
+            {/* Header Row with Animated Beating Red Heart */}
+            <View style={styles.topRow}>
+              <View style={styles.badge}>
+                <Text style={styles.sparkle}>✨</Text>
+                <Text style={styles.badgeText}>DEDICATORIA ESPECIAL</Text>
+                <Text style={styles.sparkle}>✨</Text>
+              </View>
+
+              <Animated.View
+                style={[
+                  styles.heartWrapper,
+                  {
+                    transform: [{ scale: heartScale }],
+                    shadowOpacity: glowAnim,
+                  },
+                ]}
+              >
+                <Ionicons name="heart" size={26} color="#F43F5E" />
+              </Animated.View>
             </View>
 
-            <Animated.View
-              style={[
-                styles.heartWrapper,
-                {
-                  transform: [{ scale: heartScale }],
-                  shadowOpacity: glowAnim,
-                },
-              ]}
-            >
-              <Ionicons name="heart" size={26} color="#F43F5E" />
-            </Animated.View>
-          </View>
-
-          {/* Romantic Message */}
-          <View style={styles.quoteBox}>
-            <Text style={[styles.quoteMark, { color: isDark ? '#FDA4AF' : '#FB7185' }]}>“</Text>
-            <Text style={[styles.dedicationText, { color: isDark ? '#FFE4E6' : '#881337' }]}>
-              Aplicacion hecha con amor y mucho cariño para el amor de mi vida, te apoyo en tus emprendimientos, te apoyo en todo lo que tu quieras hacer y siempre sera asi, Te amo demasiado
-            </Text>
-            <Text style={[styles.quoteMarkEnd, { color: isDark ? '#FDA4AF' : '#FB7185' }]}>”</Text>
-          </View>
-
-          {/* Sweet Footer Signature */}
-          <View style={[styles.footerRow, { borderTopColor: isDark ? 'rgba(244, 63, 94, 0.25)' : 'rgba(251, 113, 133, 0.3)' }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="infinite" size={16} color="#F43F5E" />
-              <Text style={[styles.footerSub, { color: isDark ? '#FDA4AF' : '#9F1239' }]}>
-                Para Siempre Contigo • Hecho con Amor
+            {/* Romantic Message */}
+            <View style={styles.quoteBox}>
+              <Text style={[styles.quoteMark, { color: isDark ? '#FDA4AF' : '#FB7185' }]}>“</Text>
+              <Text style={[styles.dedicationText, { color: isDark ? '#FFE4E6' : '#881337' }]}>
+                Aplicacion hecha con amor y mucho cariño para el amor de mi vida, te apoyo en tus emprendimientos, te apoyo en todo lo que tu quieras hacer y siempre sera asi, Te amo demasiado
               </Text>
+              <Text style={[styles.quoteMarkEnd, { color: isDark ? '#FDA4AF' : '#FB7185' }]}>”</Text>
             </View>
-            <Text style={styles.touchHint}>Toca aquí 💌</Text>
-          </View>
-        </LinearGradient>
+
+            {/* Sweet Footer Signature */}
+            <View style={[styles.footerRow, { borderTopColor: isDark ? 'rgba(244, 63, 94, 0.25)' : 'rgba(251, 113, 133, 0.3)' }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="infinite" size={16} color="#F43F5E" />
+                <Text style={[styles.footerSub, { color: isDark ? '#FDA4AF' : '#9F1239' }]}>
+                  Regalito de Mesesiversary • Hecho con Amor Jectorini
+                </Text>
+              </View>
+              <Text style={styles.touchHint}>Toca aquí 💌</Text>
+            </View>
+          </LinearGradient>
         </View>
       </TouchableOpacity>
       <RomanticDedicationModal visible={isModalOpen} onClose={() => setIsModalOpen(false)} />
