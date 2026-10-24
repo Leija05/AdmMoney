@@ -80,6 +80,7 @@ export interface CookieSale {
   promotion_name?: string;
   discount_amount?: number;
   order_id?: number;
+  ticket_token?: string;
   created_at?: string;
 }
 
@@ -115,6 +116,7 @@ export interface Order {
   whatsapp_url: string;
   stock_deducted: boolean;
   sale_registered?: boolean;
+  ticket_token?: string;
   created_at?: string;
 }
 

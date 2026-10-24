@@ -3,6 +3,7 @@ from datetime import datetime, date
 from typing import List, Dict, Any, Optional
 from ..core.database import get_db, get_next_sequence
 from ..models.schemas import OrderCreate, OrderUpdate
+from .ticket_token_service import generate_ticket_token, ensure_ticket_token
 
 DAY_NAMES_ES = {
     0: "Lunes",
@@ -35,12 +36,18 @@ class OrderService:
             query["customer_name"] = {"$regex": customer_name, "$options": "i"}
 
         cursor = db.orders.find(query, {"_id": 0}).sort([("delivery_date", 1), ("id", -1)])
-        return list(cursor)
+        orders = list(cursor)
+        for o in orders:
+            ensure_ticket_token(o, "orders")
+        return orders
 
     @staticmethod
     def get_by_id(order_id: int) -> Optional[Dict[str, Any]]:
         db = get_db()
-        return db.orders.find_one({"id": order_id}, {"_id": 0})
+        order = db.orders.find_one({"id": order_id}, {"_id": 0})
+        if order:
+            ensure_ticket_token(order, "orders")
+        return order
 
     @staticmethod
     def create_order(data: OrderCreate) -> Dict[str, Any]:
@@ -81,6 +88,7 @@ class OrderService:
             "whatsapp_message": whatsapp_message,
             "whatsapp_url": whatsapp_url,
             "stock_deducted": False,
+            "ticket_token": generate_ticket_token(),
             "created_at": now_str
         }
 

@@ -124,7 +124,10 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
     paymentText = `${order.payment_method} (${order.payment_status})`;
     dateText = `Entrega: ${order.delivery_date}`;
     const encodedNote = customNote ? `?note=${encodeURIComponent(customNote)}` : '';
-    pdfUrl = `${pdfBaseUrl}/orders/${order.id}/pdf${encodedNote}`;
+    const token = order.ticket_token;
+    pdfUrl = token
+      ? `${pdfBaseUrl}/tickets/${token}${encodedNote}`
+      : `${pdfBaseUrl}/orders/${order.id}/pdf${encodedNote}`;
   } else if (sale) {
     ticketId = sale.id;
     ticketType = 'Venta';
@@ -133,7 +136,10 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
     paymentText = sale.payment_method || 'Efectivo';
     dateText = `Fecha: ${sale.sale_date}`;
     const encodedNote = customNote ? `?note=${encodeURIComponent(customNote)}` : '';
-    pdfUrl = `${pdfBaseUrl}/cookies/sales/${sale.id}/pdf${encodedNote}`;
+    const token = sale.ticket_token;
+    pdfUrl = token
+      ? `${pdfBaseUrl}/tickets/${token}${encodedNote}`
+      : `${pdfBaseUrl}/cookies/sales/${sale.id}/pdf${encodedNote}`;
   }
 
   // Build the live preview text matching the exact requested structure
@@ -362,6 +368,29 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
                 thumbColor={includePdf ? '#FFFFFF' : '#f4f3f4'}
               />
             </View>
+
+            {/* Security Badge Token info */}
+            {includePdf && (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  backgroundColor: isDark ? 'rgba(59, 130, 246, 0.12)' : '#EFF6FF',
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 10,
+                  marginBottom: 14,
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(59, 130, 246, 0.25)' : '#DBEAFE',
+                }}
+              >
+                <Ionicons name="shield-checkmark" size={16} color="#3B82F6" />
+                <Text style={{ fontSize: 11, color: isDark ? '#93C5FD' : '#1E40AF', flex: 1, fontWeight: '600' }}>
+                  Enlace Criptográfico Seguro (Token 24 car. • Vigencia 30 días)
+                </Text>
+              </View>
+            )}
 
             {/* Optional Custom Note */}
             <View style={styles.fieldGroup}>

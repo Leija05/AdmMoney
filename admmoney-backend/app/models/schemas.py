@@ -233,6 +233,7 @@ class OrderResponse(BaseModel):
     promotion_id: Optional[int] = None
     promotion_name: Optional[str] = None
     discount_amount: Optional[float] = 0.0
+    ticket_token: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -291,6 +292,7 @@ class CookieSaleResponse(BaseModel):
     promotion_name: Optional[str] = None
     discount_amount: Optional[float] = 0.0
     order_id: Optional[int] = None
+    ticket_token: Optional[str] = None
 
     class Config:
         from_attributes = True

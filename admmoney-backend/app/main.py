@@ -15,6 +15,7 @@ from .api.routers.scanner import router as scanner_router
 from .api.routers.analytics import router as analytics_router
 from .api.routers.promotions import router as promotions_router
 from .api.routers.customers import router as customers_router
+from .api.routers.tickets import router as tickets_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -66,6 +67,7 @@ app.include_router(scanner_router)
 app.include_router(analytics_router)
 app.include_router(promotions_router)
 app.include_router(customers_router)
+app.include_router(tickets_router)
 
 @app.get("/api/health", tags=["Health"])
 @app.get("/health", tags=["Health"])

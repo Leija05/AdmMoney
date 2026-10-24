@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageCircle, FileText, Check, X, ExternalLink, Download, Sparkles } from 'lucide-react';
+import { MessageCircle, FileText, Check, X, ExternalLink, Download, Sparkles, ShieldCheck } from 'lucide-react';
 import { Order, CookieSale } from '../../lib/types';
 import { Button } from '../ui/Button';
 import { APP_CONFIG } from '../../config/appConfig';
@@ -48,10 +48,13 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
     itemsSummary = `• ${sale.quantity}x ${sale.cookie_name}`;
   }
 
-  // PDF endpoint URL
+  // PDF endpoint URL (Secure Cryptographic Token)
   const apiBase = APP_CONFIG.API_BASE_URL.replace(/\/+$/, '');
   const encodedNote = customNote.trim() ? `?note=${encodeURIComponent(customNote.trim())}` : '';
-  const pdfUrl = isOrder
+  const token = isOrder ? order?.ticket_token : sale?.ticket_token;
+  const pdfUrl = token
+    ? `${apiBase}/tickets/${token}${encodedNote}`
+    : isOrder
     ? `${apiBase}/orders/${targetId}/pdf${encodedNote}`
     : `${apiBase}/cookies/sales/${targetId}/pdf${encodedNote}`;
 
@@ -236,6 +239,27 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
               {includePdf && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
             </div>
           </div>
+
+          {/* Security Badge Token info */}
+          {includePdf && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 0.75rem',
+                borderRadius: '10px',
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.25)',
+                color: '#93C5FD',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+              }}
+            >
+              <ShieldCheck size={16} color="#3B82F6" style={{ flexShrink: 0 }} />
+              <span>Enlace Criptográfico Seguro (Token 24 car. • Vigencia 30 días)</span>
+            </div>
+          )}
 
           {/* Optional Note Textarea */}
           <div>

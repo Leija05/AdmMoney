@@ -265,6 +265,7 @@ export const INITIAL_MOBILE_SALES: CookieSale[] = [
     customer_name: 'Cliente Mostrador',
     payment_method: 'Efectivo',
     notes: 'Venta Individual ($35.00 MXN) • Ganancia +$25.33',
+    ticket_token: 'b1c2d3e4f5a60123456789cd',
   },
   {
     id: 2,
@@ -280,6 +281,7 @@ export const INITIAL_MOBILE_SALES: CookieSale[] = [
     customer_name: 'Café La Terraza Roma',
     payment_method: 'Transferencia',
     notes: 'Promoción 3 x $90.00 MXN ($30 c/u) • Ganancia +$60.99',
+    ticket_token: 'c2d3e4f5a6b70123456789ef',
   },
   {
     id: 3,
@@ -295,6 +297,7 @@ export const INITIAL_MOBILE_SALES: CookieSale[] = [
     customer_name: 'Boutique Gourmet Petit',
     payment_method: 'Transferencia',
     notes: '2x Paquetes Promo 3 x $90 ($30 c/u)',
+    ticket_token: 'd3e4f5a6b7c80123456789ab',
   },
   {
     id: 4,
@@ -310,6 +313,7 @@ export const INITIAL_MOBILE_SALES: CookieSale[] = [
     customer_name: 'Mariana López (Oficina)',
     payment_method: 'Efectivo',
     notes: 'Promoción 3 x $90.00 MXN',
+    ticket_token: 'e4f5a6b7c8d90123456789bc',
   },
   {
     id: 5,
@@ -325,6 +329,7 @@ export const INITIAL_MOBILE_SALES: CookieSale[] = [
     customer_name: 'Carlos Mendoza',
     payment_method: 'Tarjeta Débito',
     notes: 'Venta Individual ($35.00 MXN)',
+    ticket_token: 'f5a6b7c8d9e00123456789cd',
   },
   {
     id: 6,
@@ -340,6 +345,7 @@ export const INITIAL_MOBILE_SALES: CookieSale[] = [
     customer_name: 'Gimnasio FitZone Condesa',
     payment_method: 'Transferencia',
     notes: 'Promoción 3 x $90.00 MXN ($30 c/u)',
+    ticket_token: 'a6b7c8d9e0f10123456789de',
   },
 ];
 
@@ -656,6 +662,7 @@ export const INITIAL_MOBILE_ORDERS: Order[] = [
     notes: 'Entrega en corporativo 14:00 hrs',
     whatsapp_message: 'Hola Mariana López, tu pedido está confirmado.',
     whatsapp_url: '',
+    ticket_token: 'a9b8e7c6d5f40123456789ab',
     stock_deducted: false
   }
 ];

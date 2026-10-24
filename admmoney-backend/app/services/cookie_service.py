@@ -7,6 +7,7 @@ from ..models.schemas import (
     CookieProductCreate, CookieProductUpdate,
     CookieSaleCreate
 )
+from .ticket_token_service import generate_ticket_token, ensure_ticket_token
 
 class CookieService:
     # ------------------ INGREDIENTES / INSUMOS & SMART INVENTORY ------------------ #
@@ -467,7 +468,10 @@ class CookieService:
     @staticmethod
     def get_sales(limit: int = 50) -> List[Dict[str, Any]]:
         db = get_db()
-        return list(db.cookie_sales.find({}, {"_id": 0}).sort([("sale_date", -1), ("id", -1)]).limit(limit))
+        sales = list(db.cookie_sales.find({}, {"_id": 0}).sort([("sale_date", -1), ("id", -1)]).limit(limit))
+        for s in sales:
+            ensure_ticket_token(s, "cookie_sales")
+        return sales
 
     @staticmethod
     def register_sale(data: CookieSaleCreate) -> Dict[str, Any]:
@@ -483,6 +487,7 @@ class CookieService:
         net_profit = round(total_revenue - total_cost, 2)
         sale_date = data.sale_date or date.today().isoformat()
         now_str = datetime.utcnow().isoformat()
+        ticket_token = generate_ticket_token()
 
         new_id = get_next_sequence("cookie_sales")
         doc = {
@@ -499,6 +504,7 @@ class CookieService:
             "customer_name": data.customer_name or "Cliente Mostrador",
             "payment_method": data.payment_method or "Efectivo",
             "notes": data.notes or "",
+            "ticket_token": ticket_token,
             "created_at": now_str
         }
 
