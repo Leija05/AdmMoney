@@ -86,8 +86,12 @@ def detect_category(text: str, items: List[ReceiptItem]) -> str:
             if kw in combined:
                 return category
     return "Supermercado"
-
 async def scan_receipt_image(file_bytes: bytes, filename: str) -> ReceiptScanResponse:
+    import base64
+    import urllib.request
+    import urllib.parse
+    import json
+
     ext = Path(filename).suffix.lower() or ".jpg"
     unique_name = f"receipt_{uuid.uuid4().hex[:12]}{ext}"
     saved_path = UPLOAD_DIR / unique_name
@@ -95,72 +99,66 @@ async def scan_receipt_image(file_bytes: bytes, filename: str) -> ReceiptScanRes
     with open(saved_path, "wb") as f:
         f.write(file_bytes)
 
-    # Perform parsing
+    # Perform parsing with real OCR
     raw_text = ""
+
+    # 1. Try OCR.Space free API (reliable cloud OCR for Spanish & English receipts)
     try:
-        # Check if pytesseract is available
-        import pytesseract
-        processed = preprocess_image(saved_path)
-        raw_text = pytesseract.image_to_string(processed, lang="spa+eng")
-    except Exception:
-        # Fallback or synthetic OCR extraction based on image inspection
-        pass
+        mime = "image/png" if ext == ".png" else "image/jpeg"
+        b64_img = f"data:{mime};base64,{base64.b64encode(file_bytes).decode('utf-8')}"
+        post_data = urllib.parse.urlencode({
+            'apikey': 'K88346086088957',
+            'base64Image': b64_img,
+            'language': 'spa',
+            'isOverlayRequired': False,
+            'isTable': True
+        }).encode('utf-8')
 
-    # If raw_text is empty or too short, generate a rich realistic receipt breakdown
-    # so the user can immediately test scanning any ticket without needing local Tesseract OCR binaries installed
-    if not raw_text or len(raw_text.strip()) < 15:
-        # Simulated smart scanner recognizing bakery supplies or groceries
-        raw_text = f"""*** TICKET DE COMPRA ***
-COSTCO WHOLESALE MEXICO
-FECHA: {date.today().strftime('%d/%m/%Y')} HORA: 14:32
---------------------------------
-1 HARINA TRIGO ESP 10KG   $320.00
-2 MANTEQUILLA GLORIA 1KG  $370.00
-1 CHISPAS CHOCOLATE 2KG   $480.00
-1 AZUCAR MASCABADO 5KG    $190.00
-1 VAINILLA EXTRACTO 500ML  $95.00
---------------------------------
-SUBTOTAL:                $1,455.00
-IVA 16%:                   $232.80
-TOTAL A PAGAR:           $1,687.80
-FORMA DE PAGO: TARJETA BBVA
-GRACIAS POR SU COMPRA
-"""
+        req = urllib.request.Request('https://api.ocr.space/parse/image', data=post_data)
+        req.add_header('User-Agent', 'AdmMoneyOCR/1.0')
+        with urllib.request.urlopen(req, timeout=14) as resp:
+            ocr_res = json.loads(resp.read().decode('utf-8'))
+            if ocr_res.get('ParsedResults'):
+                parsed_text = ocr_res['ParsedResults'][0].get('ParsedText', '').strip()
+                if parsed_text:
+                    raw_text = parsed_text
+    except Exception as e:
+        print(f"OCR.Space error: {e}")
 
-    merchant = detect_merchant(raw_text)
-    receipt_date = detect_date(raw_text)
-    total_amount = detect_total(raw_text)
-    if total_amount == 0.0:
-        total_amount = 1687.80
+    # 2. Try local pytesseract if cloud OCR was empty
+    if not raw_text:
+        try:
+            import pytesseract
+            processed = preprocess_image(saved_path)
+            raw_text = pytesseract.image_to_string(processed, lang="spa+eng")
+        except Exception:
+            pass
+
+    # Extract data from detected text
+    merchant = detect_merchant(raw_text) if raw_text else "Ticket Registrado"
+    receipt_date = detect_date(raw_text) if raw_text else date.today().isoformat()
+    total_amount = detect_total(raw_text) if raw_text else 0.0
 
     # Extract line items
     items: List[ReceiptItem] = []
-    lines = raw_text.split("\n")
-    for line in lines:
-        line_match = re.search(r'(\d+)?\s*([A-Za-z\s]+?)\s+\$?([0-9]+[\.,][0-9]{2})', line)
-        if line_match:
-            qty_str, item_name, price_str = line_match.groups()
-            name_clean = item_name.strip()
-            if len(name_clean) > 2 and name_clean.upper() not in ["TOTAL", "SUBTOTAL", "IVA", "CAMBIO", "EFECTIVO", "FECHA"]:
-                try:
-                    qty = float(qty_str) if qty_str else 1.0
-                    price = float(price_str.replace(",", ""))
-                    items.append(ReceiptItem(name=name_clean.title(), quantity=qty, price=price))
-                except ValueError:
-                    continue
+    if raw_text:
+        lines = raw_text.split("\n")
+        for line in lines:
+            line_match = re.search(r'(\d+)?\s*([A-Za-z\s]+?)\s+\$?([0-9]+[\.,][0-9]{2})', line)
+            if line_match:
+                qty_str, item_name, price_str = line_match.groups()
+                name_clean = item_name.strip()
+                if len(name_clean) > 2 and name_clean.upper() not in ["TOTAL", "SUBTOTAL", "IVA", "CAMBIO", "EFECTIVO", "FECHA", "PAGO", "TARJETA"]:
+                    try:
+                        qty = float(qty_str) if qty_str else 1.0
+                        price = float(price_str.replace(",", ""))
+                        items.append(ReceiptItem(name=name_clean.title(), quantity=qty, price=price))
+                    except ValueError:
+                        continue
 
-    if not items:
-        items = [
-            ReceiptItem(name="Harina De Trigo 10Kg", quantity=1.0, price=320.00),
-            ReceiptItem(name="Mantequilla Gloria 1Kg", quantity=2.0, price=370.00),
-            ReceiptItem(name="Chispas De Chocolate 2Kg", quantity=1.0, price=480.00),
-            ReceiptItem(name="Azúcar Mascabado 5Kg", quantity=1.0, price=190.00),
-            ReceiptItem(name="Extracto De Vainilla", quantity=1.0, price=95.00)
-        ]
-
-    category = detect_category(raw_text, items)
-    subtotal = round(total_amount / 1.16, 2)
-    tax = round(total_amount - subtotal, 2)
+    category = detect_category(raw_text, items) if raw_text else "Insumos Galletas"
+    subtotal = round(total_amount / 1.16, 2) if total_amount > 0 else 0.0
+    tax = round(total_amount - subtotal, 2) if total_amount > 0 else 0.0
 
     return ReceiptScanResponse(
         merchant=merchant,
@@ -170,7 +168,6 @@ GRACIAS POR SU COMPRA
         tax=tax,
         items=items,
         suggested_category=category,
-        confidence=0.96,
-        raw_text=raw_text,
-        image_url=f"/uploads/{unique_name}"
+        confidence=0.92 if raw_text else 0.50,
+        raw_text=raw_text or "No se pudo extraer texto claro del ticket. Puedes ingresar el monto manualmente.",
     )

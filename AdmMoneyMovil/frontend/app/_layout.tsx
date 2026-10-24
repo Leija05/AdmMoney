@@ -51,8 +51,7 @@ if (Platform.OS === 'web' && typeof window !== 'undefined') {
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     ...Ionicons.font,
-    'Ionicons': require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf'),
-    'ionicons': require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf'),
+    ionicons: require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf'),
   });
   const loadAllData = useAppStore((state) => state.loadAllData);
   const colors = useThemeColors();
@@ -62,9 +61,10 @@ export default function RootLayout() {
       try {
         if (Platform.OS === 'android') {
           // On Android release builds, ensure typeface is bound to both 'ionicons' and 'Ionicons'
+          // Note: asset:/// must have three slashes because FontLoaderModule strips (ASSET_SCHEME.length + 1)
           await Font.loadAsync({
-            ionicons: 'asset://fonts/Ionicons.ttf',
-            Ionicons: 'asset://fonts/Ionicons.ttf',
+            ionicons: 'asset:///fonts/ionicons.ttf',
+            Ionicons: 'asset:///fonts/ionicons.ttf',
           }).catch(() => {});
         }
       } catch (err) {

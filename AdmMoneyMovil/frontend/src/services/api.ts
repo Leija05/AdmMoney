@@ -26,6 +26,117 @@ export const setApiHost = (newHost: string) => {
 
 export const getApiHost = () => API_HOST;
 
+const COMMON_MERCHANTS = [
+  'COSTCO', 'WALMART', "SAM'S CLUB", 'SAMS CLUB', 'OXXO', 'SORIANA',
+  'BODEGA AURRERA', 'CHEDRAUI', 'LA COMER', 'CITY MARKET', 'FARMACIAS GUADALAJARA',
+  'FARMACIAS DEL AHORRO', 'MATERIAS PRIMAS', 'CENTRAL DE ABASTOS', '7 ELEVEN',
+  'SEVEN ELEVEN', 'HOME DEPOT', 'LIVERPOOL', 'SUBURBIA'
+];
+
+function parseReceiptText(rawText: string): ReceiptScanResult {
+  const upper = rawText.toUpperCase();
+  let merchant = 'Ticket de Compra';
+
+  for (const m of COMMON_MERCHANTS) {
+    if (upper.includes(m)) {
+      merchant = m.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+      break;
+    }
+  }
+
+  if (merchant === 'Ticket de Compra') {
+    const lines = rawText.split('\n').map((l) => l.trim()).filter(Boolean);
+    for (const line of lines) {
+      if (line.length > 2 && line.length < 35 && !/^\d+$/.test(line) && !line.includes('$')) {
+        merchant = line.replace(/[^\w\s]/gi, '').trim();
+        break;
+      }
+    }
+  }
+
+  // Detect total: search for TOTAL, IMPORTE, A PAGAR, or largest dollar amount
+  let total = 0;
+  const totalMatches = rawText.match(/(?:TOTAL|IMPORTE|A PAGAR|PAGO|MONTO)\s*[:\$]?\s*([0-9]+[,\.][0-9]{2})/gi);
+  if (totalMatches) {
+    for (const match of totalMatches) {
+      const numMatch = match.match(/([0-9]+[,\.][0-9]{2})/);
+      if (numMatch) {
+        const val = parseFloat(numMatch[1].replace(',', ''));
+        if (val > total) total = val;
+      }
+    }
+  }
+
+  if (total === 0) {
+    const allAmounts = rawText.match(/\$?\s*([0-9]+\.[0-9]{2})/g);
+    if (allAmounts) {
+      for (const a of allAmounts) {
+        const val = parseFloat(a.replace('$', '').trim());
+        if (val > total && val < 50000) total = val;
+      }
+    }
+  }
+
+  // Detect date
+  let detectedDate = new Date().toISOString().split('T')[0];
+  const dateMatch = rawText.match(/(\d{2}[/-]\d{2}[/-]\d{4}|\d{4}[/-]\d{2}[/-]\d{2})/);
+  if (dateMatch) {
+    const clean = dateMatch[1].replace(/\//g, '-');
+    const parts = clean.split('-');
+    if (parts[0].length === 4) {
+      detectedDate = clean;
+    } else if (parts[2].length === 4) {
+      detectedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+  }
+
+  // Detect category
+  let category = 'Insumos Galletas';
+  const lower = rawText.toLowerCase();
+  if (/(bolsa|caja|kraft|liston|etiqueta|empaque|cinta)/i.test(lower)) {
+    category = 'Empaques y Envíos';
+  } else if (/(gas|cfe|luz|agua|internet|telmex)/i.test(lower)) {
+    category = 'Servicios y Luz';
+  } else if (/(gasolina|combustible|uber|didi|estacionamiento)/i.test(lower)) {
+    category = 'Transporte';
+  } else if (/(despensa|super|jabon|papel|limpieza)/i.test(lower)) {
+    category = 'Hogar y Personales';
+  }
+
+  // Extract items
+  const items: Array<{ name: string; quantity: number; price: number }> = [];
+  const lines = rawText.split('\n');
+  for (const line of lines) {
+    const m = line.match(/^(\d+)?\s*([A-Za-z\s]{3,30}?)\s+\$?([0-9]+[\.,][0-9]{2})/);
+    if (m) {
+      const name = m[2].trim();
+      const upperName = name.toUpperCase();
+      if (!['TOTAL', 'SUBTOTAL', 'IVA', 'CAMBIO', 'EFECTIVO', 'FECHA', 'TARJETA'].some((w) => upperName.includes(w))) {
+        items.push({
+          name: name.charAt(0).toUpperCase() + name.slice(1).toLowerCase(),
+          quantity: m[1] ? parseFloat(m[1]) : 1,
+          price: parseFloat(m[3].replace(',', ''))
+        });
+      }
+    }
+  }
+
+  const subtotal = total > 0 ? parseFloat((total / 1.16).toFixed(2)) : 0;
+  const tax = total > 0 ? parseFloat((total - subtotal).toFixed(2)) : 0;
+
+  return {
+    merchant: merchant || 'Ticket Registrado',
+    date: detectedDate,
+    total_amount: total,
+    subtotal,
+    tax,
+    items,
+    suggested_category: category,
+    confidence: total > 0 ? 0.90 : 0.60,
+    raw_text: rawText.slice(0, 500)
+  };
+}
+
 export class MobileApiService {
   private static async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const res = await fetch(`${API_HOST}${endpoint}`, {
@@ -82,6 +193,7 @@ export class MobileApiService {
 
   // --- ESCÁNER DE TICKETS CON CÁMARA / FOTO ---
   static async scanReceipt(imageUri: string): Promise<ReceiptScanResult> {
+    // 1. Intentar enviar a backend principal
     try {
       const formData = new FormData();
       const filename = imageUri.split('/').pop() || 'ticket.jpg';
@@ -95,38 +207,67 @@ export class MobileApiService {
         type
       } as any);
 
-      // Do NOT set explicit 'Content-Type' header so fetch automatically adds the multipart boundary
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
+
       const res = await fetch(`${API_HOST}/scanner/upload`, {
         method: 'POST',
         body: formData,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json && (json.total_amount > 0 || json.merchant)) {
+          return json;
+        }
+      }
+    } catch (backendErr) {
+      console.warn('Backend OCR call timeout or error, trying direct OCR:', backendErr);
+    }
+
+    // 2. Fallback de OCR directo vía OCR.space (en caso de que el backend esté en suspensión en Render)
+    try {
+      const ocrFormData = new FormData();
+      ocrFormData.append('apikey', 'K88346086088957');
+      ocrFormData.append('language', 'spa');
+      ocrFormData.append('isOverlayRequired', 'false');
+      ocrFormData.append('isTable', 'true');
+      ocrFormData.append('file', {
+        uri: imageUri,
+        name: 'ticket.jpg',
+        type: 'image/jpeg',
+      } as any);
+
+      const ocrRes = await fetch('https://api.ocr.space/parse/image', {
+        method: 'POST',
+        body: ocrFormData,
       });
 
-      if (!res.ok) {
-        throw new Error(`Error al procesar ticket (HTTP ${res.status})`);
+      if (ocrRes.ok) {
+        const data = await ocrRes.json();
+        const rawText = data?.ParsedResults?.[0]?.ParsedText;
+        if (rawText && rawText.trim().length > 3) {
+          return parseReceiptText(rawText);
+        }
       }
-
-      return await res.json();
-    } catch (err) {
-      console.warn('Fallback scanner triggered:', err);
-      // Smart fallback parser so testing works even without live backend connection
-      return {
-        merchant: 'Costco Wholesale México',
-        date: new Date().toISOString().split('T')[0],
-        total_amount: 1687.80,
-        subtotal: 1455.00,
-        tax: 232.80,
-        items: [
-          { name: 'Harina Trigo Especial 10Kg', quantity: 1, price: 320.00 },
-          { name: 'Mantequilla Gloria sin Sal 1Kg', quantity: 2, price: 370.00 },
-          { name: 'Chispas Chocolate Callebaut 2Kg', quantity: 1, price: 480.00 },
-          { name: 'Azúcar Mascabado 5Kg', quantity: 1, price: 190.00 },
-          { name: 'Extracto Vainilla Natural', quantity: 1, price: 95.00 }
-        ],
-        suggested_category: 'Insumos Galletas',
-        confidence: 0.98,
-        raw_text: 'TICKET COSTCO - DETECTADO CON OCR'
-      };
+    } catch (ocrErr) {
+      console.warn('Direct OCR fallback error:', ocrErr);
     }
+
+    // 3. Si no hay OCR disponible, retornar ticket limpio sin inventar productos de Costco
+    return {
+      merchant: 'Ticket de Compra',
+      date: new Date().toISOString().split('T')[0],
+      total_amount: 0.00,
+      subtotal: 0.00,
+      tax: 0.00,
+      items: [],
+      suggested_category: 'Insumos Galletas',
+      confidence: 0.50,
+      raw_text: 'Ticket capturado listo para ingresar monto'
+    };
   }
 
   static async confirmReceipt(expenseData: Partial<Expense>): Promise<Expense> {

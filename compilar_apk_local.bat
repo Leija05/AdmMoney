@@ -6,9 +6,15 @@ echo   COMPILANDO APK NATIVO (Adm Money Mobile)
 echo ========================================================
 echo.
 call gradlew assembleRelease
-echo.
-echo ========================================================
-echo   LISTO! El APK actualizado se encuentra en:
-echo   AdmMoneyMovil\frontend\android\app\build\outputs\apk\release\app-release.apk
-echo ========================================================
+if %ERRORLEVEL% EQU 0 (
+  copy /Y "app\build\outputs\apk\release\app-release.apk" "%~dp0Adm_Money.apk"
+  echo.
+  echo ========================================================
+  echo   EXITO TOTAL! APK actualizado y copiado a:
+  echo   %~dp0Adm_Money.apk
+  echo ========================================================
+) else (
+  echo.
+  echo [ERROR] La compilacion de Gradle fallo.
+)
 pause

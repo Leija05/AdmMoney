@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
   Alert,
   ScrollView,
   Platform,
-  Linking
+  Linking,
+  Animated
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -21,19 +22,47 @@ import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
 import { MobileApiService } from '../../src/services/api';
 import { useAppStore } from '../../src/stores/app.store';
 import { ReceiptScanResult, Expense, ScannedTicket } from '../../src/lib/types';
-import { MOCK_MOBILE_RECEIPTS } from '../../src/services/mockData';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 export default function ScannerScreen() {
   const router = useRouter();
   const colors = useThemeColors();
-  const { addExpense, expenses, scannedTickets, addScannedTicket, useMockData } = useAppStore();
+  const { addExpense, expenses, scannedTickets, addScannedTicket } = useAppStore();
 
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<ReceiptScanResult | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+
+  // Animated laser scan bar
+  const scanLineAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    let animLoop: Animated.CompositeAnimation | null = null;
+    if (isScanning) {
+      animLoop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(scanLineAnim, {
+            toValue: 210,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scanLineAnim, {
+            toValue: 0,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      animLoop.start();
+    } else {
+      scanLineAnim.setValue(0);
+    }
+    return () => {
+      animLoop?.stop();
+    };
+  }, [isScanning]);
 
   // Combine tickets captured or uploaded with expenses that have tickets
   const userTickets = React.useMemo(() => {
@@ -58,17 +87,14 @@ export default function ScannerScreen() {
   // Take photo with mobile camera
   const handleTakePhoto = async () => {
     try {
-      // 1. Proactively check current camera permission status
       const currentPerm = await ImagePicker.getCameraPermissionsAsync();
       let granted = currentPerm.granted;
 
-      // 2. Request if not granted yet and OS permits prompting
       if (!granted) {
         const req = await ImagePicker.requestCameraPermissionsAsync();
         granted = req.granted;
       }
 
-      // 3. If user denied or disabled in settings, offer direct link to app settings
       if (!granted) {
         Alert.alert(
           'Permiso de Cámara Requerido',
@@ -78,9 +104,7 @@ export default function ScannerScreen() {
             {
               text: 'Abrir Ajustes',
               onPress: () => {
-                Linking.openSettings().catch(() => {
-                  Alert.alert('Ajustes', 'Abre la app de Ajustes de tu dispositivo y concede el permiso de Cámara a Adm Money.');
-                });
+                Linking.openSettings().catch(() => {});
               }
             }
           ]
@@ -96,7 +120,7 @@ export default function ScannerScreen() {
           quality: 0.85,
         });
       } catch (camErr: any) {
-        console.warn('Primary launchCameraAsync failed, retrying with fallback:', camErr);
+        console.warn('Primary launchCameraAsync fallback:', camErr);
         result = await ImagePicker.launchCameraAsync({
           quality: 0.85,
         });
@@ -130,7 +154,6 @@ export default function ScannerScreen() {
   // Pick from gallery
   const handlePickGallery = async () => {
     try {
-      // Check current media library permission status
       let granted = true;
       try {
         const currentPerm = await ImagePicker.getMediaLibraryPermissionsAsync();
@@ -141,10 +164,9 @@ export default function ScannerScreen() {
           granted = req.granted;
         }
       } catch (permErr) {
-        console.warn('Media library permission check fallback:', permErr);
+        console.warn('Media library permission fallback:', permErr);
       }
 
-      // On iOS, permission is strictly mandatory before opening picker
       if (!granted && Platform.OS === 'ios') {
         Alert.alert(
           'Permiso de Galería Requerido',
@@ -157,9 +179,6 @@ export default function ScannerScreen() {
         return;
       }
 
-      // On Android devices (particularly Xiaomi / HyperOS / MIUI), Android's new PhotoPicker
-      // can throw ActivityNotFoundException / SecurityException.
-      // We use legacy: true (ACTION_GET_CONTENT) as standard on Android for 100% universal compatibility.
       let result: ImagePicker.ImagePickerResult;
       try {
         result = await ImagePicker.launchImageLibraryAsync({
@@ -169,7 +188,7 @@ export default function ScannerScreen() {
           legacy: Platform.OS === 'android',
         });
       } catch (pickerErr: any) {
-        console.warn('First picker attempt failed, trying alternate mode:', pickerErr);
+        console.warn('First picker attempt fallback:', pickerErr);
         result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ['images'],
           allowsEditing: false,
@@ -201,6 +220,22 @@ export default function ScannerScreen() {
         ]
       );
     }
+  };
+
+  // Direct manual entry fallback
+  const handleManualEntry = () => {
+    setScanResult({
+      merchant: '',
+      total_amount: 0,
+      subtotal: 0,
+      tax: 0,
+      date: new Date().toISOString().split('T')[0],
+      suggested_category: 'Insumos Galletas',
+      confidence: 1.0,
+      raw_text: 'Registro manual de ticket',
+      items: [],
+    });
+    setIsModalVisible(true);
   };
 
   // View or re-scan an existing captured/uploaded ticket
@@ -235,26 +270,27 @@ export default function ScannerScreen() {
     }
   };
 
-  // Process ticket with backend OCR
+  // Process ticket with real OCR
   const processTicket = async (uri: string) => {
     setIsScanning(true);
     try {
-      if (useMockData) {
-        setTimeout(() => {
-          setScanResult(MOCK_MOBILE_RECEIPTS.costco);
-          setIsScanning(false);
-          setIsModalVisible(true);
-        }, 800);
-        return;
-      }
-
       const parsed = await MobileApiService.scanReceipt(uri);
       setScanResult(parsed);
       setIsModalVisible(true);
     } catch (err) {
       console.warn('Scan processing error:', err);
-      // Fallback in case backend is offline
-      setScanResult(MOCK_MOBILE_RECEIPTS.costco);
+      // Clean fallback with the real captured image ready for user input
+      setScanResult({
+        merchant: 'Ticket de Compra',
+        date: new Date().toISOString().split('T')[0],
+        total_amount: 0,
+        subtotal: 0,
+        tax: 0,
+        items: [],
+        suggested_category: 'Insumos Galletas',
+        confidence: 0.5,
+        raw_text: 'Ticket capturado',
+      });
       setIsModalVisible(true);
     } finally {
       setIsScanning(false);
@@ -285,105 +321,145 @@ export default function ScannerScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]} edges={['top']}>
       <SwipeTabWrapper currentRoute="/scanner">
-        <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.screenEyebrow, { color: colors.brandLight }]}>OCR Inteligente</Text>
-          <Text style={[styles.screenTitle, { color: colors.textMain }]}>Escáner de Tickets</Text>
-          <Text style={[styles.screenSubtitle, { color: colors.textMuted }]}>
-            Toma foto a tu ticket de compra para extraer automáticamente los productos y sumarlos a tus gastos.
-          </Text>
-        </View>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={[styles.screenEyebrow, { color: colors.brandLight }]}>OCR INTELIGENTE</Text>
+            <Text style={[styles.screenTitle, { color: colors.textMain }]}>Escáner de Tickets</Text>
+            <Text style={[styles.screenSubtitle, { color: colors.textMuted }]}>
+              Toma foto a tu ticket de compra para extraer automáticamente los productos y sumarlos a tus gastos.
+            </Text>
+          </View>
 
-        {/* Viewfinder / HUD Card */}
-        <DoubleBezelCard style={styles.viewfinderCard}>
-          {imageUri ? (
-            <View style={styles.previewContainer}>
-              <Image source={{ uri: imageUri }} style={styles.previewImage} />
-              {isScanning && (
-                <View style={styles.scanningOverlay}>
-                  <ActivityIndicator size="large" color={colors.emeraldLight} />
-                  <Text style={styles.scanningText}>Analizando ticket con OCR...</Text>
-                </View>
-              )}
-            </View>
-          ) : (
-            <View style={styles.placeholderContainer}>
-              {/* HUD Target Brackets */}
-              <View style={[styles.hudBracketTopLeft, { borderColor: colors.brand }]} />
-              <View style={[styles.hudBracketTopRight, { borderColor: colors.brand }]} />
-              <View style={[styles.hudBracketBottomLeft, { borderColor: colors.brand }]} />
-              <View style={[styles.hudBracketBottomRight, { borderColor: colors.brand }]} />
-
-              <View style={[styles.cameraIconCircle, { backgroundColor: colors.brandBg, borderColor: colors.brandBorder }]}>
-                <Ionicons name="scan" size={44} color={colors.brand} />
-              </View>
-              <Text style={[styles.placeholderTitle, { color: colors.textMain }]}>Listo para Capturar</Text>
-              <Text style={[styles.placeholderDesc, { color: colors.textMuted }]}>
-                Apunta al ticket con buena luz y presiona tomar foto
-              </Text>
-            </View>
-          )}
-        </DoubleBezelCard>
-
-        {/* Action Buttons */}
-        <View style={styles.actionColumn}>
-          <Button
-            title="Tomar Foto con Cámara"
-            variant="primary"
-            icon={<Ionicons name="camera" size={20} color="#fff" />}
-            onPress={handleTakePhoto}
-            disabled={isScanning}
-          />
-
-          <Button
-            title="Elegir Foto de Galería"
-            variant="secondary"
-            icon={<Ionicons name="images-outline" size={20} color={colors.textMain} />}
-            onPress={handlePickGallery}
-            disabled={isScanning}
-          />
-
-          {/* Real Uploaded / Captured Tickets Bar */}
-          <View style={[styles.demoTicketsBox, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <Text style={[styles.demoTicketsTitle, { color: colors.textMuted }]}>
-                Tickets Subidos y Capturados ({userTickets.length}):
-              </Text>
-            </View>
-
-            {userTickets.length === 0 ? (
-              <View style={styles.emptyTicketsContainer}>
-                <Ionicons name="receipt-outline" size={16} color={colors.textDim} />
-                <Text style={[styles.emptyTicketsText, { color: colors.textDim }]}>
-                  Aún no has tomado ni subido tickets. Usa los botones de arriba para capturar uno real.
-                </Text>
+          {/* Viewfinder / HUD Card */}
+          <DoubleBezelCard
+            style={styles.viewfinderCard}
+            innerStyle={styles.viewfinderInner}
+          >
+            {imageUri ? (
+              <View style={styles.previewContainer}>
+                <Image source={{ uri: imageUri }} style={styles.previewImage} resizeMode="contain" />
+                {isScanning ? (
+                  <View style={styles.scanningOverlay}>
+                    {/* Animated laser line */}
+                    <Animated.View
+                      style={[
+                        styles.laserLine,
+                        {
+                          borderColor: colors.brand,
+                          backgroundColor: colors.brand,
+                          transform: [{ translateY: scanLineAnim }],
+                        },
+                      ]}
+                    />
+                    <View style={styles.scanningBadge}>
+                      <ActivityIndicator size="small" color="#fff" />
+                      <Text style={styles.scanningText}>Analizando ticket con OCR...</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.reScanBadge, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}
+                    onPress={() => processTicket(imageUri)}
+                  >
+                    <Ionicons name="refresh" size={14} color={colors.brand} />
+                    <Text style={[styles.reScanText, { color: colors.brand }]}>Re-escanear</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.demoButtonsRow}
-              >
-                {userTickets.map((ticket, idx) => (
-                  <TouchableOpacity
-                    key={ticket.id || idx}
-                    onPress={() => handleSelectUploadedTicket(ticket)}
-                    style={[styles.demoTicketChip, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}
-                    disabled={isScanning}
-                  >
-                    <Ionicons name="receipt" size={13} color={colors.brand} />
-                    <Text style={[styles.demoTicketText, { color: colors.textMain }]} numberOfLines={1}>
-                      {ticket.merchant} (${ticket.amount > 0 ? ticket.amount.toFixed(0) : 'Pendiente'})
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              <View style={styles.placeholderContainer}>
+                {/* HUD Target Corner Brackets */}
+                <View style={[styles.hudBracket, styles.hudBracketTopLeft, { borderColor: colors.brand }]} />
+                <View style={[styles.hudBracket, styles.hudBracketTopRight, { borderColor: colors.brand }]} />
+                <View style={[styles.hudBracket, styles.hudBracketBottomLeft, { borderColor: colors.brand }]} />
+                <View style={[styles.hudBracket, styles.hudBracketBottomRight, { borderColor: colors.brand }]} />
+
+                <View style={[styles.cameraIconCircle, { backgroundColor: colors.brandBg, borderColor: colors.brandBorder }]}>
+                  <Ionicons name="scan-outline" size={42} color={colors.brand} />
+                </View>
+                <Text style={[styles.placeholderTitle, { color: colors.textMain }]}>Listo para Capturar</Text>
+                <Text style={[styles.placeholderDesc, { color: colors.textMuted }]}>
+                  Enfoca el ticket con buena luz y presiona tomar foto
+                </Text>
+              </View>
             )}
+          </DoubleBezelCard>
+
+          {/* Action Buttons */}
+          <View style={styles.actionColumn}>
+            <Button
+              title="Tomar Foto con Cámara"
+              variant="primary"
+              icon={<Ionicons name="camera" size={20} color="#fff" />}
+              onPress={handleTakePhoto}
+              disabled={isScanning}
+            />
+
+            <Button
+              title="Elegir Foto de Galería"
+              variant="secondary"
+              icon={<Ionicons name="images-outline" size={20} color={colors.textMain} />}
+              onPress={handlePickGallery}
+              disabled={isScanning}
+            />
+
+            <TouchableOpacity
+              onPress={handleManualEntry}
+              style={[styles.manualButton, { borderColor: colors.borderSubtle, backgroundColor: colors.bgCard }]}
+              activeOpacity={0.7}
+              disabled={isScanning}
+            >
+              <Ionicons name="create-outline" size={16} color={colors.textMuted} />
+              <Text style={[styles.manualButtonText, { color: colors.textMuted }]}>
+                O Ingresar Ticket Manualmente
+              </Text>
+            </TouchableOpacity>
+
+            {/* Real Uploaded / Captured Tickets Bar */}
+            <View style={[styles.demoTicketsBox, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
+              <View style={styles.ticketsBoxHeader}>
+                <Ionicons name="receipt-outline" size={14} color={colors.textDim} />
+                <Text style={[styles.demoTicketsTitle, { color: colors.textDim }]}>
+                  Tickets Capturados ({userTickets.length})
+                </Text>
+              </View>
+
+              {userTickets.length === 0 ? (
+                <View style={styles.emptyTicketsContainer}>
+                  <Text style={[styles.emptyTicketsText, { color: colors.textDim }]}>
+                    Aún no has tomado ni subido tickets. Usa los botones de arriba para escanear uno real.
+                  </Text>
+                </View>
+              ) : (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.demoButtonsRow}
+                >
+                  {userTickets.map((ticket, idx) => (
+                    <TouchableOpacity
+                      key={ticket.id || idx}
+                      onPress={() => handleSelectUploadedTicket(ticket)}
+                      style={[styles.demoTicketChip, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+                      disabled={isScanning}
+                    >
+                      <Ionicons name="receipt" size={13} color={colors.brand} />
+                      <Text style={[styles.demoTicketText, { color: colors.textMain }]} numberOfLines={1}>
+                        {ticket.merchant} ({ticket.amount > 0 ? `$${ticket.amount.toFixed(0)}` : 'Sin total'})
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
           </View>
-        </View>
+        </ScrollView>
 
         {/* Receipt Modal */}
         <ReceiptPreviewModal
@@ -393,7 +469,6 @@ export default function ScannerScreen() {
           imageUri={imageUri}
           onConfirm={handleConfirmExpense}
         />
-        </View>
       </SwipeTabWrapper>
     </SafeAreaView>
   );
@@ -404,13 +479,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bgPrimary,
   },
-  container: {
-    flex: 1,
+  scrollContent: {
     padding: spacing.md,
-    justifyContent: 'space-between',
+    paddingBottom: 40,
   },
   header: {
-    marginBottom: 12,
+    marginBottom: 10,
   },
   screenEyebrow: {
     fontSize: 11,
@@ -433,157 +507,193 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   viewfinderCard: {
+    height: 250,
+    marginVertical: 12,
+  },
+  viewfinderInner: {
     flex: 1,
-    marginVertical: 10,
+    padding: 0,
   },
   placeholderContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    padding: 20,
     position: 'relative',
   },
-  hudBracketTopLeft: {
+  hudBracket: {
     position: 'absolute',
-    top: 20,
-    left: 20,
     width: 24,
     height: 24,
+  },
+  hudBracketTopLeft: {
+    top: 14,
+    left: 14,
     borderTopWidth: 3,
     borderLeftWidth: 3,
-    borderColor: colors.brand,
-    borderRadius: 4,
+    borderTopLeftRadius: 6,
   },
   hudBracketTopRight: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    width: 24,
-    height: 24,
+    top: 14,
+    right: 14,
     borderTopWidth: 3,
     borderRightWidth: 3,
-    borderColor: colors.brand,
-    borderRadius: 4,
+    borderTopRightRadius: 6,
   },
   hudBracketBottomLeft: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    width: 24,
-    height: 24,
+    bottom: 14,
+    left: 14,
     borderBottomWidth: 3,
     borderLeftWidth: 3,
-    borderColor: colors.brand,
-    borderRadius: 4,
+    borderBottomLeftRadius: 6,
   },
   hudBracketBottomRight: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    width: 24,
-    height: 24,
+    bottom: 14,
+    right: 14,
     borderBottomWidth: 3,
     borderRightWidth: 3,
-    borderColor: colors.brand,
-    borderRadius: 4,
+    borderBottomRightRadius: 6,
   },
   cameraIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.brandBg,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     borderWidth: 1,
-    borderColor: colors.brandBorder,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   placeholderTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
-    color: colors.textMain,
+    marginBottom: 4,
   },
   placeholderDesc: {
     fontSize: 12,
-    color: colors.textDim,
     textAlign: 'center',
-    marginTop: 6,
     maxWidth: 240,
+    lineHeight: 16,
   },
   previewContainer: {
     flex: 1,
     borderRadius: radii.md,
     overflow: 'hidden',
     position: 'relative',
+    backgroundColor: '#000',
   },
   previewImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
   },
   scanningOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(5, 6, 9, 0.75)',
+    backgroundColor: 'rgba(5, 6, 9, 0.65)',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+  },
+  laserLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 20,
+    height: 2,
+    borderBottomWidth: 2,
+    shadowColor: '#38BDF8',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  scanningBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   scanningText: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  reScanBadge: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    elevation: 3,
+  },
+  reScanText: {
+    fontSize: 11,
     fontWeight: '700',
   },
   actionColumn: {
     gap: 10,
+    marginTop: 4,
+  },
+  manualButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: radii.md,
+    borderWidth: 1,
+  },
+  manualButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   demoTicketsBox: {
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
     borderRadius: radii.md,
-    padding: 10,
+    padding: 12,
     marginTop: 4,
+  },
+  ticketsBoxHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 8,
   },
   demoTicketsTitle: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.textDim,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 6,
   },
   demoButtonsRow: {
     flexDirection: 'row',
     gap: 8,
   },
   demoTicketChip: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    backgroundColor: '#FFFFFF',
+    gap: 5,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
     borderRadius: radii.pill,
-    paddingVertical: 7,
-    paddingHorizontal: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
   },
   demoTicketText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textMain,
+    fontSize: 12,
+    fontWeight: '600',
   },
   emptyTicketsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 4,
+    paddingVertical: 4,
   },
   emptyTicketsText: {
     fontSize: 11,
-    lineHeight: 15,
-    flex: 1,
+    lineHeight: 16,
   },
 });

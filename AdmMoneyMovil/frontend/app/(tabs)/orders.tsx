@@ -19,6 +19,7 @@ import { DoubleBezelCard } from '../../src/components/ui/DoubleBezelCard';
 import { useAppStore } from '../../src/stores/app.store';
 import { Order } from '../../src/lib/types';
 import { confirmAction } from '../../src/stores/confirmation.store';
+import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
 
 export default function OrdersScreen() {
   const colors = useThemeColors();
@@ -118,7 +119,8 @@ export default function OrdersScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]} edges={['top']}>
-      {/* Top Header */}
+      <SwipeTabWrapper currentRoute="/orders">
+        {/* Top Header */}
       <View style={[styles.header, { borderBottomColor: colors.borderSubtle }]}>
         <View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -260,6 +262,7 @@ export default function OrdersScreen() {
         onSave={handleSaveOrder}
         onSaveCustomer={addCustomer}
       />
+      </SwipeTabWrapper>
     </SafeAreaView>
   );
 }

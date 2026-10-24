@@ -41,17 +41,19 @@ export const DoubleBezelCard: React.FC<DoubleBezelCardProps> = ({
     }).start();
   };
 
+  const hasFlex = (style as any)?.flex !== undefined;
+
   const content = gradient ? (
     <LinearGradient
       colors={gradient as any}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={[styles.innerCore, { backgroundColor: 'transparent' }, innerStyle]}
+      style={[styles.innerCore, { backgroundColor: 'transparent' }, hasFlex && { flex: 1 }, innerStyle]}
     >
       {children}
     </LinearGradient>
   ) : (
-    <View style={[styles.innerCore, { backgroundColor: colors.bgCard }, innerStyle]}>
+    <View style={[styles.innerCore, { backgroundColor: colors.bgCard }, hasFlex && { flex: 1 }, innerStyle]}>
       {children}
     </View>
   );
