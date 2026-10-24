@@ -103,22 +103,61 @@ function parseReceiptText(rawText: string): ReceiptScanResult {
     category = 'Hogar y Personales';
   }
 
-  // Extract items
+  // Extract items with intelligent multi-format POS column parser
   const items: Array<{ name: string; quantity: number; price: number }> = [];
   const lines = rawText.split('\n');
-  for (const line of lines) {
-    const m = line.match(/^(\d+)?\s*([A-Za-z\s]{3,30}?)\s+\$?([0-9]+[\.,][0-9]{2})/);
-    if (m) {
-      const name = m[2].trim();
-      const upperName = name.toUpperCase();
-      if (!['TOTAL', 'SUBTOTAL', 'IVA', 'CAMBIO', 'EFECTIVO', 'FECHA', 'TARJETA'].some((w) => upperName.includes(w))) {
-        items.push({
-          name: name.charAt(0).toUpperCase() + name.slice(1).toLowerCase(),
-          quantity: m[1] ? parseFloat(m[1]) : 1,
-          price: parseFloat(m[3].replace(',', ''))
-        });
+
+  for (let line of lines) {
+    line = line.trim();
+    if (!line) continue;
+    const upper = line.toUpperCase();
+    if (['TOTAL', 'SUBTOTAL', 'IVA', 'CAMBIO', 'EFECTIVO', 'FECHA', 'DESCRIPCION', 'CANTIDAD', 'PAGO', 'TARJETA', 'CLIENTE'].some((k) => upper.includes(k))) {
+      continue;
+    }
+
+    const parts = line.split(/\s+/);
+    if (parts.length < 2) continue;
+
+    const lastStr = parts[parts.length - 1].replace('$', '').replace(',', '');
+    const lastPrice = parseFloat(lastStr);
+
+    if (!isNaN(lastPrice) && lastPrice > 0 && lastPrice < 90000) {
+      // Formato A: Último es precio, penúltimo es cantidad (ej. PEPPERONI ORIGINAL 1.000 76.00)
+      if (parts.length >= 3) {
+        const secondLastQty = parseFloat(parts[parts.length - 2]);
+        if (!isNaN(secondLastQty) && secondLastQty > 0 && secondLastQty <= 100) {
+          const rawName = parts.slice(0, parts.length - 2).join(' ').trim();
+          if (rawName.length >= 2) {
+            const formattedName = rawName.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+            items.push({ name: formattedName, quantity: secondLastQty, price: lastPrice });
+            continue;
+          }
+        }
+      }
+
+      // Formato B: Primero es cantidad, último es precio (ej. 2 LECHE LALA 28.50)
+      const firstQty = parseFloat(parts[0]);
+      if (!isNaN(firstQty) && firstQty > 0 && firstQty <= 100) {
+        const rawName = parts.slice(1, parts.length - 1).join(' ').trim();
+        if (rawName.length >= 2) {
+          const formattedName = rawName.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+          items.push({ name: formattedName, quantity: firstQty, price: lastPrice });
+          continue;
+        }
+      }
+
+      // Formato C: Nombre directo y precio (ej. QUESO MANCHEGO 65.00)
+      const rawName = parts.slice(0, parts.length - 1).join(' ').trim();
+      if (rawName.length >= 3 && !/^\d+$/.test(rawName)) {
+        const formattedName = rawName.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+        items.push({ name: formattedName, quantity: 1, price: lastPrice });
       }
     }
+  }
+
+  // Si no se detectó un total explícito pero hay productos, sumar los productos
+  if (total === 0 && items.length > 0) {
+    total = parseFloat(items.reduce((acc, it) => acc + it.price, 0).toFixed(2));
   }
 
   const subtotal = total > 0 ? parseFloat((total / 1.16).toFixed(2)) : 0;
@@ -132,8 +171,8 @@ function parseReceiptText(rawText: string): ReceiptScanResult {
     tax,
     items,
     suggested_category: category,
-    confidence: total > 0 ? 0.90 : 0.60,
-    raw_text: rawText.slice(0, 500)
+    confidence: total > 0 ? 0.95 : 0.60,
+    raw_text: rawText.slice(0, 1000)
   };
 }
 

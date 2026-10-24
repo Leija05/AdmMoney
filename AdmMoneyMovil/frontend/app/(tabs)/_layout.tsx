@@ -2,37 +2,47 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../src/theme';
-import { Platform, View } from 'react-native';
+import { Platform, View, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function TabLayout() {
   const colors = useThemeColors();
+  const isDark = colors.isDark;
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.bgCard,
-          borderTopColor: colors.borderSubtle,
-          borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 88 : 68,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 10,
-          paddingTop: 8,
-          elevation: 6,
+          position: 'absolute',
+          bottom: Platform.OS === 'ios' ? 20 : 12,
+          left: 14,
+          right: 14,
+          height: 64,
+          borderRadius: 24,
+          backgroundColor: isDark ? 'rgba(28, 32, 43, 0.94)' : 'rgba(255, 255, 255, 0.96)',
+          borderWidth: 1,
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.07)',
+          paddingBottom: 6,
+          paddingTop: 6,
           shadowColor: '#000000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.08,
-          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: isDark ? 0.40 : 0.12,
+          shadowRadius: 16,
+          elevation: 10,
         },
         tabBarActiveTintColor: colors.brand,
         tabBarInactiveTintColor: colors.textDim,
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: 9.5,
           fontWeight: '700',
           letterSpacing: -0.2,
+          marginTop: -2,
         },
         tabBarItemStyle: {
           paddingHorizontal: 0,
+          justifyContent: 'center',
+          alignItems: 'center',
         },
       }}
     >
@@ -40,8 +50,14 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Resumen',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="grid-outline" size={size - 2} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconWrapper, focused && { backgroundColor: isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(2, 132, 199, 0.12)' }]}>
+              <Ionicons
+                name={focused ? 'grid' : 'grid-outline'}
+                size={19}
+                color={focused ? colors.brand : colors.textDim}
+              />
+            </View>
           ),
         }}
       />
@@ -49,8 +65,14 @@ export default function TabLayout() {
         name="expenses"
         options={{
           title: 'Gastos',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="receipt-outline" size={size - 2} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconWrapper, focused && { backgroundColor: isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(2, 132, 199, 0.12)' }]}>
+              <Ionicons
+                name={focused ? 'receipt' : 'receipt-outline'}
+                size={19}
+                color={focused ? colors.brand : colors.textDim}
+              />
+            </View>
           ),
         }}
       />
@@ -58,8 +80,14 @@ export default function TabLayout() {
         name="orders"
         options={{
           title: 'Pedidos',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="bag-handle-outline" size={size - 1} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconWrapper, focused && { backgroundColor: isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(2, 132, 199, 0.12)' }]}>
+              <Ionicons
+                name={focused ? 'bag-handle' : 'bag-handle-outline'}
+                size={19}
+                color={focused ? colors.brand : colors.textDim}
+              />
+            </View>
           ),
         }}
       />
@@ -67,26 +95,16 @@ export default function TabLayout() {
         name="scanner"
         options={{
           title: 'Escanear',
-          tabBarIcon: ({ color, size }) => (
-            <View
-              style={{
-                width: 46,
-                height: 46,
-                borderRadius: 23,
-                backgroundColor: colors.brandBg,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 12,
-                borderWidth: 1,
-                borderColor: '#BAE6FD',
-                shadowColor: '#0284C7',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.15,
-                shadowRadius: 6,
-                elevation: 3,
-              }}
-            >
-              <Ionicons name="scan" size={22} color={colors.brandText} />
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.centerButtonOuter}>
+              <LinearGradient
+                colors={focused ? ['#38BDF8', '#0284C7'] : ['#0284C7', '#0369A1']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.centerButtonGradient}
+              >
+                <Ionicons name="scan" size={24} color="#FFFFFF" />
+              </LinearGradient>
             </View>
           ),
         }}
@@ -95,8 +113,14 @@ export default function TabLayout() {
         name="cookies"
         options={{
           title: 'Galletas',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="cafe-outline" size={size - 2} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconWrapper, focused && { backgroundColor: isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(2, 132, 199, 0.12)' }]}>
+              <Ionicons
+                name={focused ? 'cafe' : 'cafe-outline'}
+                size={19}
+                color={focused ? colors.brand : colors.textDim}
+              />
+            </View>
           ),
         }}
       />
@@ -104,8 +128,14 @@ export default function TabLayout() {
         name="analytics"
         options={{
           title: 'Gráficas',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="bar-chart-outline" size={size - 2} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconWrapper, focused && { backgroundColor: isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(2, 132, 199, 0.12)' }]}>
+              <Ionicons
+                name={focused ? 'bar-chart' : 'bar-chart-outline'}
+                size={19}
+                color={focused ? colors.brand : colors.textDim}
+              />
+            </View>
           ),
         }}
       />
@@ -113,11 +143,48 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: 'Ajustes',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size - 2} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconWrapper, focused && { backgroundColor: isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(2, 132, 199, 0.12)' }]}>
+              <Ionicons
+                name={focused ? 'settings' : 'settings-outline'}
+                size={19}
+                color={focused ? colors.brand : colors.textDim}
+              />
+            </View>
           ),
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabIconWrapper: {
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  centerButtonOuter: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    marginTop: -20,
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  centerButtonGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+  },
+});

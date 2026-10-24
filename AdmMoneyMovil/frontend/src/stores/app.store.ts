@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { LayoutAnimation, Platform, UIManager } from 'react-native';
 import {
   Expense,
   CookieProduct,
@@ -87,8 +88,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   useMockData: false,
   theme: 'light',
 
-  setTheme: (theme: 'light' | 'dark') => set({ theme }),
-  toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
+  setTheme: (theme: 'light' | 'dark') => {
+    try {
+      if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+        UIManager.setLayoutAnimationEnabledExperimental(true);
+      }
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    } catch {}
+    set({ theme });
+  },
+  toggleTheme: () => {
+    try {
+      if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+        UIManager.setLayoutAnimationEnabledExperimental(true);
+      }
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    } catch {}
+    set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' }));
+  },
 
   setUseMockData: (_enabled: boolean) => {
     set({ useMockData: false });

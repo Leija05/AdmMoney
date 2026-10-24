@@ -144,17 +144,54 @@ async def scan_receipt_image(file_bytes: bytes, filename: str) -> ReceiptScanRes
     if raw_text:
         lines = raw_text.split("\n")
         for line in lines:
-            line_match = re.search(r'(\d+)?\s*([A-Za-z\s]+?)\s+\$?([0-9]+[\.,][0-9]{2})', line)
-            if line_match:
-                qty_str, item_name, price_str = line_match.groups()
-                name_clean = item_name.strip()
-                if len(name_clean) > 2 and name_clean.upper() not in ["TOTAL", "SUBTOTAL", "IVA", "CAMBIO", "EFECTIVO", "FECHA", "PAGO", "TARJETA"]:
+            line = line.strip()
+            if not line:
+                continue
+            upper = line.upper()
+            if any(k in upper for k in ["TOTAL", "SUBTOTAL", "IVA", "CAMBIO", "EFECTIVO", "FECHA", "DESCRIPCION", "CANTIDAD", "PAGO", "TARJETA", "CLIENTE"]):
+                continue
+
+            parts = line.split()
+            if len(parts) < 2:
+                continue
+
+            try:
+                last_str = parts[-1].replace("$", "").replace(",", "")
+                last_price = float(last_str)
+            except ValueError:
+                continue
+
+            if 0 < last_price < 90000:
+                # Formato A: Último es precio, penúltimo es cantidad (ej. PEPPERONI ORIGINAL 1.000 76.00)
+                if len(parts) >= 3:
                     try:
-                        qty = float(qty_str) if qty_str else 1.0
-                        price = float(price_str.replace(",", ""))
-                        items.append(ReceiptItem(name=name_clean.title(), quantity=qty, price=price))
+                        second_last_qty = float(parts[-2])
+                        if 0 < second_last_qty <= 100:
+                            raw_name = " ".join(parts[:-2]).strip()
+                            if len(raw_name) >= 2:
+                                items.append(ReceiptItem(name=raw_name.title(), quantity=second_last_qty, price=last_price))
+                                continue
                     except ValueError:
-                        continue
+                        pass
+
+                # Formato B: Primero es cantidad, último es precio (ej. 2 LECHE LALA 28.50)
+                try:
+                    first_qty = float(parts[0])
+                    if 0 < first_qty <= 100:
+                        raw_name = " ".join(parts[1:-1]).strip()
+                        if len(raw_name) >= 2:
+                            items.append(ReceiptItem(name=raw_name.title(), quantity=first_qty, price=last_price))
+                            continue
+                except ValueError:
+                    pass
+
+                # Formato C: Nombre directo y precio
+                raw_name = " ".join(parts[:-1]).strip()
+                if len(raw_name) >= 3 and not raw_name.isdigit():
+                    items.append(ReceiptItem(name=raw_name.title(), quantity=1.0, price=last_price))
+
+    if total_amount == 0.0 and items:
+        total_amount = round(sum(it.price for it in items), 2)
 
     category = detect_category(raw_text, items) if raw_text else "Insumos Galletas"
     subtotal = round(total_amount / 1.16, 2) if total_amount > 0 else 0.0
