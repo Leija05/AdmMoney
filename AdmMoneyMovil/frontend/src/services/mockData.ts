@@ -519,7 +519,7 @@ export function computeMobileSummary(
       avg_price: item.units_sold > 0 ? Number((item.revenue / item.units_sold).toFixed(2)) : 0,
       avg_cost: item.units_sold > 0 ? Number((item.cost / item.units_sold).toFixed(2)) : 0,
       margin_pct:
-        item.revenue > 0 ? Number(((item.profit / item.revenue) * 100).toFixed(1)) : 0,
+        item.revenue > 0 ? Number(((item.profit / item.revenue) * 100).toFixed(2)) : 0,
     }))
     .sort((a, b) => b.units_sold - a.units_sold);
 
@@ -562,7 +562,7 @@ export function computeMobileSummary(
     total_cookie_cost: Number(totalCookieCost.toFixed(2)),
     net_cookie_profit: Number(netCookieProfit.toFixed(2)),
     overall_net_balance: Number(overallNetBalance.toFixed(2)),
-    cookie_profit_margin_pct: Number(cookieProfitMarginPct.toFixed(1)),
+    cookie_profit_margin_pct: Number(cookieProfitMarginPct.toFixed(2)),
     total_cookies_sold: totalCookiesSold,
     top_selling_cookie: topSellingCookie,
     category_breakdown: categoryBreakdown,

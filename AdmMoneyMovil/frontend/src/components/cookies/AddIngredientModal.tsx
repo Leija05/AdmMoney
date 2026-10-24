@@ -82,7 +82,7 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
         unit,
         package_cost: costNum,
         package_quantity: qtyNum,
-        cost_per_unit: Number(unitCost.toFixed(4)),
+        cost_per_unit: Number(unitCost.toFixed(2)),
         stock_quantity: parseFloat(stockQty) || 1,
         supplier: supplier.trim() || 'Proveedor Local',
       };
@@ -284,7 +284,7 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
               <Text style={[styles.calcLabel, { color: isDark ? '#9BA3AF' : '#15803D' }]}>
                 Costo Calculado por {unit}:
               </Text>
-              <Text style={styles.calcVal}>${unitCost.toFixed(4)} MXN / {unit}</Text>
+              <Text style={styles.calcVal}>${unitCost.toFixed(2)} MXN / {unit}</Text>
             </View>
 
             <View style={styles.actions}>

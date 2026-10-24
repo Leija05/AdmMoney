@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
   Alert,
   Image,
   Platform,
+  Animated,
+  PanResponder,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -79,6 +81,47 @@ export default function CookiesScreen() {
   // Modals state
   const [inspectedCookie, setInspectedCookie] = useState<CookieProduct | null>(null);
   const [actionSheetCookie, setActionSheetCookie] = useState<CookieProduct | null>(null);
+  const actionSheetTranslateY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (actionSheetCookie) {
+      actionSheetTranslateY.setValue(0);
+    }
+  }, [actionSheetCookie]);
+
+  const actionSheetPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
+        return gestureState.dy > 5 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.2;
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        if (gestureState.dy > 0) {
+          actionSheetTranslateY.setValue(gestureState.dy);
+        } else {
+          actionSheetTranslateY.setValue(gestureState.dy * 0.15);
+        }
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (gestureState.dy > 80 || (gestureState.dy > 25 && gestureState.vy > 0.35)) {
+          Animated.timing(actionSheetTranslateY, {
+            toValue: 600,
+            duration: 180,
+            useNativeDriver: true,
+          }).start(() => {
+            setActionSheetCookie(null);
+            actionSheetTranslateY.setValue(0);
+          });
+        } else {
+          Animated.spring(actionSheetTranslateY, {
+            toValue: 0,
+            bounciness: 4,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
   const [editingCookieProduct, setEditingCookieProduct] = useState<CookieProduct | null>(null);
   const [selectedSale, setSelectedSale] = useState<CookieSale | null>(null);
   const [isAddCookieOpen, setIsAddCookieOpen] = useState(false);
@@ -188,7 +231,7 @@ export default function CookiesScreen() {
     setIsSaleModalOpen(false);
     Alert.alert(
       '¡Venta Registrada!',
-      `Cobraste $${currentTotalRevenue.toFixed(2)} MXN y ganaste +$${currentNetProfit.toFixed(2)} MXN netos (${currentRoi.toFixed(0)}% rendimiento).`
+      `Cobraste $${currentTotalRevenue.toFixed(2)} MXN y ganaste +$${currentNetProfit.toFixed(2)} MXN netos (${currentRoi.toFixed(2)}% rendimiento).`
     );
   };
 
@@ -417,7 +460,7 @@ export default function CookiesScreen() {
             </TouchableOpacity>
 
             <BackendHeartbeat compact onPress={() => router.push('/settings')} />
-            <Badge label={`${avgMargin.toFixed(0)}%`} variant="emerald" />
+            <Badge label={`${avgMargin.toFixed(2)}%`} variant="emerald" />
           </View>
         </View>
 
@@ -598,7 +641,7 @@ export default function CookiesScreen() {
 
                     <View style={{ alignItems: 'flex-end', gap: 6 }}>
                       <Text style={{ fontSize: 14, fontWeight: '900', color: colors.emeraldLight }}>
-                        ${item.cost_per_unit.toFixed(3)} / {item.unit}
+                        ${item.cost_per_unit.toFixed(2)} / {item.unit}
                       </Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <TouchableOpacity
@@ -961,23 +1004,23 @@ export default function CookiesScreen() {
           onPress={() => setActionSheetCookie(null)}
         >
           {actionSheetCookie && (
-            <TouchableOpacity
-              activeOpacity={1}
+            <Animated.View
               style={[
                 styles.actionSheetDialog,
                 {
                   backgroundColor: colors.bgCard,
                   borderColor: colors.borderSubtle,
+                  transform: [{ translateY: actionSheetTranslateY }],
                 },
               ]}
             >
-              {/* Drag Handle Bar */}
-              <View style={styles.sheetHandleWrapper}>
+              {/* Drag Handle Bar with Swipe-down Gesture */}
+              <View style={styles.sheetHandleWrapper} {...actionSheetPanResponder.panHandlers}>
                 <View style={[styles.sheetHandleBar, { backgroundColor: colors.borderSubtle }]} />
               </View>
 
-              {/* Header with cookie info */}
-              <View style={styles.actionSheetHeader}>
+              {/* Header with cookie info and Swipe-down Gesture */}
+              <View style={styles.actionSheetHeader} {...actionSheetPanResponder.panHandlers}>
                 <Image source={{ uri: actionSheetCookie.image_url }} style={styles.actionSheetImg} />
                 <View style={{ flex: 1, paddingRight: 8 }}>
                   <Text style={[styles.actionSheetTitle, { color: colors.textMain }]} numberOfLines={1}>
@@ -1116,7 +1159,7 @@ export default function CookiesScreen() {
                 </View>
                 <Ionicons name="chevron-forward" size={17} color="#EF4444" />
               </TouchableOpacity>
-            </TouchableOpacity>
+            </Animated.View>
           )}
         </TouchableOpacity>
       </Modal>
@@ -1271,7 +1314,7 @@ export default function CookiesScreen() {
                       +${currentNetProfit.toFixed(2)} MXN
                     </Text>
                     <Text style={{ fontSize: 10, color: colors.emeraldLight, fontWeight: '700' }}>
-                      ~{currentRoi.toFixed(0)}% rendimiento
+                      ~{currentRoi.toFixed(2)}% rendimiento
                     </Text>
                   </View>
                 </View>

@@ -158,7 +158,7 @@ export const IngredientModal: React.FC<IngredientModalProps> = ({
             Costo calculado por {unit}:
           </span>
           <span style={{ fontFamily: 'Outfit', fontSize: '1.15rem', fontWeight: 800, color: '#34d399' }}>
-            ${costPerUnit.toFixed(4)} / {unit}
+            ${costPerUnit.toFixed(2)} / {unit}
           </span>
         </div>
       </form>

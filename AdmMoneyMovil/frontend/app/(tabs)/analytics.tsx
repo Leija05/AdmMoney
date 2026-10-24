@@ -210,7 +210,7 @@ export default function AnalyticsScreen() {
             >
               <Text style={[styles.kpiLabel, { color: colors.textDim }]}>Ganancia Neta</Text>
               <Text style={[styles.kpiValue, { color: colors.emeraldLight }]}>
-                +${totalProfit.toFixed(0)}
+                +${totalProfit.toFixed(2)}
               </Text>
               <Text style={[styles.kpiSub, { color: colors.textDim }]}>libre de costos</Text>
             </DoubleBezelCard>
@@ -225,7 +225,7 @@ export default function AnalyticsScreen() {
             >
               <Text style={[styles.kpiLabel, { color: colors.textDim }]}>Venta Bruta</Text>
               <Text style={[styles.kpiValue, { color: colors.amberLight }]}>
-                ${totalRev.toFixed(0)}
+                ${totalRev.toFixed(2)}
               </Text>
               <Text style={[styles.kpiSub, { color: colors.textDim }]}>{filteredSales.length} ventas</Text>
             </DoubleBezelCard>
@@ -240,7 +240,7 @@ export default function AnalyticsScreen() {
             >
               <Text style={[styles.kpiLabel, { color: colors.textDim }]}>Margen Neto</Text>
               <Text style={[styles.kpiValue, { color: colors.cyan }]}>
-                {avgMargin.toFixed(1)}%
+                {avgMargin.toFixed(2)}%
               </Text>
               <Text style={[styles.kpiSub, { color: colors.textDim }]}>sobre ingresos</Text>
             </DoubleBezelCard>
@@ -399,7 +399,7 @@ export default function AnalyticsScreen() {
                             #{idx + 1} {item.cookie_name}
                           </Text>
                           <Text style={[styles.cookieBarProfit, { color: colors.emeraldLight }]}>
-                            +${item.profit.toFixed(0)} neta
+                            +${item.profit.toFixed(2)} neta
                           </Text>
                         </View>
 
@@ -423,7 +423,7 @@ export default function AnalyticsScreen() {
 
                         <View style={styles.barMetaRow}>
                           <Text style={[styles.barMetaText, { color: colors.textDim }]}>{item.units_sold} piezas vendidas</Text>
-                          <Badge label={`${item.margin_pct.toFixed(1)}% margen`} variant="emerald" />
+                          <Badge label={`${item.margin_pct.toFixed(2)}% margen`} variant="emerald" />
                         </View>
                       </View>
                     );
@@ -450,7 +450,7 @@ export default function AnalyticsScreen() {
               ) : (
                 <View style={{ marginTop: 14, gap: 10 }}>
                   {Object.entries(catTotals).map(([cat, amt]) => {
-                    const pct = ((amt / totalExp) * 100).toFixed(1);
+                    const pct = ((amt / totalExp) * 100).toFixed(2);
                     return (
                       <View key={cat} style={[styles.catRow, { borderBottomColor: colors.borderSubtle }]}>
                         <View style={{ flex: 1 }}>
@@ -483,7 +483,7 @@ export default function AnalyticsScreen() {
               ) : (
                 <View style={{ marginTop: 12, gap: 8 }}>
                   {Object.entries(payTotals).map(([method, amt]) => {
-                    const pct = totalRev > 0 ? ((amt / totalRev) * 100).toFixed(0) : '0';
+                    const pct = totalRev > 0 ? ((amt / totalRev) * 100).toFixed(2) : '0.00';
                     return (
                       <View key={method} style={[styles.catRow, { borderBottomColor: colors.borderSubtle }]}>
                         <View style={{ flex: 1 }}>

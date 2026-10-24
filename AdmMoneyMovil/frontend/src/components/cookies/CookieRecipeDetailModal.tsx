@@ -426,7 +426,7 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
                   </Text>
                   <View style={styles.tagRow}>
                     <Badge label={`Tanda: ${batchYield} pzas`} variant="amber" />
-                    <Badge label={`${marginPct.toFixed(1)}% Margen`} variant="emerald" />
+                    <Badge label={`${marginPct.toFixed(2)}% Margen`} variant="emerald" />
                   </View>
                   <TouchableOpacity
                     onPress={() => setIsPhotoPickerOpen(true)}
@@ -500,7 +500,7 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
                     <Text style={[styles.schemeKey, { color: isDark ? '#94A3B8' : '#64748B' }]}>
                       Rendimiento sobre costo (ROI):
                     </Text>
-                    <Text style={styles.schemeValGold}>~{roiPct.toFixed(0)}% ROI</Text>
+                    <Text style={styles.schemeValGold}>~{roiPct.toFixed(2)}% ROI</Text>
                   </View>
                 </View>
 
@@ -565,7 +565,7 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
                         Ganancia por galleta en promo:
                       </Text>
                       <Text style={styles.schemeValGold}>
-                        +${scheme.profitPerPiece.toFixed(2)} MXN (~{scheme.roi.toFixed(0)}% ROI)
+                        +${scheme.profitPerPiece.toFixed(2)} MXN (~{scheme.roi.toFixed(2)}% ROI)
                       </Text>
                     </View>
                   </View>
@@ -631,7 +631,7 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
                             {ing.name}
                           </Text>
                           <Text style={[styles.ingSub, { color: isDark ? '#94A3B8' : '#64748B' }]}>
-                            {ing.quantity} {ing.unit} por tanda ({costSharePct.toFixed(1)}% del costo)
+                            {ing.quantity} {ing.unit} por tanda ({costSharePct.toFixed(2)}% del costo)
                           </Text>
                         </View>
                         <Text style={[styles.ingCost, { color: isDark ? '#F1F3F7' : '#0F172A' }]}>

@@ -179,7 +179,7 @@ export default function DashboardScreen() {
     setSelectedPromoId(null);
     setQuickSaleQty(1);
 
-    const marginPctCalc = quickSaleTotal > 0 ? Math.round((quickSaleNetProfit / quickSaleTotal) * 100) : 0;
+    const marginPctCalc = quickSaleTotal > 0 ? ((quickSaleNetProfit / quickSaleTotal) * 100).toFixed(2) : '0.00';
     Alert.alert(
       '¡Venta Registrada!',
       `Cobraste $${quickSaleTotal.toFixed(2)} MXN y ganaste +$${quickSaleNetProfit.toFixed(2)} MXN netos (${marginPctCalc}% rendimiento).`
@@ -302,7 +302,7 @@ export default function DashboardScreen() {
                   {privacyMode ? '••••••' : `+$${cookieRevenue.toFixed(2)}`}
                 </Text>
                 <Text style={{ fontSize: 10, fontWeight: '700', color: '#A7F3D0', marginTop: 1 }}>
-                  {privacyMode ? '••••••' : `+$${cookieProfit.toFixed(2)} libres (${marginPct.toFixed(0)}%)`}
+                  {privacyMode ? '••••••' : `+$${cookieProfit.toFixed(2)} libres (${marginPct.toFixed(2)}%)`}
                 </Text>
               </View>
 
@@ -342,7 +342,7 @@ export default function DashboardScreen() {
                 </Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
                   <Text style={[styles.statSub, { color: colors.textDim }]}>
-                    {privacyMode ? '•••% margen' : `${marginPct.toFixed(1)}% margen neto`}
+                    {privacyMode ? '•••% margen' : `${marginPct.toFixed(2)}% margen neto`}
                   </Text>
                   <Ionicons name="chevron-forward" size={13} color={colors.textDim} />
                 </View>
@@ -583,7 +583,7 @@ export default function DashboardScreen() {
                   }}
                 >
                   <Text style={[styles.schemeBtnTitle, { color: colors.textMain }, selectedPromoId === null && { color: colors.amberLight }]}>
-                    Individual (${starCookie.sale_price.toFixed(0)})
+                    Individual (${starCookie.sale_price.toFixed(2)})
                   </Text>
                   <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 2 }}>Precio regular</Text>
                 </TouchableOpacity>

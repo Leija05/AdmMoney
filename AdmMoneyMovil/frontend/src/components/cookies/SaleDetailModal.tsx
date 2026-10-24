@@ -231,8 +231,8 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                   </View>
 
                   <View style={styles.badgeRow}>
-                    <Badge label={`${marginPct.toFixed(1)}% Margen Neto`} variant="emerald" />
-                    <Badge label={`~${roiPct.toFixed(0)}% ROI`} variant="amber" />
+                    <Badge label={`${marginPct.toFixed(2)}% Margen Neto`} variant="emerald" />
+                    <Badge label={`~${roiPct.toFixed(2)}% ROI`} variant="amber" />
                   </View>
                 </View>
               </View>

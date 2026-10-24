@@ -254,7 +254,7 @@ export const CookiesPage: React.FC<CookiesPageProps> = ({
 
                     <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                       <span className="badge" style={{ background: 'var(--pastel-mint-bg)', color: 'var(--pastel-mint-text)', border: '1px solid var(--pastel-mint-border)', fontWeight: 700 }}>
-                        {cookie.profit_margin_pct.toFixed(0)}% margen
+                        {cookie.profit_margin_pct.toFixed(2)}% margen
                       </span>
                       {onEditCookie && (
                         <button
@@ -499,7 +499,7 @@ export const CookiesPage: React.FC<CookiesPageProps> = ({
                         {ing.min_stock_alert || 5} {ing.unit}
                       </td>
                       <td style={{ fontFamily: 'Outfit', fontWeight: 800, color: '#fbbf24' }}>
-                        ${ing.cost_per_unit.toFixed(4)} / {ing.unit}
+                        ${ing.cost_per_unit.toFixed(2)} / {ing.unit}
                       </td>
                       <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{ing.supplier || 'Local'}</td>
                       <td>

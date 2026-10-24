@@ -280,7 +280,7 @@ class OrderService:
                 # Descontar del ingrediente correspondiente
                 db.cookie_ingredients.update_one(
                     {"name": {"$regex": f"^{ing_name}", "$options": "i"}},
-                    {"$inc": {"stock_quantity": -round(required_total, 3)}}
+                    {"$inc": {"stock_quantity": -round(required_total, 2)}}
                 )
 
     @staticmethod
@@ -306,7 +306,7 @@ class OrderService:
 
                 db.cookie_ingredients.update_one(
                     {"name": {"$regex": f"^{ing_name}", "$options": "i"}},
-                    {"$inc": {"stock_quantity": round(required_total, 3)}}
+                    {"$inc": {"stock_quantity": round(required_total, 2)}}
                 )
 
     @staticmethod

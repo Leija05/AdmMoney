@@ -375,7 +375,7 @@ export const EditCookieModal: React.FC<EditCookieModalProps> = ({
                       Estructura por Tanda ({yieldNum} pzas)
                     </Text>
                     <Badge
-                      label={`${marginPct.toFixed(1)}% Margen`}
+                      label={`${marginPct.toFixed(2)}% Margen`}
                       variant={marginPct >= 60 ? 'emerald' : 'amber'}
                     />
                   </View>
@@ -815,7 +815,7 @@ export const EditCookieModal: React.FC<EditCookieModalProps> = ({
                                   {item.supplier || 'Almacén'} • Stock: {item.stock_quantity} {item.unit}
                                 </Text>
                                 <Text style={{ fontSize: 11, fontWeight: '800', color: colors.emeraldLight, marginTop: 2 }}>
-                                  ${item.cost_per_unit.toFixed(3)} / {item.unit}
+                                  ${item.cost_per_unit.toFixed(2)} / {item.unit}
                                 </Text>
                               </View>
                               <View>

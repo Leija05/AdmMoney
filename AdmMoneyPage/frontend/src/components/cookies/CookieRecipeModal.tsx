@@ -333,7 +333,7 @@ export const CookieRecipeModal: React.FC<CookieRecipeModalProps> = ({
             </div>
             <div style={{ marginTop: '0.35rem' }}>
               <Badge variant="emerald">
-                {marginPct.toFixed(1)}% margen
+                {marginPct.toFixed(2)}% margen
               </Badge>
             </div>
           </div>

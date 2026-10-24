@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,9 @@ import {
   Modal,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  Alert
+  Alert,
+  Animated,
+  PanResponder,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Expense } from '../../lib/types';
@@ -34,6 +36,48 @@ export const ExpenseActionModal: React.FC<ExpenseActionModalProps> = ({
   onDelete,
 }) => {
   const colors = useThemeColors();
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      translateY.setValue(0);
+    }
+  }, [visible]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
+        return gestureState.dy > 5 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.2;
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        if (gestureState.dy > 0) {
+          translateY.setValue(gestureState.dy);
+        } else {
+          translateY.setValue(gestureState.dy * 0.15);
+        }
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (gestureState.dy > 80 || (gestureState.dy > 25 && gestureState.vy > 0.35)) {
+          Animated.timing(translateY, {
+            toValue: 600,
+            duration: 180,
+            useNativeDriver: true,
+          }).start(() => {
+            onClose();
+            translateY.setValue(0);
+          });
+        } else {
+          Animated.spring(translateY, {
+            toValue: 0,
+            bounciness: 4,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
   if (!expense) return null;
 
   const handleDelete = () => {
@@ -52,12 +96,23 @@ export const ExpenseActionModal: React.FC<ExpenseActionModalProps> = ({
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop}>
           <TouchableWithoutFeedback>
-            <View style={[styles.sheetContainer, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
-              {/* Little drag handle */}
-              <View style={styles.handleBar} />
+            <Animated.View
+              style={[
+                styles.sheetContainer,
+                {
+                  backgroundColor: colors.bgCard,
+                  borderColor: colors.borderSubtle,
+                  transform: [{ translateY }],
+                },
+              ]}
+            >
+              {/* Little drag handle with PanResponder */}
+              <View style={styles.handleWrapper} {...panResponder.panHandlers}>
+                <View style={styles.handleBar} />
+              </View>
 
-              {/* Expense mini summary */}
-              <View style={styles.header}>
+              {/* Expense mini summary with PanResponder */}
+              <View style={styles.header} {...panResponder.panHandlers}>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.eyebrow, { color: colors.rose }]}>Acciones Rápidas</Text>
                   <Text style={[styles.title, { color: colors.textMain }]} numberOfLines={1}>
@@ -147,7 +202,7 @@ export const ExpenseActionModal: React.FC<ExpenseActionModalProps> = ({
                   <Ionicons name="chevron-forward" size={16} color={colors.rose} />
                 </TouchableOpacity>
               </View>
-            </View>
+            </Animated.View>
           </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
@@ -173,13 +228,17 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
+  handleWrapper: {
+    alignItems: 'center',
+    paddingVertical: 4,
+    marginBottom: 8,
+  },
   handleBar: {
     width: 36,
     height: 4,
     borderRadius: 2,
     backgroundColor: 'rgba(156, 163, 175, 0.4)',
     alignSelf: 'center',
-    marginBottom: 14,
   },
   header: {
     flexDirection: 'row',

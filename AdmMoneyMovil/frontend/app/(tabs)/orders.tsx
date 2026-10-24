@@ -191,7 +191,7 @@ export default function OrdersScreen() {
                     <Text style={[styles.metricLabel, { color: colors.textDim }]}>Por Cobrar</Text>
                   </View>
                   <Text style={[styles.metricVal, { color: colors.brandText }]}>
-                    ${totalToCollect.toFixed(0)}
+                    ${totalToCollect.toFixed(2)}
                   </Text>
                 </DoubleBezelCard>
               </View>

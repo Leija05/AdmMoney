@@ -326,7 +326,7 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
             stock_quantity: qty,
             package_quantity: qty,
             package_cost: cost,
-            cost_per_unit: Number((cost / qty).toFixed(3)),
+            cost_per_unit: Number((cost / qty).toFixed(2)),
             unit: newItem.unit,
             supplier: merchant.trim() || 'Proveedor',
             type: newItem.type,

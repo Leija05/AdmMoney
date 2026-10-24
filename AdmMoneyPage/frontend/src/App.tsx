@@ -337,7 +337,7 @@ const AppContent: React.FC = () => {
     try {
       const created = await ApiService.createIngredient(ingredientData);
       setIngredients((prev) => [...prev, created]);
-      notifySuccess('Insumo Guardado', `"${created.name}" agregado con costo unitario de $${created.cost_per_unit.toFixed(3)}.`);
+      notifySuccess('Insumo Guardado', `"${created.name}" agregado con costo unitario de $${created.cost_per_unit.toFixed(2)}.`);
       await fetchData();
     } catch (err: any) {
       showException({

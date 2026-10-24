@@ -293,7 +293,7 @@ export const AddCookieModal: React.FC<AddCookieModalProps> = ({
       ]);
       setIsSaving(false);
       onClose();
-      Alert.alert('¡Receta Creada!', `La receta "${name}" ha sido agregada con un margen del ${marginPct.toFixed(1)}%.`);
+      Alert.alert('¡Receta Creada!', `La receta "${name}" ha sido agregada con un margen del ${marginPct.toFixed(2)}%.`);
     } catch {
       setIsSaving(false);
       Alert.alert('Error', 'No se pudo guardar la receta.');
@@ -713,13 +713,13 @@ export const AddCookieModal: React.FC<AddCookieModalProps> = ({
                 <Text style={[styles.previewKey, { color: isDark ? '#9BA3AF' : '#92400E' }]}>
                   Margen de Utilidad
                 </Text>
-                <Text style={styles.previewValGold}>{marginPct.toFixed(1)}%</Text>
+                <Text style={styles.previewValGold}>{marginPct.toFixed(2)}%</Text>
               </View>
               <View style={styles.previewCol}>
                 <Text style={[styles.previewKey, { color: isDark ? '#9BA3AF' : '#92400E' }]}>
                   Rendimiento (ROI)
                 </Text>
-                <Text style={styles.previewValGold}>~{roiPct.toFixed(0)}%</Text>
+                <Text style={styles.previewValGold}>~{roiPct.toFixed(2)}%</Text>
               </View>
             </View>
 
@@ -977,7 +977,7 @@ export const AddCookieModal: React.FC<AddCookieModalProps> = ({
                               {item.supplier || 'Almacén'} • Stock: {item.stock_quantity} {item.unit}
                             </Text>
                             <Text style={{ fontSize: 11, fontWeight: '800', color: colors.emeraldLight, marginTop: 2 }}>
-                              ${item.cost_per_unit.toFixed(3)} / {item.unit}
+                              ${item.cost_per_unit.toFixed(2)} / {item.unit}
                             </Text>
                           </View>
                           <View style={{ alignItems: 'flex-end' }}>

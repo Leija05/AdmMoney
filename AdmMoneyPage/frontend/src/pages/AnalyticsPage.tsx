@@ -94,7 +94,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ summary, cookies, 
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <Badge variant="emerald">
-                          {item.margin_pct.toFixed(1)}% margen
+                          {item.margin_pct.toFixed(2)}% margen
                         </Badge>
                         <span style={{ fontFamily: 'Outfit', fontWeight: 800, color: 'var(--accent-emerald-light)', fontSize: '1rem' }}>
                           +${item.profit.toFixed(2)} neta
@@ -168,7 +168,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ summary, cookies, 
             {/* Category breakdown legend */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.5rem' }}>
               {Object.entries(categoryTotals).map(([cat, amount]) => {
-                const pct = ((amount / totalExp) * 100).toFixed(1);
+                const pct = ((amount / totalExp) * 100).toFixed(2);
                 const color = categoryColors[cat] || '#10b981';
                 return (
                   <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
@@ -177,7 +177,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ summary, cookies, 
                       <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{cat}</span>
                     </div>
                     <span style={{ color: 'var(--text-muted)' }}>
-                      ${amount.toFixed(0)} ({pct}%)
+                      ${amount.toFixed(2)} ({pct}%)
                     </span>
                   </div>
                 );
@@ -216,7 +216,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ summary, cookies, 
                 <div>
                   <h4 style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-main)' }}>{c.name}</h4>
                   <Badge variant="emerald" style={{ fontSize: '0.65rem' }}>
-                    {c.profit_margin_pct.toFixed(1)}% Margen
+                    {c.profit_margin_pct.toFixed(2)}% Margen
                   </Badge>
                 </div>
               </div>

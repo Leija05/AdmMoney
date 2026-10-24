@@ -406,7 +406,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-emerald)', boxShadow: '0 0 10px var(--accent-emerald)' }} />
                 <span style={{ fontSize: '0.825rem', color: 'var(--text-muted)' }}>
-                  Margen operativo consolidado: <strong style={{ color: 'var(--text-main)' }}>{marginPct.toFixed(1)}%</strong>
+                  Margen operativo consolidado: <strong style={{ color: 'var(--text-main)' }}>{marginPct.toFixed(2)}%</strong>
                 </span>
               </div>
 
@@ -528,10 +528,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     {isHovered && (
                       <div className="chart-tooltip-bubble">
                         <div style={{ color: 'var(--accent-emerald-light)', fontWeight: 800 }}>
-                          Ventas: ${item.cookie_revenue.toFixed(0)} MXN
+                          Ventas: ${item.cookie_revenue.toFixed(2)} MXN
                         </div>
                         <div style={{ color: 'var(--accent-rose-light)', fontWeight: 700 }}>
-                          Gastos: ${item.expenses.toFixed(0)} MXN
+                          Gastos: ${item.expenses.toFixed(2)} MXN
                         </div>
                       </div>
                     )}
@@ -611,7 +611,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   </div>
                 </div>
                 <div className="tabular-nums" style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '1.45rem', color: 'var(--accent-emerald-light)' }}>
-                  {marginPct.toFixed(1)}%
+                  {marginPct.toFixed(2)}%
                 </div>
               </div>
 

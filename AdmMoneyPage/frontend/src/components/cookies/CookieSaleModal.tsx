@@ -314,7 +314,7 @@ export const CookieSaleModal: React.FC<CookieSaleModalProps> = ({
               +${netProfit.toFixed(2)} MXN
             </div>
             <div style={{ fontSize: '0.75rem', color: '#34d399', fontWeight: 700, marginTop: '0.2rem' }}>
-              Rendimiento: ~{roiPct.toFixed(0)}%
+              Rendimiento: ~{roiPct.toFixed(2)}%
             </div>
           </div>
         </div>

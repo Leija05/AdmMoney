@@ -171,7 +171,7 @@ export const StockPurchaseModal: React.FC<StockPurchaseModalProps> = ({
                 <div style={{ padding: '0.65rem 0.85rem', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Antes de comprar</span>
                   <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-main)' }}>{prevStock} {currentIng?.unit}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>${prevCpp.toFixed(4)} / {currentIng?.unit}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>${prevCpp.toFixed(2)} / {currentIng?.unit}</div>
                 </div>
 
                 <ArrowRight size={18} color="var(--text-muted)" />
@@ -179,7 +179,7 @@ export const StockPurchaseModal: React.FC<StockPurchaseModalProps> = ({
                 <div style={{ padding: '0.65rem 0.85rem', background: 'var(--pastel-mint-bg)', border: '1px solid var(--pastel-mint-border)', borderRadius: '8px' }}>
                   <span style={{ fontSize: '0.7rem', color: 'var(--pastel-mint-text)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Nuevo Stock y Costo</span>
                   <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--pastel-mint-text)' }}>{newStock.toFixed(2)} {currentIng?.unit}</div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--pastel-mint-text)', fontWeight: 700 }}>${newCpp.toFixed(4)} / {currentIng?.unit}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--pastel-mint-text)', fontWeight: 700 }}>${newCpp.toFixed(2)} / {currentIng?.unit}</div>
                 </div>
               </div>
             </div>

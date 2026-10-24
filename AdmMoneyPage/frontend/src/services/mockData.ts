@@ -586,7 +586,7 @@ class MockDataRepository {
       unit: data.unit || 'kg',
       package_cost: pkgCost,
       package_quantity: pkgQty,
-      cost_per_unit: Number(unitCost.toFixed(4)),
+      cost_per_unit: Number(unitCost.toFixed(2)),
       stock_quantity: Number(data.stock_quantity) || 0,
       supplier: data.supplier || 'Proveedor Local',
       updated_at: todayStr,
@@ -714,7 +714,7 @@ class MockDataRepository {
         avg_price: item.units_sold > 0 ? Number((item.revenue / item.units_sold).toFixed(2)) : 0,
         avg_cost: item.units_sold > 0 ? Number((item.cost / item.units_sold).toFixed(2)) : 0,
         margin_pct:
-          item.revenue > 0 ? Number(((item.profit / item.revenue) * 100).toFixed(1)) : 0,
+          item.revenue > 0 ? Number(((item.profit / item.revenue) * 100).toFixed(2)) : 0,
       }))
       .sort((a, b) => b.units_sold - a.units_sold);
 
@@ -760,7 +760,7 @@ class MockDataRepository {
       total_cookie_cost: Number(totalCookieCost.toFixed(2)),
       net_cookie_profit: Number(netCookieProfit.toFixed(2)),
       overall_net_balance: Number(overallNetBalance.toFixed(2)),
-      cookie_profit_margin_pct: Number(cookieProfitMarginPct.toFixed(1)),
+      cookie_profit_margin_pct: Number(cookieProfitMarginPct.toFixed(2)),
       total_cookies_sold: totalCookiesSold,
       top_selling_cookie: topSellingCookie,
       category_breakdown: categoryBreakdown,
@@ -915,7 +915,7 @@ class MockDataRepository {
     const cookie = this.cookies.find(c => c.id === productId) || this.cookies[0];
     const wasteFactor = 1.0 + (wastePct / 100);
     const items = (cookie.ingredients || []).map((ing: any) => {
-      const scaled = Number(((ing.quantity / (cookie.batch_yield || 16)) * targetUnits * wasteFactor).toFixed(1));
+      const scaled = Number(((ing.quantity / (cookie.batch_yield || 16)) * targetUnits * wasteFactor).toFixed(2));
       const cost = Number(((ing.cost / (cookie.batch_yield || 16)) * targetUnits * wasteFactor).toFixed(2));
       return {
         name: ing.name,
@@ -978,7 +978,7 @@ class MockDataRepository {
       const newStock = prevStock + data.quantity;
       const newCpp = newStock > 0 ? (prevStock * prevCost + data.total_cost) / newStock : 0;
       ing.stock_quantity = newStock;
-      ing.cost_per_unit = Number(newCpp.toFixed(4));
+      ing.cost_per_unit = Number(newCpp.toFixed(2));
       return { ...ing };
     }
     return null;

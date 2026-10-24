@@ -66,7 +66,7 @@ export const CookieCard: React.FC<CookieCardProps> = ({
           </Text>
           <View style={styles.badgeRow}>
             <Badge
-              label={privacyMode ? '•••% Margen' : `${cookie.profit_margin_pct.toFixed(1)}% Margen`}
+              label={privacyMode ? '•••% Margen' : `${cookie.profit_margin_pct.toFixed(2)}% Margen`}
               variant="emerald"
             />
             <Text style={[styles.batchText, { color: colors.textDim }]}>

@@ -54,8 +54,8 @@ class CookieService:
             "unit": data.unit,
             "package_cost": float(data.package_cost),
             "package_quantity": float(data.package_quantity),
-            "cost_per_unit": round(cost_per_unit, 4),
-            "stock_quantity": float(data.stock_quantity or 0.0),
+            "cost_per_unit": round(cost_per_unit, 2),
+            "stock_quantity": round(float(data.stock_quantity or 0.0), 2),
             "supplier": data.supplier or "",
             "type": data.type or "edible",
             "min_stock_alert": float(data.min_stock_alert if data.min_stock_alert is not None else 5.0),
@@ -79,7 +79,7 @@ class CookieService:
 
         update_fields: Dict[str, Any] = {
             "updated_at": datetime.utcnow().isoformat(),
-            "cost_per_unit": round(cost_per_unit, 4)
+            "cost_per_unit": round(cost_per_unit, 2)
         }
 
         if data.name is not None:
@@ -133,10 +133,10 @@ class CookieService:
             {"id": ingredient_id},
             {
                 "$set": {
-                    "stock_quantity": round(new_total_stock, 3),
-                    "cost_per_unit": round(new_cpp, 4),
-                    "package_cost": purchased_total_cost,
-                    "package_quantity": purchased_qty,
+                    "stock_quantity": round(new_total_stock, 2),
+                    "cost_per_unit": round(new_cpp, 2),
+                    "package_cost": round(purchased_total_cost, 2),
+                    "package_quantity": round(purchased_qty, 2),
                     "supplier": data.supplier or existing.get("supplier", ""),
                     "updated_at": now_str
                 }
@@ -155,7 +155,7 @@ class CookieService:
                 category=category,
                 date=today_str,
                 payment_method="Transferencia",
-                notes=f"Proveedor: {data.supplier or existing.get('supplier', 'N/A')}. CPP actualizado a ${round(new_cpp, 4)}/{existing['unit']}.",
+                notes=f"Proveedor: {data.supplier or existing.get('supplier', 'N/A')}. CPP actualizado a ${round(new_cpp, 2)}/{existing['unit']}.",
                 expense_type="direct"
             ))
 
