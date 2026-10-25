@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors, radii, spacing, gradients } from '../../src/theme';
 import { OrderCard } from '../../src/components/orders/OrderCard';
 import { OrderModal } from '../../src/components/orders/OrderModal';
+import { OrderDeliveryReminderBanner } from '../../src/components/orders/OrderDeliveryReminderBanner';
 import { Button } from '../../src/components/ui/Button';
 import { BackendHeartbeat } from '../../src/components/ui/BackendHeartbeat';
 import { DoubleBezelCard } from '../../src/components/ui/DoubleBezelCard';
@@ -158,6 +159,14 @@ export default function OrdersScreen() {
         refreshing={isLoading}
         ListHeaderComponent={
           <View style={{ marginBottom: 14 }}>
+            {/* Urgent Delivery Reminder Banner */}
+            <OrderDeliveryReminderBanner
+              onPressOrder={(id) => {
+                const target = orders.find((o) => o.id === id);
+                if (target) handleEditOrder(target);
+              }}
+            />
+
             {/* Quick Metrics Cards */}
             <View style={styles.metricsRow}>
               <View style={{ flex: 1 }}>

@@ -7,14 +7,13 @@ import {
   TouchableOpacity,
   Animated,
   Easing,
-  Dimensions,
+  ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useThemeColors, radii } from '../../theme';
+import { useThemeColors } from '../../theme';
 import { AnimatedSignature } from './AnimatedSignature';
-
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 interface FloatingHeart {
   id: number;
@@ -37,6 +36,14 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
 }) => {
   const colors = useThemeColors();
   const isDark = colors.isDark;
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+
+  // Responsive adaptative calculations
+  const isSmallScreen = screenHeight < 720 || screenWidth < 360;
+  const cardWidth = Math.min(screenWidth - 32, 400);
+  const cardMaxHeight = Math.min(screenHeight * 0.88, 700);
+  const signatureWidth = Math.min(cardWidth - (isSmallScreen ? 50 : 70), 270);
+  const signatureHeight = Math.round(signatureWidth * (120 / 270));
 
   const [hearts, setHearts] = useState<FloatingHeart[]>([]);
   const [loveCount, setLoveCount] = useState(0);
@@ -107,7 +114,7 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
         animScale,
         animOpacity,
         symbol: symbols[Math.floor(Math.random() * symbols.length)],
-        size: 22 + Math.random() * 18,
+        size: isSmallScreen ? (18 + Math.random() * 12) : (22 + Math.random() * 18),
       };
 
       newHearts.push(h);
@@ -163,7 +170,16 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <Animated.View style={[styles.dialogCard, { transform: [{ scale: cardScale }] }]}>
+        <Animated.View
+          style={[
+            styles.dialogCard,
+            {
+              width: cardWidth,
+              maxHeight: cardMaxHeight,
+              transform: [{ scale: cardScale }],
+            },
+          ]}
+        >
           <LinearGradient
             colors={
               isDark
@@ -174,90 +190,109 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
             end={{ x: 1, y: 1 }}
             style={styles.gradientContainer}
           >
-            {/* Close button */}
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            {/* Close button always floating on top right */}
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
               <Ionicons name="close" size={20} color={isDark ? '#FDA4AF' : '#881337'} />
             </TouchableOpacity>
 
-            {/* Beating Heart Avatar */}
-            <View style={styles.avatarContainer}>
-              <Animated.View
+            {/* Scrollable Container so everything is guaranteed 100% visible on any screen */}
+            <ScrollView
+              style={{ width: '100%' }}
+              contentContainerStyle={[
+                styles.scrollContent,
+                {
+                  paddingTop: isSmallScreen ? 12 : 18,
+                  paddingBottom: isSmallScreen ? 16 : 22,
+                  paddingHorizontal: isSmallScreen ? 16 : 22,
+                },
+              ]}
+              showsVerticalScrollIndicator={false}
+              bounces={true}
+            >
+              {/* Beating Heart Avatar */}
+              <View style={[styles.avatarContainer, { height: isSmallScreen ? 70 : 86 }]}>
+                <Animated.View
+                  style={[
+                    styles.heartPulseGlow,
+                    {
+                      width: isSmallScreen ? 66 : 78,
+                      height: isSmallScreen ? 66 : 78,
+                      borderRadius: isSmallScreen ? 33 : 39,
+                      transform: [{ scale: heartPulse }],
+                      backgroundColor: isDark ? 'rgba(244, 63, 94, 0.22)' : 'rgba(244, 63, 94, 0.15)',
+                    },
+                  ]}
+                >
+                  <Ionicons name="heart" size={isSmallScreen ? 34 : 40} color="#F43F5E" />
+                </Animated.View>
+              </View>
+
+              {/* Dedication Header Badge */}
+              <View style={styles.pillBadge}>
+                <Text style={styles.sparkle}>✨</Text>
+                <Text style={styles.pillText}>DEDICATORIA DE AMOR</Text>
+                <Text style={styles.sparkle}>✨</Text>
+              </View>
+
+              <Text style={[styles.mainTitle, { color: isDark ? '#FFF1F2' : '#881337', fontSize: isSmallScreen ? 17 : 19 }]}>
+                Para el Amor de Mi Vida 💖
+              </Text>
+
+              {/* Heartfelt Letter Box */}
+              <View
                 style={[
-                  styles.heartPulseGlow,
+                  styles.messageBox,
                   {
-                    transform: [{ scale: heartPulse }],
-                    backgroundColor: isDark ? 'rgba(244, 63, 94, 0.22)' : 'rgba(244, 63, 94, 0.15)',
+                    padding: isSmallScreen ? 12 : 16,
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.85)',
+                    borderColor: isDark ? 'rgba(244, 63, 94, 0.3)' : 'rgba(251, 113, 133, 0.35)',
                   },
                 ]}
               >
-                <Ionicons name="heart" size={44} color="#F43F5E" />
-              </Animated.View>
-            </View>
-
-            {/* Dedication Header */}
-            <View style={styles.pillBadge}>
-              <Text style={styles.sparkle}>✨</Text>
-              <Text style={styles.pillText}>DEDICATORIA DE AMOR</Text>
-              <Text style={styles.sparkle}>✨</Text>
-            </View>
-
-            <Text style={[styles.mainTitle, { color: isDark ? '#FFF1F2' : '#881337' }]}>
-              Para el Amor de Mi Vida 💖
-            </Text>
-
-            {/* Heartfelt Letter Box */}
-            <View
-              style={[
-                styles.messageBox,
-                {
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.85)',
-                  borderColor: isDark ? 'rgba(244, 63, 94, 0.3)' : 'rgba(251, 113, 133, 0.35)',
-                },
-              ]}
-            >
-              <Text style={[styles.quoteText, { color: isDark ? '#FFE4E6' : '#4C0519' }]}>
-                “Aplicación hecha con amor y mucho cariño para el amor de mi vida, te apoyo en tus emprendimientos, te apoyo en todo lo que tú quieras hacer y siempre será así, Te amo demasiado”
-              </Text>
-
-              <View style={styles.noteDivider} />
-
-              <Text style={[styles.subNote, { color: isDark ? '#FDA4AF' : '#9F1239' }]}>
-                Cada línea de código y cada pantalla fueron diseñados pensando en ti y en tu éxito, sigamos construyendo grandes metas juntos My Natycitaa
-              </Text>
-
-              {/* Animated Handwritten Signature */}
-              <View style={styles.signatureBox}>
-                <Text style={[styles.signatureCaption, { color: isDark ? '#FDA4AF' : '#9F1239' }]}>
-                  Con todo mi amor para ti:
+                <Text style={[styles.quoteText, { color: isDark ? '#FFE4E6' : '#4C0519', fontSize: isSmallScreen ? 12.5 : 13.5, lineHeight: isSmallScreen ? 19 : 21 }]}>
+                  “Aplicación hecha con amor y mucho cariño para el amor de mi vida, te apoyo en tus emprendimientos, te apoyo en todo lo que tú quieras hacer y siempre será así, Te amo demasiado”
                 </Text>
-                <AnimatedSignature
-                  visible={visible}
-                  color={isDark ? '#FDA4AF' : '#BE123C'}
-                  width={270}
-                  height={125}
-                  isDark={isDark}
-                />
+
+                <View style={styles.noteDivider} />
+
+                <Text style={[styles.subNote, { color: isDark ? '#FDA4AF' : '#9F1239', fontSize: isSmallScreen ? 11 : 11.5, lineHeight: isSmallScreen ? 16 : 17 }]}>
+                  Cada línea de código y cada pantalla fueron diseñados pensando en ti y en tu éxito, sigamos construyendo grandes metas juntos My Natycitaa
+                </Text>
+
+                {/* Animated Handwritten Signature (Fully Responsive) */}
+                <View style={styles.signatureBox}>
+                  <Text style={[styles.signatureCaption, { color: isDark ? '#FDA4AF' : '#9F1239' }]}>
+                    Con todo mi amor para ti:
+                  </Text>
+                  <AnimatedSignature
+                    visible={visible}
+                    color={isDark ? '#FDA4AF' : '#BE123C'}
+                    width={signatureWidth}
+                    height={signatureHeight}
+                    isDark={isDark}
+                  />
+                </View>
               </View>
-            </View>
 
-            {/* Interactive Love Tap Button */}
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={handleSendMoreLove}
-              style={[styles.loveBtn, { backgroundColor: isDark ? '#E11D48' : '#F43F5E' }]}
-            >
-              <Ionicons name="sparkles" size={17} color="#FFF" />
-              <Text style={styles.loveBtnText}>
-                {loveCount > 0 ? `¡Enviando Amor! (+${loveCount} 💕)` : 'Enviar Más Amor 💕'}
-              </Text>
-            </TouchableOpacity>
+              {/* Interactive Love Tap Button */}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleSendMoreLove}
+                style={[styles.loveBtn, { backgroundColor: isDark ? '#E11D48' : '#F43F5E' }]}
+              >
+                <Ionicons name="sparkles" size={17} color="#FFF" />
+                <Text style={styles.loveBtnText}>
+                  {loveCount > 0 ? `¡Enviando Amor! (+${loveCount} 💕)` : 'Enviar Más Amor 💕'}
+                </Text>
+              </TouchableOpacity>
 
-            {/* Sweet Footer Close */}
-            <TouchableOpacity onPress={onClose} style={styles.footerCloseBtn}>
-              <Text style={[styles.footerCloseText, { color: isDark ? '#FDA4AF' : '#9F1239' }]}>
-                Cerrar con Amor 💌
-              </Text>
-            </TouchableOpacity>
+              {/* Sweet Footer Close */}
+              <TouchableOpacity onPress={onClose} style={styles.footerCloseBtn}>
+                <Text style={[styles.footerCloseText, { color: isDark ? '#FDA4AF' : '#9F1239' }]}>
+                  Cerrar con Amor 💌
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
           </LinearGradient>
         </Animated.View>
 
@@ -292,11 +327,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
   },
   dialogCard: {
-    width: '100%',
-    maxWidth: 380,
     borderRadius: 24,
     overflow: 'hidden',
     shadowColor: '#F43F5E',
@@ -306,42 +339,30 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   gradientContainer: {
-    padding: 24,
+    width: '100%',
+    flexShrink: 1,
+  },
+  scrollContent: {
     alignItems: 'center',
   },
   closeBtn: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    padding: 6,
+    top: 14,
+    right: 14,
+    padding: 7,
     borderRadius: 999,
-    backgroundColor: 'rgba(244, 63, 94, 0.12)',
-    zIndex: 10,
+    backgroundColor: 'rgba(244, 63, 94, 0.14)',
+    zIndex: 20,
   },
   avatarContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
-    marginBottom: 14,
-    height: 90,
+    marginTop: 4,
+    marginBottom: 8,
   },
   heartPulseGlow: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  floatingLayer: {
-    position: 'absolute',
-    bottom: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 200,
-    height: 100,
-  },
-  floatingHeartItem: {
-    position: 'absolute',
   },
   pillBadge: {
     flexDirection: 'row',
@@ -363,21 +384,17 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   mainTitle: {
-    fontSize: 19,
     fontWeight: '900',
     textAlign: 'center',
-    marginBottom: 14,
+    marginBottom: 12,
   },
   messageBox: {
     width: '100%',
-    padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    marginBottom: 18,
+    marginBottom: 14,
   },
   quoteText: {
-    fontSize: 13.5,
-    lineHeight: 21,
     fontStyle: 'italic',
     textAlign: 'center',
     fontWeight: '600',
@@ -385,17 +402,15 @@ const styles = StyleSheet.create({
   noteDivider: {
     height: 1,
     backgroundColor: 'rgba(244, 63, 94, 0.2)',
-    marginVertical: 12,
+    marginVertical: 10,
   },
   subNote: {
-    fontSize: 11.5,
-    lineHeight: 17,
     textAlign: 'center',
     fontWeight: '500',
   },
   signatureBox: {
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 10,
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: 'rgba(244, 63, 94, 0.15)',
@@ -413,7 +428,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 13,
+    paddingVertical: 12,
     borderRadius: 14,
     shadowColor: '#F43F5E',
     shadowOffset: { width: 0, height: 4 },
@@ -427,7 +442,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   footerCloseBtn: {
-    marginTop: 14,
+    marginTop: 10,
     paddingVertical: 6,
     paddingHorizontal: 16,
   },

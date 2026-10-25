@@ -21,6 +21,7 @@ import { ExpenseDetailModal } from '../../src/components/expenses/ExpenseDetailM
 import { BackendHeartbeat } from '../../src/components/ui/BackendHeartbeat';
 import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
 import { FadeSlideIn } from '../../src/components/ui/FadeSlideIn';
+import { OrderDeliveryReminderBanner } from '../../src/components/orders/OrderDeliveryReminderBanner';
 import { useAppStore } from '../../src/stores/app.store';
 import { Expense, CookieProduct } from '../../src/lib/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -233,6 +234,9 @@ export default function DashboardScreen() {
             <BackendHeartbeat onPress={() => router.push('/settings')} />
           </View>
         </View>
+
+        {/* Order Delivery Reminder Banner */}
+        <OrderDeliveryReminderBanner />
 
         {/* Global Net Balance Luxury Gradient Card */}
         <FadeSlideIn delay={40}>

@@ -41,6 +41,8 @@ export default function SettingsScreen() {
     setDailyClosingReminder,
     stockAlertsEnabled,
     setStockAlertsEnabled,
+    orderRemindersEnabled,
+    setOrderRemindersEnabled,
     businessName,
     setBusinessName,
     ticketFooterText,
@@ -436,6 +438,27 @@ export default function SettingsScreen() {
                 onValueChange={setStockAlertsEnabled}
                 trackColor={{ false: '#E2E8F0', true: colors.roseBg }}
                 thumbColor={stockAlertsEnabled ? colors.roseLight : '#CBD5E1'}
+              />
+            </View>
+
+            {/* Recordatorio de Pedidos Próximos a Entregar */}
+            <View style={[styles.settingItemRow, { borderTopWidth: 1, borderTopColor: colors.borderSubtle, paddingTop: 12 }]}>
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="time" size={16} color={colors.amberLight} />
+                  <Text style={[styles.settingItemTitle, { color: colors.textMain }]}>
+                    Recordatorio de Pedidos por Entregar
+                  </Text>
+                </View>
+                <Text style={[styles.cardSub, { color: colors.textDim }]}>
+                  Envía notificaciones a tu teléfono y muestra alertas cuando haya pedidos agendados para entregar hoy o mañana.
+                </Text>
+              </View>
+              <Switch
+                value={orderRemindersEnabled}
+                onValueChange={setOrderRemindersEnabled}
+                trackColor={{ false: '#E2E8F0', true: colors.amberBg }}
+                thumbColor={orderRemindersEnabled ? colors.amberLight : '#CBD5E1'}
               />
             </View>
           </DoubleBezelCard>

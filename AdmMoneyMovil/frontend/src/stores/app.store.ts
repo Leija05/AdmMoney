@@ -15,6 +15,7 @@ import {
 } from '../lib/types';
 import { MobileApiService, setApiHost } from '../services/api';
 import { APP_CONFIG } from '../config/appConfig';
+import { checkAndSendOrderDeliveryNotification } from '../services/notificationService';
 
 const customStorage: StateStorage = {
   getItem: async (name: string): Promise<string | null> => {
@@ -93,6 +94,7 @@ interface AppState {
   highPrecisionOcr: boolean;
   dailyClosingReminder: boolean;
   stockAlertsEnabled: boolean;
+  orderRemindersEnabled: boolean;
   businessName: string;
   ticketFooterText: string;
   privacyMode: boolean;
@@ -104,6 +106,7 @@ interface AppState {
   setHighPrecisionOcr: (enabled: boolean) => void;
   setDailyClosingReminder: (enabled: boolean) => void;
   setStockAlertsEnabled: (enabled: boolean) => void;
+  setOrderRemindersEnabled: (enabled: boolean) => void;
   setBusinessName: (name: string) => void;
   setTicketFooterText: (text: string) => void;
   setPrivacyMode: (enabled: boolean) => void;
@@ -174,6 +177,7 @@ export const useAppStore = create<AppState>()(
   highPrecisionOcr: true,
   dailyClosingReminder: true,
   stockAlertsEnabled: true,
+  orderRemindersEnabled: true,
   businessName: 'Lucky Cookies',
   ticketFooterText: '¡Gracias por endulzar tu día con nosotros!',
   privacyMode: false,
@@ -185,6 +189,12 @@ export const useAppStore = create<AppState>()(
   setHighPrecisionOcr: (highPrecisionOcr: boolean) => set({ highPrecisionOcr }),
   setDailyClosingReminder: (dailyClosingReminder: boolean) => set({ dailyClosingReminder }),
   setStockAlertsEnabled: (stockAlertsEnabled: boolean) => set({ stockAlertsEnabled }),
+  setOrderRemindersEnabled: (orderRemindersEnabled: boolean) => {
+    set({ orderRemindersEnabled });
+    if (orderRemindersEnabled) {
+      checkAndSendOrderDeliveryNotification(get().orders, true).catch(() => {});
+    }
+  },
   setBusinessName: (businessName: string) => set({ businessName }),
   setTicketFooterText: (ticketFooterText: string) => set({ ticketFooterText }),
   setPrivacyMode: (privacyMode: boolean) => set({ privacyMode }),
@@ -275,6 +285,10 @@ export const useAppStore = create<AppState>()(
           customers: mergedCustomers,
           isOnline: true,
         });
+
+        if (ords && ords.length > 0) {
+          checkAndSendOrderDeliveryNotification(ords, get().orderRemindersEnabled).catch(() => {});
+        }
       } else {
         set({ isOnline: false });
       }
