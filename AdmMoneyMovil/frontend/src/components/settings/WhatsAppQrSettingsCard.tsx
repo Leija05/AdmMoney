@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,67 +14,92 @@ import { useAppStore } from '../../stores/app.store';
 import { useThemeColors, radii, spacing } from '../../theme';
 import { DoubleBezelCard } from '../ui/DoubleBezelCard';
 import { VectorQrCode } from '../ui/VectorQrCode';
-import { buildWhatsAppLink, cleanPhoneForWhatsApp, formatDisplayPhone } from '../../lib/whatsappUtils';
+import { buildWhatsAppLink, formatDisplayPhone } from '../../lib/whatsappUtils';
 
 export const WhatsAppQrSettingsCard: React.FC = () => {
   const colors = useThemeColors();
+  const isDark = colors.isDark;
   const {
     whatsappPhone1,
     whatsappPhone2,
     whatsappLabel1,
     whatsappLabel2,
     defaultQrPhone,
-    setWhatsappPhone1,
-    setWhatsappPhone2,
-    setWhatsappLabel1,
-    setWhatsappLabel2,
     setDefaultQrPhone,
+    saveWhatsAppSettings,
     businessName,
   } = useAppStore();
 
-  const [isEditingPhones, setIsEditingPhones] = useState(false);
-  const [phone1Draft, setPhone1Draft] = useState(whatsappPhone1);
-  const [phone2Draft, setPhone2Draft] = useState(whatsappPhone2);
-  const [label1Draft, setLabel1Draft] = useState(whatsappLabel1 || 'Ventas / Pedidos');
-  const [label2Draft, setLabel2Draft] = useState(whatsappLabel2 || 'Atención / Soporte');
-  
+  const [phone1, setPhone1] = useState(whatsappPhone1 || '');
+  const [phone2, setPhone2] = useState(whatsappPhone2 || '');
+  const [label1, setLabel1] = useState(whatsappLabel1 || 'Pedidos Línea 1');
+  const [label2, setLabel2] = useState(whatsappLabel2 || 'Pedidos Línea 2');
+  const [hasSavedFeedback, setHasSavedFeedback] = useState(false);
+
   const [customMessage, setCustomMessage] = useState(
-    `¡Hola! Quisiera información y hacer un pedido de ${businessName}.`
+    `¡Hola! Me gustaría hacer un pedido en ${businessName || 'Lucky Cookies'}.`
   );
 
-  const activePhone = defaultQrPhone === 'phone1' ? whatsappPhone1 : whatsappPhone2;
-  const activeLabel = defaultQrPhone === 'phone1' ? (whatsappLabel1 || 'Teléfono 1') : (whatsappLabel2 || 'Teléfono 2');
+  // Sincronizar automáticamente cuando el store se rehidrate desde el almacenamiento persistente
+  useEffect(() => {
+    if (whatsappPhone1 !== undefined) setPhone1(whatsappPhone1);
+    if (whatsappPhone2 !== undefined) setPhone2(whatsappPhone2);
+    if (whatsappLabel1) setLabel1(whatsappLabel1);
+    if (whatsappLabel2) setLabel2(whatsappLabel2);
+  }, [whatsappPhone1, whatsappPhone2, whatsappLabel1, whatsappLabel2]);
+
+  const activePhone = defaultQrPhone === 'phone1' ? phone1 : phone2;
+  const activeLabel = defaultQrPhone === 'phone1' ? label1 : label2;
   const qrUrl = buildWhatsAppLink(activePhone, customMessage);
 
-  const handleSavePhones = () => {
-    setWhatsappPhone1(phone1Draft.trim());
-    setWhatsappPhone2(phone2Draft.trim());
-    setWhatsappLabel1(label1Draft.trim() || 'Ventas / Pedidos');
-    setWhatsappLabel2(label2Draft.trim() || 'Atención / Soporte');
-    setIsEditingPhones(false);
+  const handleSave = () => {
+    saveWhatsAppSettings({
+      phone1,
+      phone2,
+      label1,
+      label2,
+      defaultQrPhone,
+    });
+    setHasSavedFeedback(true);
+    setTimeout(() => setHasSavedFeedback(false), 2200);
     Alert.alert(
-      'Números Guardados',
-      'Los teléfonos de WhatsApp han sido actualizados con éxito para la generación de códigos QR y etiquetas de empaque.'
+      '¡Números Guardados!',
+      'Ambos números de WhatsApp para pedidos han sido guardados con éxito y están activos para generar códigos QR y etiquetas de empaque.'
     );
+  };
+
+  const handleSelectActiveLine = (line: 'phone1' | 'phone2') => {
+    setDefaultQrPhone(line);
+    saveWhatsAppSettings({
+      phone1,
+      phone2,
+      label1,
+      label2,
+      defaultQrPhone: line,
+    });
   };
 
   const handleTestWhatsApp = async () => {
     if (!activePhone.trim()) {
       Alert.alert(
         'Teléfono no configurado',
-        'Por favor ingresa un número de teléfono para poder abrir el chat de WhatsApp.'
+        'Ingresa y guarda el número de teléfono en la línea seleccionada para poder abrir el chat de WhatsApp.'
       );
       return;
     }
     const url = buildWhatsAppLink(activePhone, customMessage);
-    const canOpen = await Linking.canOpenURL(url);
-    if (canOpen) {
-      await Linking.openURL(url);
-    } else {
-      Alert.alert(
-        'No se pudo abrir WhatsApp',
-        'Verifica que tengas la app de WhatsApp instalada en tu dispositivo o el navegador web.'
-      );
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert(
+          'No se pudo abrir WhatsApp',
+          'Verifica que tengas la aplicación de WhatsApp instalada en tu dispositivo o el navegador web.'
+        );
+      }
+    } catch {
+      Alert.alert('Error', 'No se pudo abrir el enlace de WhatsApp.');
     }
   };
 
@@ -82,243 +107,259 @@ export const WhatsAppQrSettingsCard: React.FC = () => {
     if (!activePhone.trim()) {
       Alert.alert(
         'Teléfono Requerido',
-        'Ingresa al menos un número para poder compartir tu código o enlace directo de WhatsApp.'
+        'Ingresa al menos un número telefónico para poder compartir tu código de pedidos.'
       );
       return;
     }
     try {
       await Share.share({
-        title: `WhatsApp Directo - ${businessName}`,
-        message: `¡Contáctanos directo por WhatsApp en ${businessName}!\n\nCanal: ${activeLabel}\nNúmero: ${formatDisplayPhone(
+        title: `Hacer Pedido en ${businessName} por WhatsApp`,
+        message: `¡Haz tu pedido de galletas por WhatsApp en ${businessName}!\n\n• Canal: ${activeLabel}\n• Teléfono: ${formatDisplayPhone(
           activePhone
-        )}\n\nEnvíanos un mensaje haciendo clic en el enlace:\n${qrUrl}`,
+        )}\n\nEnvíanos un mensaje haciendo clic aquí:\n${qrUrl}`,
       });
     } catch {}
   };
 
   return (
     <DoubleBezelCard style={styles.card}>
-      {/* Title Header */}
+      {/* Encabezado Principal */}
       <View style={styles.headerRow}>
-        <View style={{ flex: 1, paddingRight: 12 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Ionicons name="logo-whatsapp" size={20} color="#10B981" />
-            <Text style={[styles.cardTitle, { color: colors.textMain }]}>
-              WhatsApp & Códigos QR Directos
-            </Text>
-          </View>
+        <View style={styles.headerIconBadge}>
+          <Ionicons name="logo-whatsapp" size={22} color="#10B981" />
+        </View>
+        <View style={{ flex: 1, paddingLeft: 10 }}>
+          <Text style={[styles.cardTitle, { color: colors.textMain }]}>
+            Números de WhatsApp & QR de Pedidos
+          </Text>
           <Text style={[styles.cardSub, { color: colors.textDim }]}>
-            Configura hasta 2 líneas de WhatsApp y genera códigos QR para contacto directo o etiquetas de empaque.
+            Configura tus 2 números para recibir pedidos y selecciona cuál activará el código QR y las etiquetas.
           </Text>
         </View>
+      </View>
 
-        <TouchableOpacity
-          onPress={() => {
-            if (!isEditingPhones) {
-              setPhone1Draft(whatsappPhone1);
-              setPhone2Draft(whatsappPhone2);
-              setLabel1Draft(whatsappLabel1 || 'Ventas / Pedidos');
-              setLabel2Draft(whatsappLabel2 || 'Atención / Soporte');
-            }
-            setIsEditingPhones(!isEditingPhones);
-          }}
-          style={[styles.editBadgeBtn, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+      {/* --- SECCIÓN 1: CONFIGURACIÓN DE LAS 2 LÍNEAS DE PEDIDOS --- */}
+      <View style={styles.linesSection}>
+        <Text style={[styles.sectionSubtitle, { color: colors.textDim }]}>
+          CONFIGURA LOS 2 NÚMEROS PARA RECIBIR PEDIDOS:
+        </Text>
+
+        {/* LÍNEA DE PEDIDOS 1 */}
+        <View
+          style={[
+            styles.phoneCard,
+            {
+              backgroundColor: colors.bgTertiary,
+              borderColor: defaultQrPhone === 'phone1' ? colors.brand : colors.borderSubtle,
+            },
+          ]}
         >
-          <Ionicons name={isEditingPhones ? 'close-outline' : 'pencil-outline'} size={14} color={colors.textMain} />
-          <Text style={[styles.editBadgeText, { color: colors.textMain }]}>
-            {isEditingPhones ? 'Cancelar' : 'Editar Líneas'}
+          <View style={styles.phoneCardTop}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => handleSelectActiveLine('phone1')}
+              style={styles.radioClickArea}
+            >
+              <Ionicons
+                name={defaultQrPhone === 'phone1' ? 'radio-button-on' : 'radio-button-off'}
+                size={18}
+                color={defaultQrPhone === 'phone1' ? colors.brandLight : colors.textDim}
+              />
+              <Text
+                style={[
+                  styles.phoneCardHeading,
+                  { color: defaultQrPhone === 'phone1' ? colors.brandLight : colors.textMain },
+                ]}
+              >
+                Línea de Pedidos 1
+              </Text>
+            </TouchableOpacity>
+
+            {defaultQrPhone === 'phone1' ? (
+              <View style={[styles.activeBadge, { backgroundColor: colors.brand }]}>
+                <Ionicons name="qr-code" size={11} color="#FFFFFF" />
+                <Text style={styles.activeBadgeText}>Activo en QR</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={() => handleSelectActiveLine('phone1')}
+                style={[styles.selectLineBtn, { borderColor: colors.borderSubtle }]}
+              >
+                <Text style={[styles.selectLineBtnText, { color: colors.textDim }]}>Usar en QR</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Formulario Línea 1 */}
+          <View style={styles.cardFormRow}>
+            <View style={styles.labelInputCol}>
+              <Text style={[styles.tinyLabel, { color: colors.textDim }]}>Nombre / Etiqueta</Text>
+              <TextInput
+                style={[
+                  styles.labelInput,
+                  { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle, color: colors.textMain },
+                ]}
+                placeholder="Ej. Pedidos Principal"
+                placeholderTextColor={colors.textDim}
+                value={label1}
+                onChangeText={setLabel1}
+              />
+            </View>
+
+            <View style={styles.phoneInputCol}>
+              <Text style={[styles.tinyLabel, { color: colors.textDim }]}>Teléfono (10 dígitos)</Text>
+              <View
+                style={[
+                  styles.phoneInputWrapper,
+                  { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle },
+                ]}
+              >
+                <View style={styles.prefixPill}>
+                  <Text style={[styles.prefixText, { color: colors.textDim }]}>+52</Text>
+                </View>
+                <TextInput
+                  style={[styles.phoneTextInput, { color: colors.textMain }]}
+                  placeholder="312 123 4567"
+                  placeholderTextColor={colors.textDim}
+                  keyboardType="phone-pad"
+                  value={phone1}
+                  onChangeText={setPhone1}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* LÍNEA DE PEDIDOS 2 */}
+        <View
+          style={[
+            styles.phoneCard,
+            {
+              backgroundColor: colors.bgTertiary,
+              borderColor: defaultQrPhone === 'phone2' ? colors.brand : colors.borderSubtle,
+              marginTop: 10,
+            },
+          ]}
+        >
+          <View style={styles.phoneCardTop}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => handleSelectActiveLine('phone2')}
+              style={styles.radioClickArea}
+            >
+              <Ionicons
+                name={defaultQrPhone === 'phone2' ? 'radio-button-on' : 'radio-button-off'}
+                size={18}
+                color={defaultQrPhone === 'phone2' ? colors.brandLight : colors.textDim}
+              />
+              <Text
+                style={[
+                  styles.phoneCardHeading,
+                  { color: defaultQrPhone === 'phone2' ? colors.brandLight : colors.textMain },
+                ]}
+              >
+                Línea de Pedidos 2
+              </Text>
+            </TouchableOpacity>
+
+            {defaultQrPhone === 'phone2' ? (
+              <View style={[styles.activeBadge, { backgroundColor: colors.brand }]}>
+                <Ionicons name="qr-code" size={11} color="#FFFFFF" />
+                <Text style={styles.activeBadgeText}>Activo en QR</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={() => handleSelectActiveLine('phone2')}
+                style={[styles.selectLineBtn, { borderColor: colors.borderSubtle }]}
+              >
+                <Text style={[styles.selectLineBtnText, { color: colors.textDim }]}>Usar en QR</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Formulario Línea 2 */}
+          <View style={styles.cardFormRow}>
+            <View style={styles.labelInputCol}>
+              <Text style={[styles.tinyLabel, { color: colors.textDim }]}>Nombre / Etiqueta</Text>
+              <TextInput
+                style={[
+                  styles.labelInput,
+                  { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle, color: colors.textMain },
+                ]}
+                placeholder="Ej. Pedidos Sucursal"
+                placeholderTextColor={colors.textDim}
+                value={label2}
+                onChangeText={setLabel2}
+              />
+            </View>
+
+            <View style={styles.phoneInputCol}>
+              <Text style={[styles.tinyLabel, { color: colors.textDim }]}>Teléfono (10 dígitos)</Text>
+              <View
+                style={[
+                  styles.phoneInputWrapper,
+                  { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle },
+                ]}
+              >
+                <View style={styles.prefixPill}>
+                  <Text style={[styles.prefixText, { color: colors.textDim }]}>+52</Text>
+                </View>
+                <TextInput
+                  style={[styles.phoneTextInput, { color: colors.textMain }]}
+                  placeholder="312 987 6543"
+                  placeholderTextColor={colors.textDim}
+                  keyboardType="phone-pad"
+                  value={phone2}
+                  onChangeText={setPhone2}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* BOTÓN DESTACADO PARA GUARDAR NÚMEROS */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={handleSave}
+          style={[
+            styles.saveAllBtn,
+            { backgroundColor: hasSavedFeedback ? '#10B981' : colors.brand },
+          ]}
+        >
+          <Ionicons
+            name={hasSavedFeedback ? 'checkmark-circle' : 'save-outline'}
+            size={17}
+            color="#FFFFFF"
+          />
+          <Text style={styles.saveAllBtnText}>
+            {hasSavedFeedback ? '¡Números Guardados Correctamente!' : 'Guardar Números de Pedidos'}
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Editing Mode */}
-      {isEditingPhones ? (
-        <View style={[styles.editFormBox, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
-          <Text style={[styles.editFormNotice, { color: colors.brandText }]}>
-            Ingresa los 10 dígitos de tu teléfono móvil (ej. 55 1234 5678). El código internacional de país (+52 para México) se gestionará automáticamente.
-          </Text>
-
-          {/* Línea 1 */}
-          <View style={styles.inputGroup}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <Ionicons name="call" size={14} color={colors.emeraldLight} />
-              <Text style={[styles.fieldLabel, { color: colors.textMain }]}>Línea 1 (Principal)</Text>
-            </View>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TextInput
-                style={[
-                  styles.labelInput,
-                  { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle, color: colors.textMain },
-                ]}
-                placeholder="Etiqueta ej. Ventas"
-                placeholderTextColor={colors.textDim}
-                value={label1Draft}
-                onChangeText={setLabel1Draft}
-              />
-              <TextInput
-                style={[
-                  styles.phoneInput,
-                  { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle, color: colors.textMain },
-                ]}
-                placeholder="10 dígitos del teléfono"
-                placeholderTextColor={colors.textDim}
-                keyboardType="phone-pad"
-                value={phone1Draft}
-                onChangeText={setPhone1Draft}
-              />
-            </View>
-          </View>
-
-          {/* Línea 2 */}
-          <View style={[styles.inputGroup, { marginTop: 12 }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <Ionicons name="chatbubbles" size={14} color={colors.brandLight} />
-              <Text style={[styles.fieldLabel, { color: colors.textMain }]}>Línea 2 (Secundaria / Soporte)</Text>
-            </View>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TextInput
-                style={[
-                  styles.labelInput,
-                  { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle, color: colors.textMain },
-                ]}
-                placeholder="Etiqueta ej. Soporte"
-                placeholderTextColor={colors.textDim}
-                value={label2Draft}
-                onChangeText={setLabel2Draft}
-              />
-              <TextInput
-                style={[
-                  styles.phoneInput,
-                  { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle, color: colors.textMain },
-                ]}
-                placeholder="10 dígitos del teléfono"
-                placeholderTextColor={colors.textDim}
-                keyboardType="phone-pad"
-                value={phone2Draft}
-                onChangeText={setPhone2Draft}
-              />
-            </View>
-          </View>
-
-          <TouchableOpacity
-            onPress={handleSavePhones}
-            style={[styles.saveBtn, { backgroundColor: colors.brand }]}
-          >
-            <Ionicons name="checkmark-done" size={16} color="#FFFFFF" />
-            <Text style={styles.saveBtnText}>Guardar Líneas Telefónicas</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
-
-      {/* Selector de número activo para el QR */}
-      <View style={styles.selectorContainer}>
-        <Text style={[styles.subLabel, { color: colors.textDim }]}>
-          SELECCIONA LA LÍNEA A DONDE REDIRIGIRÁ EL CÓDIGO QR:
-        </Text>
-
-        <View style={styles.phoneTabsRow}>
-          {/* Opción Línea 1 */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setDefaultQrPhone('phone1')}
-            style={[
-              styles.phoneTabBtn,
-              {
-                backgroundColor: defaultQrPhone === 'phone1' ? colors.brandBg : colors.bgTertiary,
-                borderColor: defaultQrPhone === 'phone1' ? colors.brandBorder : colors.borderSubtle,
-              },
-            ]}
-          >
-            <View style={styles.tabTop}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Ionicons
-                  name={defaultQrPhone === 'phone1' ? 'radio-button-on' : 'radio-button-off'}
-                  size={14}
-                  color={defaultQrPhone === 'phone1' ? colors.brandText : colors.textDim}
-                />
-                <Text
-                  style={[
-                    styles.tabTitle,
-                    { color: defaultQrPhone === 'phone1' ? colors.brandText : colors.textMain },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {whatsappLabel1 || 'Línea 1'}
-                </Text>
-              </View>
-              {defaultQrPhone === 'phone1' && (
-                <View style={[styles.activePill, { backgroundColor: colors.brand }]}>
-                  <Text style={styles.activePillText}>Activo en QR</Text>
-                </View>
-              )}
-            </View>
-            <Text style={[styles.tabPhone, { color: colors.textMuted }]}>
-              {whatsappPhone1 ? formatDisplayPhone(whatsappPhone1) : 'Sin registrar'}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Opción Línea 2 */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setDefaultQrPhone('phone2')}
-            style={[
-              styles.phoneTabBtn,
-              {
-                backgroundColor: defaultQrPhone === 'phone2' ? colors.brandBg : colors.bgTertiary,
-                borderColor: defaultQrPhone === 'phone2' ? colors.brandBorder : colors.borderSubtle,
-              },
-            ]}
-          >
-            <View style={styles.tabTop}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Ionicons
-                  name={defaultQrPhone === 'phone2' ? 'radio-button-on' : 'radio-button-off'}
-                  size={14}
-                  color={defaultQrPhone === 'phone2' ? colors.brandText : colors.textDim}
-                />
-                <Text
-                  style={[
-                    styles.tabTitle,
-                    { color: defaultQrPhone === 'phone2' ? colors.brandText : colors.textMain },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {whatsappLabel2 || 'Línea 2'}
-                </Text>
-              </View>
-              {defaultQrPhone === 'phone2' && (
-                <View style={[styles.activePill, { backgroundColor: colors.brand }]}>
-                  <Text style={styles.activePillText}>Activo en QR</Text>
-                </View>
-              )}
-            </View>
-            <Text style={[styles.tabPhone, { color: colors.textMuted }]}>
-              {whatsappPhone2 ? formatDisplayPhone(whatsappPhone2) : 'Sin registrar'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* QR Code Presentation Box */}
+      {/* --- SECCIÓN 2: TARJETA DEL CÓDIGO QR GENERADO --- */}
       <View style={[styles.qrDisplayCard, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
+        {/* Cabecera del QR */}
         <View style={styles.qrBadgeHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Ionicons name="qr-code" size={16} color={colors.emeraldLight} />
+            <Ionicons name="qr-code" size={17} color={colors.emeraldLight} />
             <Text style={[styles.qrBadgeTitle, { color: colors.textMain }]}>
               QR Directo • {activeLabel}
             </Text>
           </View>
-          <Text style={[styles.qrPhoneText, { color: colors.emeraldLight }]}>
-            {activePhone ? formatDisplayPhone(activePhone) : 'Configura un teléfono'}
-          </Text>
+          <View style={[styles.phonePillBadge, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : '#D1FAE5' }]}>
+            <Text style={[styles.qrPhoneText, { color: colors.emeraldLight }]}>
+              {activePhone ? formatDisplayPhone(activePhone) : 'Sin registrar'}
+            </Text>
+          </View>
         </View>
 
-        {/* QR Canvas */}
+        {/* Lienzo del Código QR */}
         <View style={styles.qrCanvasWrapper}>
           <View style={[styles.qrFrame, { borderColor: colors.borderSubtle, backgroundColor: '#FFFFFF' }]}>
             <VectorQrCode
               value={qrUrl}
-              size={160}
+              size={170}
               color="#064E3B"
               backgroundColor="#FFFFFF"
             />
@@ -326,13 +367,13 @@ export const WhatsAppQrSettingsCard: React.FC = () => {
         </View>
 
         <Text style={[styles.qrInstructions, { color: colors.textDim }]}>
-          Cualquier cliente puede escanear este código con su cámara y se abrirá WhatsApp automáticamente listo para enviarte un mensaje.
+          Tus clientes pueden escanear este código con su cámara y se les abrirá WhatsApp directamente para pedirte galletas a la línea seleccionada.
         </Text>
 
-        {/* Mensaje al escanear */}
-        <View style={{ marginTop: 10 }}>
-          <Text style={[styles.fieldLabel, { color: colors.textDim, marginBottom: 4 }]}>
-            Mensaje predeterminado al abrir WhatsApp:
+        {/* Campo de Mensaje de Bienvenida */}
+        <View style={{ marginTop: 12 }}>
+          <Text style={[styles.tinyLabel, { color: colors.textDim, marginBottom: 5 }]}>
+            Mensaje inicial al abrir WhatsApp:
           </Text>
           <TextInput
             style={[
@@ -343,24 +384,26 @@ export const WhatsAppQrSettingsCard: React.FC = () => {
             onChangeText={setCustomMessage}
             placeholder="Mensaje de bienvenida..."
             placeholderTextColor={colors.textDim}
+            multiline
+            numberOfLines={2}
           />
         </View>
 
-        {/* Action Buttons */}
+        {/* Botones de Acción */}
         <View style={styles.qrActionsRow}>
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={handleTestWhatsApp}
             style={[styles.testWaBtn, { backgroundColor: '#10B981' }]}
           >
-            <Ionicons name="logo-whatsapp" size={16} color="#FFFFFF" />
+            <Ionicons name="logo-whatsapp" size={17} color="#FFFFFF" />
             <Text style={styles.testWaBtnText}>Probar en WhatsApp</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={handleShareQr}
-            style={[styles.shareQrBtn, { backgroundColor: colors.brand, borderColor: colors.brandBorder }]}
+            style={[styles.shareQrBtn, { backgroundColor: colors.brand }]}
           >
             <Ionicons name="share-social-outline" size={16} color="#FFFFFF" />
             <Text style={styles.shareQrBtnText}>Compartir Enlace</Text>
@@ -379,132 +422,153 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  headerIconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 15.5,
     fontWeight: '800',
     letterSpacing: -0.2,
   },
   cardSub: {
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 4,
+    fontSize: 11.5,
+    lineHeight: 16,
+    marginTop: 2,
   },
-  editBadgeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    borderWidth: 1,
+  linesSection: {
+    marginTop: 2,
+    marginBottom: 14,
   },
-  editBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  editFormBox: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  editFormNotice: {
-    fontSize: 11,
-    lineHeight: 15,
-    marginBottom: 10,
-  },
-  inputGroup: {
-    marginBottom: 6,
-  },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  labelInput: {
-    flex: 1.1,
-    height: 40,
-    borderRadius: 8,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  phoneInput: {
-    flex: 1.5,
-    height: 40,
-    borderRadius: 8,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    height: 40,
-    borderRadius: 8,
-    marginTop: 10,
-  },
-  saveBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  selectorContainer: {
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(148, 163, 184, 0.12)',
-  },
-  subLabel: {
+  sectionSubtitle: {
     fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
     marginBottom: 8,
   },
-  phoneTabsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  phoneTabBtn: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 10,
+  phoneCard: {
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1.5,
   },
-  tabTop: {
+  phoneCardTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 10,
   },
-  tabTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+  radioClickArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
   },
-  tabPhone: {
-    fontSize: 11,
-    marginTop: 4,
-    fontWeight: '500',
-  },
-  activePill: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  activePillText: {
-    color: '#FFFFFF',
-    fontSize: 9,
+  phoneCardHeading: {
+    fontSize: 13,
     fontWeight: '800',
   },
+  activeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 6,
+  },
+  activeBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  selectLineBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  selectLineBtnText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+  },
+  cardFormRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  labelInputCol: {
+    flex: 1.1,
+  },
+  phoneInputCol: {
+    flex: 1.4,
+  },
+  tinyLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    marginBottom: 4,
+    letterSpacing: 0.2,
+  },
+  labelInput: {
+    height: 38,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 9,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  phoneInputWrapper: {
+    height: 38,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  prefixPill: {
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100%',
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(148, 163, 184, 0.2)',
+  },
+  prefixText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  phoneTextInput: {
+    flex: 1,
+    paddingHorizontal: 8,
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
+  saveAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    height: 42,
+    borderRadius: 10,
+    marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  saveAllBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
   qrDisplayCard: {
-    marginTop: 12,
     padding: 14,
     borderRadius: 14,
     borderWidth: 1,
@@ -519,9 +583,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
   },
+  phonePillBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
   qrPhoneText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11.5,
+    fontWeight: '800',
   },
   qrCanvasWrapper: {
     alignItems: 'center',
@@ -529,13 +598,13 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   qrFrame: {
-    padding: 12,
-    borderRadius: 16,
+    padding: 14,
+    borderRadius: 18,
     borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
     elevation: 3,
   },
   qrInstructions: {
@@ -543,14 +612,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
     marginTop: 12,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
   },
   messageInput: {
-    height: 38,
+    minHeight: 52,
     borderRadius: 8,
     borderWidth: 1,
     paddingHorizontal: 10,
+    paddingVertical: 7,
     fontSize: 12,
+    textAlignVertical: 'top',
   },
   qrActionsRow: {
     flexDirection: 'row',
@@ -563,7 +634,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    height: 40,
+    height: 42,
     borderRadius: 8,
   },
   testWaBtnText: {
@@ -577,9 +648,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    height: 40,
+    height: 42,
     borderRadius: 8,
-    borderWidth: 1,
   },
   shareQrBtnText: {
     color: '#FFFFFF',

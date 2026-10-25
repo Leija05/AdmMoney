@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
-import QRCode from 'qrcode';
+import qrcode from 'qrcode-generator';
 import { Ionicons } from '@expo/vector-icons';
 
 interface VectorQrCodeProps {
@@ -22,16 +22,18 @@ export const VectorQrCode: React.FC<VectorQrCodeProps> = ({
   const qrData = useMemo(() => {
     if (!value || !value.trim()) return null;
     try {
-      const qr = QRCode.create(value.trim(), { errorCorrectionLevel });
-      const modules = qr.modules;
-      const count = modules.size;
-      const data = modules.data;
+      // typeNumber: 0 (detección automática de versión 1 a 40)
+      const qr = qrcode(0, errorCorrectionLevel);
+      qr.addData(value.trim());
+      qr.make();
 
-      // Construir SVG path compacto con todos los cuadrados negros
+      const count = qr.getModuleCount();
+
+      // Construir SVG path compacto con todos los cuadrados oscuros
       let path = '';
       for (let row = 0; row < count; row++) {
         for (let col = 0; col < count; col++) {
-          if (data[row * count + col]) {
+          if (qr.isDark(row, col)) {
             path += `M${col},${row}h1v1h-1z `;
           }
         }

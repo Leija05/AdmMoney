@@ -22,7 +22,11 @@ const customStorage: StateStorage = {
   getItem: async (name: string): Promise<string | null> => {
     if (Platform.OS === 'web') {
       try {
-        return typeof window !== 'undefined' ? window.localStorage.getItem(name) : null;
+        let val = typeof window !== 'undefined' ? window.localStorage.getItem(name) : null;
+        if (!val && name === 'admmoney_mobile_settings_v2' && typeof window !== 'undefined') {
+          val = window.localStorage.getItem('admmoney_mobile_settings_v1');
+        }
+        return val;
       } catch {
         return null;
       }
@@ -31,7 +35,16 @@ const customStorage: StateStorage = {
       if (!FileSystem.documentDirectory) return null;
       const fileUri = `${FileSystem.documentDirectory}${name}.json`;
       const fileInfo = await FileSystem.getInfoAsync(fileUri);
-      if (!fileInfo.exists) return null;
+      if (!fileInfo.exists) {
+        if (name === 'admmoney_mobile_settings_v2') {
+          const oldUri = `${FileSystem.documentDirectory}admmoney_mobile_settings_v1.json`;
+          const oldInfo = await FileSystem.getInfoAsync(oldUri);
+          if (oldInfo.exists) {
+            return await FileSystem.readAsStringAsync(oldUri);
+          }
+        }
+        return null;
+      }
       return await FileSystem.readAsStringAsync(fileUri);
     } catch (e) {
       console.warn('Storage read error:', e);
@@ -123,6 +136,13 @@ interface AppState {
   setWhatsappLabel1: (label: string) => void;
   setWhatsappLabel2: (label: string) => void;
   setDefaultQrPhone: (choice: 'phone1' | 'phone2') => void;
+  saveWhatsAppSettings: (settings: {
+    phone1: string;
+    phone2: string;
+    label1?: string;
+    label2?: string;
+    defaultQrPhone?: 'phone1' | 'phone2';
+  }) => void;
 
   setTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
@@ -197,8 +217,8 @@ export const useAppStore = create<AppState>()(
   monthlyGoal: 15000,
   whatsappPhone1: '',
   whatsappPhone2: '',
-  whatsappLabel1: 'Ventas / Pedidos',
-  whatsappLabel2: 'Atención / Soporte',
+  whatsappLabel1: 'Pedidos Línea 1',
+  whatsappLabel2: 'Pedidos Línea 2',
   defaultQrPhone: 'phone1',
 
   setCurrency: (currency: string) => set({ currency }),
@@ -223,6 +243,15 @@ export const useAppStore = create<AppState>()(
   setWhatsappLabel1: (whatsappLabel1: string) => set({ whatsappLabel1 }),
   setWhatsappLabel2: (whatsappLabel2: string) => set({ whatsappLabel2 }),
   setDefaultQrPhone: (defaultQrPhone: 'phone1' | 'phone2') => set({ defaultQrPhone }),
+  saveWhatsAppSettings: ({ phone1, phone2, label1, label2, defaultQrPhone }) => {
+    set((state) => ({
+      whatsappPhone1: phone1.trim(),
+      whatsappPhone2: phone2.trim(),
+      whatsappLabel1: label1 && label1.trim() ? label1.trim() : (state.whatsappLabel1 || 'Pedidos Línea 1'),
+      whatsappLabel2: label2 && label2.trim() ? label2.trim() : (state.whatsappLabel2 || 'Pedidos Línea 2'),
+      defaultQrPhone: defaultQrPhone || state.defaultQrPhone || 'phone1',
+    }));
+  },
 
   setTheme: (theme: 'light' | 'dark') => {
     try {
@@ -509,7 +538,7 @@ export const useAppStore = create<AppState>()(
   },
     }),
     {
-      name: 'admmoney_mobile_settings_v1',
+      name: 'admmoney_mobile_settings_v2',
       storage: createJSONStorage(() => customStorage),
       partialize: (state) => ({
         theme: state.theme,

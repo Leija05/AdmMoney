@@ -131,7 +131,7 @@ export const StickerGeneratorModal: React.FC<StickerGeneratorModalProps> = ({
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 }}>
               <Ionicons name="logo-whatsapp" size={14} color="#10B981" />
               <Text style={[styles.phoneSelectorTitle, { color: colors.textDim }]}>
-                DESTINO DEL QR DE LA ETIQUETA:
+                DESTINO DEL QR PARA PEDIDOS:
               </Text>
             </View>
             <View style={styles.phoneTabsRow}>
@@ -155,7 +155,7 @@ export const StickerGeneratorModal: React.FC<StickerGeneratorModalProps> = ({
                   ]}
                   numberOfLines={1}
                 >
-                  {whatsappLabel1 || 'Línea 1'} ({whatsappPhone1 ? formatDisplayPhone(whatsappPhone1) : 'Sin núm.'})
+                  {whatsappLabel1 || 'Pedidos Línea 1'} ({whatsappPhone1 ? formatDisplayPhone(whatsappPhone1) : 'Sin núm.'})
                 </Text>
               </TouchableOpacity>
 
@@ -179,7 +179,7 @@ export const StickerGeneratorModal: React.FC<StickerGeneratorModalProps> = ({
                   ]}
                   numberOfLines={1}
                 >
-                  {whatsappLabel2 || 'Línea 2'} ({whatsappPhone2 ? formatDisplayPhone(whatsappPhone2) : 'Sin núm.'})
+                  {whatsappLabel2 || 'Pedidos Línea 2'} ({whatsappPhone2 ? formatDisplayPhone(whatsappPhone2) : 'Sin núm.'})
                 </Text>
               </TouchableOpacity>
             </View>
