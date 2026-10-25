@@ -130,26 +130,36 @@ export default function OrdersScreen() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]} edges={['top']}>
       <SwipeTabWrapper currentRoute="/orders">
       {/* Top Header */}
-      <View style={[styles.header, { borderBottomColor: colors.borderSubtle }]}>
-        <View style={{ flex: 1, marginRight: 10 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={{ fontSize: 11, fontWeight: '800', color: colors.amberLight, letterSpacing: 0.8 }}>
-              LUCKY COOKIES
-            </Text>
-            <BackendHeartbeat />
+      <View style={[styles.header, { borderBottomColor: colors.borderSubtle, backgroundColor: colors.bgPrimary }]}>
+        <View style={styles.headerTopRow}>
+          <View style={[styles.eyebrowBadge, { backgroundColor: colors.amberBg, borderColor: colors.amberBorder }]}>
+            <Ionicons name="sparkles" size={10} color={colors.amberLight} />
+            <Text style={[styles.eyebrowText, { color: colors.amberLight }]}>LUCKY COOKIES</Text>
           </View>
-          <Text style={[styles.headerTitle, { color: colors.textMain }]} numberOfLines={1}>
-            Gestión de Pedidos
-          </Text>
+          <BackendHeartbeat compact />
         </View>
 
-        <Button
-          title="Nuevo Pedido"
-          variant="amber"
-          icon={<Ionicons name="add" size={17} color="#fff" />}
-          onPress={handleOpenAddOrder}
-          style={{ paddingVertical: 8, paddingHorizontal: 12, flexShrink: 0 }}
-        />
+        <View style={styles.headerMainRow}>
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <Text style={[styles.headerTitle, { color: colors.textMain }]} numberOfLines={1}>
+              Gestión de Pedidos
+            </Text>
+            <Text style={[styles.headerSubtitle, { color: colors.textDim }]}>
+              {orders.length === 1 ? '1 pedido registrado' : `${orders.length} pedidos registrados`}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            onPress={handleOpenAddOrder}
+            activeOpacity={0.85}
+            style={[styles.newOrderBtn, { backgroundColor: colors.amber }]}
+          >
+            <View style={styles.newOrderIconWrap}>
+              <Ionicons name="add" size={15} color="#FFFFFF" />
+            </View>
+            <Text style={styles.newOrderBtnText}>Nuevo Pedido</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -177,55 +187,105 @@ export default function OrdersScreen() {
               }}
             />
 
-            {/* Quick Metrics Cards */}
-            <View style={styles.metricsRow}>
-              <View style={{ flex: 1 }}>
-                <DoubleBezelCard style={styles.metricCard}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="time-outline" size={16} color={colors.amberLight} />
-                    <Text style={[styles.metricLabel, { color: colors.textDim }]}>Por Hornear</Text>
+            {/* Bento Quick Metrics */}
+            {/* 1. Hero Card: Dinero Pendiente de Cobro */}
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={() => setOrderStatusFilter(orderStatusFilter === 'Pagos Pendientes' ? 'Todos' : 'Pagos Pendientes')}
+              style={{ marginBottom: 10 }}
+            >
+              <DoubleBezelCard
+                style={[
+                  styles.heroMetricCard,
+                  orderStatusFilter === 'Pagos Pendientes' && {
+                    borderColor: colors.amberBorder,
+                    backgroundColor: colors.amberBg,
+                  },
+                ]}
+              >
+                <View style={styles.heroMetricRow}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <View style={[styles.metricIconBox, { backgroundColor: colors.amberBg }]}>
+                        <Ionicons name="hourglass-outline" size={15} color={colors.amberLight} />
+                      </View>
+                      <Text style={[styles.metricLabel, { color: colors.amberLight }]}>
+                        Por Cobrar (Pendiente)
+                      </Text>
+                    </View>
+                    <Text style={[styles.heroMetricVal, { color: colors.amberLight }]}>
+                      ${totalToCollect.toFixed(2)} <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textDim }}>MXN</Text>
+                    </Text>
+                    <Text style={[styles.heroMetricSub, { color: colors.textDim }]}>
+                      {totalPendingPaymentsCount} {totalPendingPaymentsCount === 1 ? 'pedido con saldo pendiente' : 'pedidos con saldo pendiente'}
+                    </Text>
                   </View>
-                  <Text style={[styles.metricVal, { color: colors.textMain }]}>
-                    {pendingOrders.length}
-                  </Text>
-                </DoubleBezelCard>
-              </View>
 
-              <View style={{ flex: 1 }}>
-                <DoubleBezelCard style={styles.metricCard}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="checkmark-done-circle-outline" size={16} color={colors.emeraldLight} />
-                    <Text style={[styles.metricLabel, { color: colors.textDim }]}>Listos p/ Entrega</Text>
+                  <View style={[styles.filterActionPill, {
+                    backgroundColor: orderStatusFilter === 'Pagos Pendientes' ? colors.amberLight : (isDark ? '#1C2230' : '#EEF2F6'),
+                    borderColor: orderStatusFilter === 'Pagos Pendientes' ? colors.amberLight : colors.borderSubtle,
+                  }]}>
+                    <Text style={[styles.filterActionText, {
+                      color: orderStatusFilter === 'Pagos Pendientes' ? '#FFFFFF' : colors.textMuted,
+                      fontWeight: orderStatusFilter === 'Pagos Pendientes' ? '800' : '600',
+                    }]}>
+                      {orderStatusFilter === 'Pagos Pendientes' ? '✓ Filtrado' : 'Filtrar'}
+                    </Text>
                   </View>
-                  <Text style={[styles.metricVal, { color: colors.emeraldLight }]}>
-                    {readyOrders.length}
-                  </Text>
-                </DoubleBezelCard>
-              </View>
+                </View>
+              </DoubleBezelCard>
+            </TouchableOpacity>
 
+            {/* 2. Sub-Row: Por Hornear & Listos p/ Entrega (2 spacious equal columns) */}
+            <View style={styles.subMetricsRow}>
               <TouchableOpacity
-                style={{ flex: 1.35 }}
-                activeOpacity={0.8}
-                onPress={() => setOrderStatusFilter(orderStatusFilter === 'Pagos Pendientes' ? 'Todos' : 'Pagos Pendientes')}
+                style={{ flex: 1 }}
+                activeOpacity={0.85}
+                onPress={() => setOrderStatusFilter(orderStatusFilter === 'Pendiente' ? 'Todos' : 'Pendiente')}
               >
                 <DoubleBezelCard
                   style={[
-                    styles.metricCard,
-                    orderStatusFilter === 'Pagos Pendientes' && {
-                      borderColor: colors.amberBorder,
-                      backgroundColor: colors.amberBg,
-                    },
+                    styles.subMetricCard,
+                    orderStatusFilter === 'Pendiente' && { borderColor: colors.brandBorder, backgroundColor: colors.brandBg },
                   ]}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="hourglass-outline" size={16} color={colors.amberLight} />
-                    <Text style={[styles.metricLabel, { color: colors.amberLight }]}>Dinero Pendiente</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                    <View style={[styles.metricIconBox, { backgroundColor: colors.brandBg }]}>
+                      <Ionicons name="time-outline" size={14} color={colors.brand} />
+                    </View>
+                    <Text style={[styles.metricLabel, { color: colors.textDim }]}>Por Hornear</Text>
                   </View>
-                  <Text style={[styles.metricVal, { color: colors.amberLight }]}>
-                    ${totalToCollect.toFixed(2)}
+                  <Text style={[styles.subMetricVal, { color: colors.textMain }]}>
+                    {pendingOrders.length}
                   </Text>
-                  <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textDim, marginTop: 2 }}>
-                    {totalPendingPaymentsCount} {totalPendingPaymentsCount === 1 ? 'pago pendiente' : 'pagos pendientes'}
+                  <Text style={[styles.subMetricSub, { color: colors.textDim }]}>
+                    {pendingOrders.length === 1 ? 'pedido en cola' : 'pedidos en cola'}
+                  </Text>
+                </DoubleBezelCard>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{ flex: 1 }}
+                activeOpacity={0.85}
+                onPress={() => setOrderStatusFilter(orderStatusFilter === 'Listo' ? 'Todos' : 'Listo')}
+              >
+                <DoubleBezelCard
+                  style={[
+                    styles.subMetricCard,
+                    orderStatusFilter === 'Listo' && { borderColor: colors.emeraldBorder, backgroundColor: colors.emeraldBg },
+                  ]}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                    <View style={[styles.metricIconBox, { backgroundColor: colors.emeraldBg }]}>
+                      <Ionicons name="checkmark-done-circle-outline" size={14} color={colors.emeraldLight} />
+                    </View>
+                    <Text style={[styles.metricLabel, { color: colors.textDim }]} numberOfLines={1}>Listos Entrega</Text>
+                  </View>
+                  <Text style={[styles.subMetricVal, { color: colors.emeraldLight }]}>
+                    {readyOrders.length}
+                  </Text>
+                  <Text style={[styles.subMetricSub, { color: colors.textDim }]}>
+                    {readyOrders.length === 1 ? 'listo p/ entregar' : 'listos p/ entregar'}
                   </Text>
                 </DoubleBezelCard>
               </TouchableOpacity>
@@ -234,6 +294,7 @@ export default function OrdersScreen() {
             {/* Filter Chips */}
             <ScrollView
               horizontal
+              nestedScrollEnabled={true}
               showsHorizontalScrollIndicator={false}
               style={{ marginTop: 12 }}
               contentContainerStyle={{ flexDirection: 'row', gap: 8, paddingVertical: 4 }}
@@ -310,40 +371,135 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+  },
+  headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    marginBottom: 8,
+  },
+  eyebrowBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+  },
+  eyebrowText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  headerMainRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '900',
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
-  metricsRow: {
+  headerSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  newOrderBtn: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: radii.pill,
+    elevation: 2,
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
-  metricCard: {
-    padding: 10,
-    borderRadius: 14,
+  newOrderIconWrap: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newOrderBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  heroMetricCard: {
+    padding: 14,
+    borderRadius: 16,
+  },
+  heroMetricRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  metricIconBox: {
+    width: 26,
+    height: 26,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   metricLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
-  metricVal: {
-    fontSize: 18,
+  heroMetricVal: {
+    fontSize: 22,
     fontWeight: '900',
-    marginTop: 4,
+    letterSpacing: -0.5,
+    marginTop: 2,
+  },
+  heroMetricSub: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 3,
+  },
+  filterActionPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+  },
+  filterActionText: {
+    fontSize: 11.5,
+  },
+  subMetricsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  subMetricCard: {
+    padding: 12,
+    borderRadius: 14,
+  },
+  subMetricVal: {
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  subMetricSub: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    marginTop: 3,
   },
   filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: radii.pill,
     borderWidth: 1,
   },
   filterChipText: {
