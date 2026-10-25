@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -7,7 +7,10 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  Alert
+  Alert,
+  Animated,
+  PanResponder,
+  Dimensions,
 } from 'react-native';
 import { Button } from '../ui/Button';
 import { colors, useThemeColors, radii, spacing } from '../../theme';
@@ -104,28 +107,85 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
     }
   };
 
+  const screenHeight = Dimensions.get('window').height;
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
+        return gestureState.dy > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.3;
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        if (gestureState.dy > 0) {
+          translateY.setValue(gestureState.dy);
+        } else {
+          translateY.setValue(gestureState.dy * 0.15);
+        }
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (gestureState.dy > 110 || (gestureState.dy > 30 && gestureState.vy > 0.35)) {
+          Animated.timing(translateY, {
+            toValue: screenHeight,
+            duration: 180,
+            useNativeDriver: true,
+          }).start(() => {
+            onClose();
+            translateY.setValue(0);
+          });
+        } else {
+          Animated.spring(translateY, {
+            toValue: 0,
+            friction: 8,
+            tension: 80,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  useEffect(() => {
+    if (visible) {
+      translateY.setValue(0);
+    }
+  }, [visible]);
+
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <View
+        <Animated.View
           style={[
             styles.dialog,
             {
               backgroundColor: isDark ? '#1C202A' : '#FFFFFF',
               borderColor: isDark ? '#2E384D' : '#E2E8F0',
+              transform: [{ translateY }],
             },
           ]}
         >
-          <View style={[styles.header, { borderBottomColor: isDark ? '#2A303C' : '#E5E7EB' }]}>
-            <View>
-              <Text style={[styles.headerEyebrow, { color: colors.amberLight }]}>Materia Prima</Text>
-              <Text style={[styles.headerTitle, { color: isDark ? '#F1F3F7' : '#181A1F' }]}>
-                {editingIngredient ? 'Editar Insumo Registrado' : 'Registrar Nuevo Insumo'}
-              </Text>
+          {/* Top Drag Handle & Header with panResponder */}
+          <View {...panResponder.panHandlers}>
+            <View style={styles.dragHandleContainer}>
+              <View
+                style={[
+                  styles.dragHandleBar,
+                  { backgroundColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)' },
+                ]}
+              />
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={22} color={colors.textMuted} />
-            </TouchableOpacity>
+
+            <View style={[styles.header, { borderBottomColor: isDark ? '#2A303C' : '#E5E7EB' }]}>
+              <View>
+                <Text style={[styles.headerEyebrow, { color: colors.amberLight }]}>Materia Prima</Text>
+                <Text style={[styles.headerTitle, { color: isDark ? '#F1F3F7' : '#181A1F' }]}>
+                  {editingIngredient ? 'Editar Insumo Registrado' : 'Registrar Nuevo Insumo'}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                <Ionicons name="close" size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <ScrollView
@@ -310,7 +370,7 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
               />
             </View>
           </ScrollView>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -329,6 +389,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderHighlight,
     maxHeight: '90%',
+  },
+  dragHandleContainer: {
+    width: '100%',
+    alignItems: 'center',
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
+  dragHandleBar: {
+    width: 40,
+    height: 5,
+    borderRadius: 2.5,
   },
   header: {
     flexDirection: 'row',

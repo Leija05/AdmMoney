@@ -125,6 +125,14 @@ android {
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
     }
+
+    applicationVariants.all { variant ->
+        if (variant.buildType.name == 'release') {
+            variant.outputs.all { output ->
+                outputFileName = "Adm_Monet.apk"
+            }
+        }
+    }
 }
 
 // Apply static values from `gradle.properties` to the `android.packagingOptions`
@@ -173,5 +181,41 @@ dependencies {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
+    }
+}
+
+// Auto-copiar el APK generado a la carpeta principal del proyecto al terminar assembleRelease
+afterEvaluate {
+    if (tasks.findByName('assembleRelease')) {
+        tasks.named('assembleRelease').configure { task ->
+            task.doLast {
+                def rootWorkspace = rootDir.parentFile.parentFile
+                def releaseDir = file("${projectDir}/build/outputs/apk/release")
+                if (!releaseDir.exists()) {
+                    releaseDir = file("${buildDir}/outputs/apk/release")
+                }
+
+                def apkFiles = releaseDir.listFiles()?.findAll { it.name.endsWith('.apk') }
+                if (apkFiles && apkFiles.size() > 0) {
+                    def generatedApk = apkFiles[0]
+                    println "\n========================================================"
+                    println ">>> EXPORTANDO APK A LA CARPETA PRINCIPAL..."
+                    copy {
+                        from generatedApk
+                        into rootWorkspace
+                        rename { "Adm_Monet.apk" }
+                    }
+                    copy {
+                        from generatedApk
+                        into rootWorkspace
+                        rename { "Adm_Money.apk" }
+                    }
+                    println ">>> ¡EXITO TOTAL! APK copiado a la carpeta principal:"
+                    println "    -> ${rootWorkspace.absolutePath}\\Adm_Monet.apk"
+                    println "    -> ${rootWorkspace.absolutePath}\\Adm_Money.apk"
+                    println "========================================================\n"
+                }
+            }
+        }
     }
 }

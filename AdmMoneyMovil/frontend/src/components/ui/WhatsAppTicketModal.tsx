@@ -247,13 +247,13 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
             </View>
 
             <View style={[styles.header, { borderBottomColor: isDark ? '#2A303C' : '#E5E7EB' }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <Image
                   source={require('../../../assets/lucky_cookies_logo.png')}
                   style={styles.logoImage}
                 />
                 <View>
-                  <Text style={[styles.headerEyebrow, { color: colors.whatsappText }]}>
+                  <Text style={[styles.headerEyebrow, { color: colors.emeraldLight }]}>
                     WhatsApp Ticket & PDF
                   </Text>
                   <Text style={[styles.headerTitle, { color: isDark ? '#F1F3F7' : '#181A1F' }]}>
@@ -261,63 +261,59 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
                   </Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
+              <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: isDark ? '#242936' : '#F1F5F9' }]}>
+                <Ionicons name="close" size={20} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
           </View>
 
-          <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
-            {/* Phone Number Input with Fixed 55 Prefix */}
+          <ScrollView
+            style={styles.body}
+            contentContainerStyle={{ paddingBottom: 36 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Phone Number Input with +52 Prefix */}
             <View style={styles.fieldGroup}>
               <Text style={[styles.label, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>
-                NÚMERO DE TELÉFONO O WHATSAPP (10 DÍGITOS) *
+                Número de Celular o WhatsApp *
               </Text>
               <View
                 style={[
                   styles.inputRow,
                   {
                     backgroundColor: isDark ? '#242936' : '#F8F9FA',
-                    borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                    borderColor: isDark ? '#2E384D' : '#E2E8F0',
                   },
                 ]}
               >
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 6,
-                    paddingRight: 10,
-                    borderRightWidth: 1,
-                    borderRightColor: isDark ? '#374151' : '#D1D5DB',
-                  }}
-                >
-                    <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#E5E7EB' : '#1F2937' }}>
-                      +52
-                    </Text>
-                  </View>
-                  <TextInput
-                    style={[styles.inputField, { color: isDark ? '#F1F3F7' : '#181A1F', marginLeft: 10 }]}
-                    placeholder="55 1234 5678 (10 dígitos)"
-                    placeholderTextColor={colors.textDim}
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                    value={phoneDigits}
-                    onChangeText={(val) => {
-                      const cleaned = val.replace(/\D/g, '');
-                      if (cleaned.startsWith('52') && cleaned.length > 10) {
-                        setPhoneDigits(cleaned.slice(2).slice(0, 10));
-                      } else {
-                        setPhoneDigits(cleaned.slice(0, 10));
-                      }
-                    }}
-                  />
+                <View style={styles.prefixBox}>
+                  <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#E5E7EB' : '#1F2937' }}>
+                    +52
+                  </Text>
                 </View>
-                <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 4 }}>
-                  Ingresa los 10 dígitos del número telefónico o celular.
-                </Text>
+                <TextInput
+                  style={[styles.inputField, { color: isDark ? '#F1F3F7' : '#181A1F' }]}
+                  placeholder="Ej. 312 123 4567"
+                  placeholderTextColor={colors.textDim}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  value={phoneDigits}
+                  onChangeText={(val) => {
+                    const cleaned = val.replace(/\D/g, '');
+                    if (cleaned.startsWith('52') && cleaned.length > 10) {
+                      setPhoneDigits(cleaned.slice(2).slice(0, 10));
+                    } else {
+                      setPhoneDigits(cleaned.slice(0, 10));
+                    }
+                  }}
+                />
               </View>
+              <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 4, marginLeft: 2 }}>
+                Ingresa los 10 dígitos del número telefónico.
+              </Text>
+            </View>
 
             {/* Toggle PDF Ticket */}
             <View
@@ -333,76 +329,61 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
                     : '#F8F9FA',
                   borderColor: includePdf
                     ? isDark
-                      ? 'rgba(16, 185, 129, 0.3)'
+                      ? 'rgba(16, 185, 129, 0.35)'
                       : '#A7F3D0'
                     : isDark
-                    ? '#2A303C'
-                    : '#E5E7EB',
+                    ? '#2E384D'
+                    : '#E2E8F0',
                 },
               ]}
             >
-              <View style={{ flex: 1, paddingRight: 10 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <View style={{ flex: 1, paddingRight: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
                   <Ionicons
                     name="document-text"
                     size={18}
-                    color={includePdf ? colors.whatsappText : colors.textMuted}
+                    color={includePdf ? colors.emeraldLight : colors.textMuted}
                   />
                   <Text
                     style={[
                       styles.toggleTitle,
-                      { color: includePdf ? colors.whatsappText : colors.textMain },
+                      { color: includePdf ? (isDark ? '#34D399' : '#047857') : colors.textMain },
                     ]}
                   >
                     Generar e Incluir Ticket en PDF
                   </Text>
                 </View>
-                <Text style={[styles.toggleDesc, { color: colors.textMuted }]}>
-                  Crea automáticamente el PDF con el logo oficial de lucky cookies, desglose y total.
+                <Text style={[styles.toggleDesc, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                  Adjunta el enlace oficial con logotipo de Lucky Cookies, desglose y comprobante.
                 </Text>
+                {includePdf && (
+                  <View style={styles.cryptoBadge}>
+                    <Ionicons name="shield-checkmark" size={13} color="#10B981" />
+                    <Text style={[styles.cryptoBadgeText, { color: isDark ? '#6EE7B7' : '#065F46' }]}>
+                      Token Criptográfico 24 car. • Vigencia 30 días
+                    </Text>
+                  </View>
+                )}
               </View>
               <Switch
                 value={includePdf}
                 onValueChange={setIncludePdf}
-                trackColor={{ false: '#767577', true: '#10B981' }}
-                thumbColor={includePdf ? '#FFFFFF' : '#f4f3f4'}
+                trackColor={{ false: isDark ? '#374151' : '#D1D5DB', true: '#10B981' }}
+                thumbColor="#FFFFFF"
               />
             </View>
-
-            {/* Security Badge Token info */}
-            {includePdf && (
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 8,
-                  backgroundColor: isDark ? 'rgba(59, 130, 246, 0.12)' : '#EFF6FF',
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  borderRadius: 10,
-                  marginBottom: 14,
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(59, 130, 246, 0.25)' : '#DBEAFE',
-                }}
-              >
-                <Ionicons name="shield-checkmark" size={16} color="#3B82F6" />
-                <Text style={{ fontSize: 11, color: isDark ? '#93C5FD' : '#1E40AF', flex: 1, fontWeight: '600' }}>
-                  Enlace Criptográfico Seguro (Token 24 car. • Vigencia 30 días)
-                </Text>
-              </View>
-            )}
 
             {/* Optional Custom Note */}
             <View style={styles.fieldGroup}>
               <Text style={[styles.label, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>
-                INFORMACIÓN OPCIONAL PARA EL MENSAJE
+                Mensaje o Nota Opcional
               </Text>
               <TextInput
                 style={[
                   styles.textArea,
                   {
                     backgroundColor: isDark ? '#242936' : '#F8F9FA',
-                    borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                    borderColor: isDark ? '#2E384D' : '#E2E8F0',
                     color: isDark ? '#F1F3F7' : '#181A1F',
                   },
                 ]}
@@ -417,34 +398,26 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
 
             {/* Live Message Preview */}
             <View style={styles.fieldGroup}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: 6,
-                }}
-              >
-                <Text style={[styles.label, { color: isDark ? '#9BA3AF' : '#5E6472', marginBottom: 0 }]}>
-                  VISTA PREVIA DEL MENSAJE WHATSAPP
-                </Text>
+              <View style={styles.previewHeaderRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="logo-whatsapp" size={14} color="#25D366" />
+                  <Text style={[styles.label, { color: isDark ? '#9BA3AF' : '#5E6472', marginBottom: 0 }]}>
+                    Vista Previa del Mensaje
+                  </Text>
+                </View>
                 {includePdf && (
                   <TouchableOpacity
                     onPress={handleOpenPdf}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 4,
-                      backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF',
-                      paddingHorizontal: 8,
-                      paddingVertical: 3,
-                      borderRadius: 6,
-                      borderWidth: 1,
-                      borderColor: isDark ? 'rgba(59, 130, 246, 0.3)' : '#BFDBFE',
-                    }}
+                    style={[
+                      styles.pdfTestBtn,
+                      {
+                        backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF',
+                        borderColor: isDark ? 'rgba(59, 130, 246, 0.3)' : '#BFDBFE',
+                      },
+                    ]}
                   >
-                    <Ionicons name="document-text-outline" size={13} color="#3B82F6" />
+                    <Ionicons name="open-outline" size={13} color="#3B82F6" />
                     <Text style={{ fontSize: 11, fontWeight: '700', color: '#3B82F6' }}>
                       Probar / Ver PDF
                     </Text>
@@ -455,15 +428,15 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
                 style={[
                   styles.previewBox,
                   {
-                    backgroundColor: isDark ? '#141822' : '#F0FDF4',
-                    borderColor: isDark ? '#1F2937' : '#DCFCE7',
+                    backgroundColor: isDark ? '#141822' : '#F9FAFB',
+                    borderColor: isDark ? '#252D3D' : '#E5E7EB',
                   },
                 ]}
               >
                 <Text
                   style={[
                     styles.previewText,
-                    { color: isDark ? '#E2E8F0' : '#166534' },
+                    { color: isDark ? '#E2E8F0' : '#1F2937' },
                   ]}
                 >
                   {buildMessage()}
@@ -479,7 +452,7 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
                   styles.cancelBtn,
                   {
                     backgroundColor: isDark ? '#242936' : '#F1F5F9',
-                    borderColor: isDark ? '#3B4353' : '#CBD5E1',
+                    borderColor: isDark ? '#374151' : '#CBD5E1',
                   },
                 ]}
               >
@@ -488,10 +461,10 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
 
               <TouchableOpacity
                 onPress={handleConfirmSend}
-                style={[styles.sendBtn, { backgroundColor: colors.whatsapp }]}
+                style={[styles.sendBtn, { backgroundColor: '#25D366' }]}
               >
-                <Ionicons name="logo-whatsapp" size={18} color="#FFF" />
-                <Text style={styles.sendBtnText}>Confirmar y Enviar</Text>
+                <Ionicons name="logo-whatsapp" size={19} color="#FFF" />
+                <Text style={styles.sendBtnText}>Enviar por WhatsApp</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -504,36 +477,45 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.78)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'flex-end',
   },
   dialog: {
     width: '100%',
-    maxWidth: 480,
-    maxHeight: '90%',
-    borderRadius: 20,
+    maxHeight: '92%',
+    borderTopLeftRadius: radii.outer,
+    borderTopRightRadius: radii.outer,
     borderWidth: 1,
-    overflow: 'hidden',
+    borderBottomWidth: 0,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    elevation: 20,
+  },
+  dragHandleContainer: {
+    alignItems: 'center',
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
+  dragHandleBar: {
+    width: 42,
+    height: 5,
+    borderRadius: 2.5,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 18,
-    paddingVertical: 14,
+    paddingBottom: 14,
+    paddingTop: 4,
     borderBottomWidth: 1,
   },
   logoImage: {
     width: 38,
     height: 38,
-    borderRadius: 8,
+    borderRadius: 10,
     resizeMode: 'contain',
   },
   headerEyebrow: {
@@ -543,12 +525,16 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   headerTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
-    marginTop: 1,
+    marginTop: 2,
   },
   closeBtn: {
-    padding: 6,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   body: {
     padding: 18,
@@ -557,9 +543,10 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   label: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
     marginBottom: 6,
   },
   inputRow: {
@@ -568,13 +555,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radii.md,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
+    paddingVertical: 4,
+  },
+  prefixBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingRight: 10,
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(150, 150, 150, 0.25)',
   },
   inputField: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
+    paddingVertical: 9,
+    paddingHorizontal: 10,
   },
   toggleCard: {
     flexDirection: 'row',
@@ -582,7 +578,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderWidth: 1,
     borderRadius: radii.md,
-    padding: 12,
+    padding: 14,
     marginBottom: 14,
   },
   toggleTitle: {
@@ -591,20 +587,46 @@ const styles = StyleSheet.create({
   },
   toggleDesc: {
     fontSize: 11,
-    marginTop: 2,
+    marginTop: 3,
+    lineHeight: 15,
+  },
+  cryptoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 6,
+  },
+  cryptoBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '700',
   },
   textArea: {
     borderWidth: 1,
     borderRadius: radii.md,
-    padding: 10,
+    padding: 12,
     fontSize: 13,
     minHeight: 64,
     textAlignVertical: 'top',
   },
+  previewHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  pdfTestBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+  },
   previewBox: {
     borderWidth: 1,
     borderRadius: radii.md,
-    padding: 12,
+    padding: 14,
   },
   previewText: {
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
@@ -619,24 +641,15 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: radii.md,
+    paddingVertical: 13,
+    borderRadius: radii.pill,
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
   },
   cancelBtnText: {
     fontSize: 13,
     fontWeight: '700',
-  },
-  dragHandleContainer: {
-    alignItems: 'center',
-    paddingTop: 8,
-    paddingBottom: 4,
-  },
-  dragHandleBar: {
-    width: 42,
-    height: 4.5,
-    borderRadius: 3,
   },
   sendBtn: {
     flex: 2,
@@ -644,8 +657,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 12,
-    borderRadius: radii.md,
+    paddingVertical: 13,
+    borderRadius: radii.pill,
     shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,

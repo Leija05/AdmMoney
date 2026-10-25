@@ -24,7 +24,7 @@ type ActiveReportView = 'cookies' | 'categories' | 'payments';
 export default function AnalyticsScreen() {
   const router = useRouter();
   const colors = useThemeColors();
-  const { summary, expenses, sales, loadAllData, isLoading, theme, toggleTheme } = useAppStore();
+  const { summary, expenses, sales, orders, loadAllData, isLoading, theme, toggleTheme } = useAppStore();
 
   const [period, setPeriod] = useState<PeriodFilter>('all');
   const [activeReport, setActiveReport] = useState<ActiveReportView>('cookies');
@@ -77,6 +77,16 @@ export default function AnalyticsScreen() {
   const avgMargin = totalRev > 0 ? (totalProfit / totalRev) * 100 : 0;
   const totalExpenses = filteredExpenses.reduce((acc, e) => acc + (e.amount || 0), 0);
   const netBalance = totalRev - totalExpenses;
+
+  const pendingPaymentOrders = orders.filter(
+    (o) => o.status !== 'Cancelado' && (o.payment_status === 'Pendiente' || o.payment_status === 'Anticipo')
+  );
+  const pendingPaymentTotal = summary?.pending_payment_amount ?? pendingPaymentOrders.reduce((sum, o) => {
+    if (o.payment_status === 'Pendiente') return sum + (o.total_amount || 0);
+    if (o.payment_status === 'Anticipo') return sum + Math.max(0, (o.total_amount || 0) - (o.deposit_amount || 0));
+    return sum;
+  }, 0);
+  const pendingPaymentsCount = summary?.pending_payment_count ?? pendingPaymentOrders.length;
 
   // Recipe performance
   const perfMap = new Map<string, { cookie_id: number; cookie_name: string; units_sold: number; revenue: number; profit: number }>();
@@ -260,6 +270,59 @@ export default function AnalyticsScreen() {
               <Text style={[styles.kpiSub, { color: colors.textDim }]}>piezas vendidas</Text>
             </DoubleBezelCard>
           </View>
+
+          {/* Dinero Pendiente de Cobro */}
+          {pendingPaymentTotal > 0 && (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => router.push('/orders')}
+              style={{ marginBottom: 14 }}
+            >
+              <DoubleBezelCard
+                gradient={
+                  theme === 'dark'
+                    ? ['rgba(245, 158, 11, 0.14)', 'rgba(217, 119, 6, 0.05)']
+                    : ['#FFFBEB', '#FEF3C7']
+                }
+                style={{
+                  borderColor: theme === 'dark' ? 'rgba(245, 158, 11, 0.35)' : '#FDE68A',
+                  borderWidth: 1,
+                }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                    <View
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 10,
+                        backgroundColor: theme === 'dark' ? 'rgba(245, 158, 11, 0.22)' : '#FDE68A',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons name="hourglass" size={18} color={colors.amberLight} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: colors.amberLight, textTransform: 'uppercase' }}>
+                          Dinero Pendiente
+                        </Text>
+                        <Badge label={`${pendingPaymentsCount} por cobrar`} variant="amber" />
+                      </View>
+                      <Text style={{ fontSize: 18, fontWeight: '900', color: colors.textMain, marginTop: 2 }}>
+                        ${pendingPaymentTotal.toFixed(2)} MXN
+                      </Text>
+                      <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 1 }}>
+                        Pedidos activos con saldo por liquidar (no incluidos en Ganancia Neta)
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.amberLight} />
+                </View>
+              </DoubleBezelCard>
+            </TouchableOpacity>
+          )}
 
           {/* Net Health Card */}
           <DoubleBezelCard

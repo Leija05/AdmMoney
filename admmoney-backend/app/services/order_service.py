@@ -94,9 +94,11 @@ class OrderService:
 
         db.orders.insert_one(doc)
 
-        # Si se crea como Pagado, sumar automáticamente a ventas cobradas
+        # Registro contable: Solo se suma como ganancia/ingreso si está Pagado o si tiene Anticipo
         if doc.get("payment_status") == "Pagado":
             OrderService._register_sales_for_order(doc)
+        elif doc.get("payment_status") == "Anticipo" and float(doc.get("deposit_amount", 0.0)) > 0:
+            OrderService._register_deposit_for_order(doc)
 
         # Auto-guardar cliente en el directorio si tiene nombre
         if data.customer_name and data.customer_name.strip():
@@ -165,6 +167,43 @@ class OrderService:
         db.cookie_sales.delete_many({"order_id": order_id})
 
     @staticmethod
+    def _register_deposit_for_order(order_dict: Dict[str, Any]):
+        db = get_db()
+        order_id = order_dict["id"]
+        # Evitar duplicados
+        if db.cookie_sales.find_one({"order_id": order_id}):
+            return
+
+        cust_name = order_dict.get("customer_name") or "Cliente"
+        deliv_date = order_dict.get("delivery_date") or date.today().isoformat()
+        pay_method = order_dict.get("payment_method") or "Efectivo"
+        deposit = float(order_dict.get("deposit_amount", 0.0))
+        if deposit <= 0:
+            return
+
+        sale_id = get_next_sequence("cookie_sales")
+        db.cookie_sales.insert_one({
+            "id": sale_id,
+            "order_id": order_id,
+            "cookie_id": 0,
+            "cookie_name": f"Anticipo Pedido #{order_id}",
+            "quantity": 1,
+            "unit_price": deposit,
+            "unit_cost": 0.0,
+            "total_revenue": deposit,
+            "total_cost": 0.0,
+            "net_profit": deposit,
+            "sale_date": deliv_date,
+            "customer_name": cust_name,
+            "payment_method": pay_method,
+            "notes": f"Anticipo Cobrado • Pedido #{order_id} • {cust_name}",
+            "promotion_id": None,
+            "promotion_name": None,
+            "discount_amount": 0.0,
+            "created_at": datetime.utcnow().isoformat()
+        })
+
+    @staticmethod
     def update_order(order_id: int, data: OrderUpdate) -> Optional[Dict[str, Any]]:
         db = get_db()
         existing = db.orders.find_one({"id": order_id})
@@ -203,18 +242,25 @@ class OrderService:
         update_dict["whatsapp_message"] = whatsapp_message
         update_dict["whatsapp_url"] = f"https://wa.me/{clean_phone}?text={urllib.parse.quote(whatsapp_message)}" if clean_phone else ""
 
-        # Manejo de cambio de estado de pago (Pagado <-> Pendiente / Anticipo)
+        # Manejo de cambio de estado de pago (Pagado <-> Pendiente / Anticipo) o monto de anticipo
         new_payment_status = update_dict.get("payment_status")
         old_payment_status = existing.get("payment_status", "Pendiente")
+        new_status = update_dict.get("status")
+        old_status = existing.get("status", "Pendiente")
+        deposit_changed = "deposit_amount" in update_dict
 
-        if new_payment_status == "Pagado" and old_payment_status != "Pagado":
+        if new_payment_status is not None or deposit_changed or (new_status is not None and new_status != old_status):
+            target_payment_status = new_payment_status if new_payment_status is not None else old_payment_status
+            target_status = new_status if new_status is not None else old_status
             merged = {**existing, **update_dict}
-            OrderService._register_sales_for_order(merged)
-        elif new_payment_status in ["Pendiente", "Anticipo"] and old_payment_status == "Pagado":
             OrderService._remove_sales_for_order(order_id)
+            if target_status != "Cancelado":
+                if target_payment_status == "Pagado":
+                    OrderService._register_sales_for_order(merged)
+                elif target_payment_status == "Anticipo" and float(merged.get("deposit_amount", 0.0)) > 0:
+                    OrderService._register_deposit_for_order(merged)
 
         # Manejo de cambio de estado y deducción automática de stock
-        new_status = update_dict.get("status")
         was_deducted = existing.get("stock_deducted", False)
 
         if new_status == "Completado" and not was_deducted:
@@ -245,6 +291,15 @@ class OrderService:
         elif new_status in ["Cancelado", "Pendiente"] and was_deducted:
             OrderService._restore_stock_for_order(existing)
             update_dict["stock_deducted"] = False
+
+        if new_status == "Cancelado":
+            OrderService._remove_sales_for_order(order_id)
+        elif existing.get("status") == "Cancelado" and new_status != "Cancelado":
+            pay_st = existing.get("payment_status", "Pendiente")
+            if pay_st == "Pagado":
+                OrderService._register_sales_for_order(existing)
+            elif pay_st == "Anticipo" and float(existing.get("deposit_amount", 0.0)) > 0:
+                OrderService._register_deposit_for_order(existing)
 
         db.orders.update_one({"id": order_id}, {"$set": update_dict})
         return db.orders.find_one({"id": order_id}, {"_id": 0})

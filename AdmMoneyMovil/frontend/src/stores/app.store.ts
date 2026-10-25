@@ -86,7 +86,6 @@ interface AppState {
   isOnline: boolean;
   backendUrl: string;
   isLoading: boolean;
-  useMockData: boolean;
   theme: 'light' | 'dark';
   currency: string;
   swipeEnabled: boolean;
@@ -114,8 +113,6 @@ interface AppState {
 
   setTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
-  setUseMockData: (enabled: boolean) => void;
-  resetMockData: () => void;
   setBackendUrl: (url: string) => void;
   checkConnection: () => Promise<boolean>;
   loadAllData: () => Promise<void>;
@@ -169,7 +166,6 @@ export const useAppStore = create<AppState>()(
   isOnline: false,
   backendUrl: APP_CONFIG.DEFAULT_API_HOST,
   isLoading: false,
-  useMockData: false,
   theme: 'light',
   currency: 'MXN',
   swipeEnabled: true,
@@ -219,15 +215,6 @@ export const useAppStore = create<AppState>()(
     set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' }));
   },
 
-  setUseMockData: (_enabled: boolean) => {
-    set({ useMockData: false });
-    get().loadAllData();
-  },
-
-  resetMockData: () => {
-    get().loadAllData();
-  },
-
   setBackendUrl: (url: string) => {
     setApiHost(url);
     set({ backendUrl: url });
@@ -256,24 +243,6 @@ export const useAppStore = create<AppState>()(
           MobileApiService.getCustomers().catch(() => []),
         ]);
 
-        let mergedCustomers: Customer[] = custs && custs.length > 0 ? [...custs] : [];
-        if (ords && ords.length > 0) {
-          const existingNames = new Set(mergedCustomers.map((c) => c.name.trim().toLowerCase()));
-          ords.forEach((o) => {
-            const clean = (o.customer_name || '').trim();
-            if (clean && !existingNames.has(clean.toLowerCase())) {
-              mergedCustomers.push({
-                id: Date.now() + Math.floor(Math.random() * 1000),
-                name: clean,
-                phone: o.customer_phone || '',
-                total_orders: 1,
-                last_order_date: o.delivery_date,
-              });
-              existingNames.add(clean.toLowerCase());
-            }
-          });
-        }
-
         set({
           expenses: exp || [],
           cookies: cks || [],
@@ -282,7 +251,7 @@ export const useAppStore = create<AppState>()(
           summary: summ || null,
           promotions: prms || [],
           orders: ords || [],
-          customers: mergedCustomers,
+          customers: custs || [],
           isOnline: true,
         });
 

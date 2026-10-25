@@ -110,13 +110,13 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                   ? colors.emeraldBg
                   : order.payment_status === 'Anticipo'
                   ? colors.amberBg
-                  : colors.bgTertiary,
+                  : colors.amberBg,
               borderColor:
                 order.payment_status === 'Pagado'
                   ? colors.emeraldBorder
                   : order.payment_status === 'Anticipo'
                   ? colors.amberBorder
-                  : colors.borderSubtle,
+                  : colors.amberBorder,
             },
           ]}
           activeOpacity={0.7}
@@ -130,14 +130,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                     ? colors.emeraldText
                     : order.payment_status === 'Anticipo'
                     ? colors.amberText
-                    : colors.textMuted,
+                    : colors.amberLight,
+                fontWeight: '700',
               },
             ]}
           >
-            {order.payment_status}
-            {order.deposit_amount > 0 && order.payment_status === 'Anticipo'
-              ? ` ($${order.deposit_amount})`
-              : ''} ▾
+            {order.payment_status === 'Pagado' ? '✓ Pagado' : order.payment_status === 'Anticipo' ? `💵 Anticipo ($${order.deposit_amount || 0})` : '⏳ Pago Pendiente'} ▾
           </Text>
         </TouchableOpacity>
       </View>
@@ -174,12 +172,29 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
       {/* Bottom Financial & Action Bar */}
       <View style={[styles.footerRow, { borderTopColor: colors.borderSubtle }]}>
-        <View>
-          <Text style={[styles.totalLabel, { color: colors.textDim }]}>Total a Cobrar</Text>
-          <Text style={[styles.totalAmount, { color: colors.textMain }]}>${order.total_amount.toFixed(2)} MXN</Text>
-          <Text style={[styles.profitSubtext, { color: colors.emeraldLight }]}>
-            Ganancia libre: +${order.net_profit.toFixed(2)}
+        <View style={{ flex: 1, paddingRight: 8 }}>
+          <Text style={[styles.totalLabel, { color: colors.textDim }]}>
+            {order.payment_status === 'Pagado' ? 'Total Cobrado' : 'Total a Cobrar'}
           </Text>
+          <Text style={[styles.totalAmount, { color: colors.textMain }]}>${order.total_amount.toFixed(2)} MXN</Text>
+          {order.payment_status === 'Pendiente' ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+              <Ionicons name="hourglass-outline" size={12} color={colors.amberLight} />
+              <Text style={{ fontSize: 11, fontWeight: '700', color: colors.amberLight }}>
+                Pago Pendiente (No sumado a ganancia)
+              </Text>
+            </View>
+          ) : order.payment_status === 'Anticipo' ? (
+            <View style={{ marginTop: 2 }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: colors.amberLight }}>
+                Anticipo: +${(order.deposit_amount || 0).toFixed(2)} • Falta: ${Math.max(0, order.total_amount - (order.deposit_amount || 0)).toFixed(2)}
+              </Text>
+            </View>
+          ) : (
+            <Text style={[styles.profitSubtext, { color: colors.emeraldLight }]}>
+              ✓ Ganancia libre: +${order.net_profit.toFixed(2)}
+            </Text>
+          )}
         </View>
 
         <View style={styles.actionsGroup}>

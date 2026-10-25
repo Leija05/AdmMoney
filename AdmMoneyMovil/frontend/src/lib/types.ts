@@ -232,6 +232,8 @@ export interface OverallSummary {
   overall_net_balance: number;
   pending_orders_count?: number;
   pending_orders_amount?: number;
+  pending_payment_amount?: number;
+  pending_payment_count?: number;
   stock_alerts_count?: number;
   top_selling_cookie: string | null;
   category_breakdown: Array<{ category: string; amount: number; count: number }>;

@@ -20,19 +20,16 @@ import { colors, useThemeColors, radii, spacing, gradients } from '../../src/the
 import { CookieCard } from '../../src/components/cookies/CookieCard';
 import { CookieRecipeDetailModal } from '../../src/components/cookies/CookieRecipeDetailModal';
 import { SaleDetailModal } from '../../src/components/cookies/SaleDetailModal';
-import { AddCookieModal } from '../../src/components/cookies/AddCookieModal';
-import { EditCookieModal } from '../../src/components/cookies/EditCookieModal';
+import { CookieModal } from '../../src/components/cookies/CookieModal';
 import { AddIngredientModal } from '../../src/components/cookies/AddIngredientModal';
 import { AddPromotionModal } from '../../src/components/cookies/AddPromotionModal';
-import { OrderCard } from '../../src/components/orders/OrderCard';
-import { OrderModal } from '../../src/components/orders/OrderModal';
 import { DoubleBezelCard } from '../../src/components/ui/DoubleBezelCard';
 import { Badge } from '../../src/components/ui/Badge';
 import { Button } from '../../src/components/ui/Button';
 import { BackendHeartbeat } from '../../src/components/ui/BackendHeartbeat';
 import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
 import { useAppStore } from '../../src/stores/app.store';
-import { CookieProduct, CookieSale, Ingredient, Promotion, Order } from '../../src/lib/types';
+import { CookieProduct, CookieSale, Ingredient, Promotion } from '../../src/lib/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { confirmAction } from '../../src/stores/confirmation.store';
@@ -47,9 +44,6 @@ export default function CookiesScreen() {
     sales,
     ingredients,
     promotions,
-    orders,
-    customers,
-    addCustomer,
     togglePromotion,
     deletePromotion,
     addPromotion,
@@ -62,12 +56,8 @@ export default function CookiesScreen() {
     addIngredient,
     updateIngredient,
     deleteIngredient,
-    addOrder,
-    updateOrder,
-    deleteOrder,
     loadAllData,
     isLoading,
-    useMockData,
     isOnline,
     theme,
     toggleTheme,
@@ -76,7 +66,7 @@ export default function CookiesScreen() {
     privacyMode,
   } = useAppStore();
 
-  const [subTab, setSubTab] = useState<'catalog' | 'ingredients' | 'sales' | 'promotions' | 'orders'>('catalog');
+  const [subTab, setSubTab] = useState<'catalog' | 'ingredients' | 'sales' | 'promotions'>('catalog');
 
   // Modals state
   const [inspectedCookie, setInspectedCookie] = useState<CookieProduct | null>(null);
@@ -129,9 +119,6 @@ export default function CookiesScreen() {
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
   const [isAddPromoOpen, setIsAddPromoOpen] = useState(false);
   const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(null);
-  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
-  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
-  const [orderStatusFilter, setOrderStatusFilter] = useState<string>('Todos');
 
   // Quick sale modal state
   const [selectedCookie, setSelectedCookie] = useState<CookieProduct | null>(null);
@@ -140,6 +127,49 @@ export default function CookiesScreen() {
   const [customerName, setCustomerName] = useState('Cliente Mostrador');
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0]);
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
+
+  const saleModalTranslateY = useRef(new Animated.Value(0)).current;
+
+  const saleModalPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
+        return gestureState.dy > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.3;
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        if (gestureState.dy > 0) {
+          saleModalTranslateY.setValue(gestureState.dy);
+        } else {
+          saleModalTranslateY.setValue(gestureState.dy * 0.15);
+        }
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (gestureState.dy > 110 || (gestureState.dy > 30 && gestureState.vy > 0.35)) {
+          Animated.timing(saleModalTranslateY, {
+            toValue: 650,
+            duration: 180,
+            useNativeDriver: true,
+          }).start(() => {
+            setIsSaleModalOpen(false);
+            saleModalTranslateY.setValue(0);
+          });
+        } else {
+          Animated.spring(saleModalTranslateY, {
+            toValue: 0,
+            friction: 8,
+            tension: 80,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  useEffect(() => {
+    if (isSaleModalOpen) {
+      saleModalTranslateY.setValue(0);
+    }
+  }, [isSaleModalOpen]);
 
   // Aggregates
   const totalRevenue = sales.reduce((acc, s) => acc + s.total_revenue, 0);
@@ -269,163 +299,6 @@ export default function CookiesScreen() {
     });
   };
 
-  const handleOpenAddOrder = () => {
-    setEditingOrder(null);
-    setIsOrderModalOpen(true);
-  };
-
-  const handleEditOrder = (order: Order) => {
-    setEditingOrder(order);
-    setIsOrderModalOpen(true);
-  };
-
-  const handleSaveOrder = async (orderData: Partial<Order>) => {
-    if (editingOrder) {
-      const prevStatus = editingOrder.payment_status;
-      await updateOrder(editingOrder.id, orderData);
-
-      // Si el pedido pasó o está en Pagado, registrar en ventas cobradas
-      if (orderData.payment_status === 'Pagado') {
-        const alreadyRegistered = sales.some(
-          (s) => (s as any).order_id === editingOrder.id || (s.notes && s.notes.includes(`Pedido #${editingOrder.id}`))
-        );
-        if (!alreadyRegistered && orderData.items && orderData.items.length > 0) {
-          for (const item of orderData.items) {
-            await addCookieSale({
-              cookie_id: item.product_id,
-              quantity: item.quantity,
-              unit_price: item.unit_price,
-              customer_name: orderData.customer_name,
-              payment_method: orderData.payment_method || 'Efectivo',
-              notes: `Pedido #${editingOrder.id} • ${orderData.customer_name}${orderData.promotion_name ? ` (${orderData.promotion_name})` : ''}`,
-              promotion_id: orderData.promotion_id,
-              promotion_name: orderData.promotion_name,
-              discount_amount: orderData.discount_amount,
-              sale_date: orderData.delivery_date || new Date().toISOString().split('T')[0],
-              order_id: editingOrder.id,
-            } as any);
-          }
-        }
-      } else if (prevStatus === 'Pagado') {
-        const salesToDelete = sales.filter(
-          (s) => (s as any).order_id === editingOrder.id || (s.notes && s.notes.includes(`Pedido #${editingOrder.id}`))
-        );
-        for (const s of salesToDelete) {
-          await deleteCookieSale(s.id);
-        }
-      }
-
-      await loadAllData();
-      Alert.alert('Pedido Actualizado', `El pedido de ${orderData.customer_name} ha sido modificado.`);
-    } else {
-      const created = await addOrder(orderData);
-      if (orderData.payment_status === 'Pagado' && created) {
-        if (orderData.items && orderData.items.length > 0) {
-          for (const item of orderData.items) {
-            await addCookieSale({
-              cookie_id: item.product_id,
-              quantity: item.quantity,
-              unit_price: item.unit_price,
-              customer_name: orderData.customer_name,
-              payment_method: orderData.payment_method || 'Efectivo',
-              notes: `Pedido #${created.id} • ${orderData.customer_name}${orderData.promotion_name ? ` (${orderData.promotion_name})` : ''}`,
-              promotion_id: orderData.promotion_id,
-              promotion_name: orderData.promotion_name,
-              discount_amount: orderData.discount_amount,
-              sale_date: orderData.delivery_date || new Date().toISOString().split('T')[0],
-              order_id: created.id,
-            } as any);
-          }
-        }
-      }
-      await loadAllData();
-      Alert.alert(
-        '¡Pedido Agendado!',
-        orderData.payment_status === 'Pagado'
-          ? `Se agendó el pedido de ${orderData.customer_name} y se registró en Ventas Cobradas e Ingresos.`
-          : `Se agendó el pedido para ${orderData.customer_name}.`
-      );
-    }
-  };
-
-  const handlePaymentStatusChange = async (id: number, nextPaymentStatus: Order['payment_status']) => {
-    const order = orders.find((o) => o.id === id);
-    if (!order) return;
-
-    if (order.payment_status === nextPaymentStatus) return;
-    const prevPaymentStatus = order.payment_status;
-
-    await updateOrder(id, { payment_status: nextPaymentStatus });
-
-    // Cuando pasa a PAGADO:
-    if (nextPaymentStatus === 'Pagado') {
-      const alreadyRegistered = sales.some(
-        (s) => (s as any).order_id === id || (s.notes && s.notes.includes(`Pedido #${id}`))
-      );
-
-      if (!alreadyRegistered && order.items && order.items.length > 0) {
-        for (const item of order.items) {
-          await addCookieSale({
-            cookie_id: item.product_id,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            customer_name: order.customer_name,
-            payment_method: order.payment_method || 'Efectivo',
-            notes: `Pedido #${order.id} • ${order.customer_name}${order.promotion_name ? ` (${order.promotion_name})` : ''}`,
-            promotion_id: order.promotion_id,
-            promotion_name: order.promotion_name,
-            discount_amount: order.discount_amount,
-            sale_date: order.delivery_date || new Date().toISOString().split('T')[0],
-            order_id: order.id,
-          } as any);
-        }
-      }
-
-      await loadAllData();
-      Alert.alert(
-        '¡Pedido Pagado!',
-        `El pedido de ${order.customer_name} pasó a Pagado y sus galletas se registraron en Ventas Cobradas e Ingresos.`
-      );
-    } else if (prevPaymentStatus === 'Pagado') {
-      // Cuando cambia de Pagado a Pendiente o Anticipo:
-      const salesToDelete = sales.filter(
-        (s) => (s as any).order_id === id || (s.notes && s.notes.includes(`Pedido #${id}`))
-      );
-      for (const s of salesToDelete) {
-        await deleteCookieSale(s.id);
-      }
-      await loadAllData();
-      Alert.alert(
-        'Estatus Actualizado',
-        `El cobro del pedido se cambió a ${nextPaymentStatus}. Se ajustó el historial de ventas.`
-      );
-    }
-  };
-
-  const handleDeleteOrder = (id: number) => {
-    const ord = orders.find((o) => o.id === id);
-    confirmAction({
-      title: '¿Eliminar Pedido?',
-      message: `¿Deseas eliminar el pedido de "${ord?.customer_name || 'Cliente'}"?`,
-      confirmText: 'Sí, Eliminar',
-      type: 'danger',
-      onConfirm: async () => {
-        // Eliminar ventas asociadas si estuviera pagado
-        const salesToDelete = sales.filter(
-          (s) => (s as any).order_id === id || (s.notes && s.notes.includes(`Pedido #${id}`))
-        );
-        for (const s of salesToDelete) {
-          await deleteCookieSale(s.id);
-        }
-        await deleteOrder(id);
-      },
-    });
-  };
-
-  const handleStatusChange = async (id: number, nextStatus: Order['status']) => {
-    await updateOrder(id, { status: nextStatus });
-  };
-
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]}>
       <SwipeTabWrapper currentRoute="/cookies">
@@ -511,7 +384,7 @@ export default function CookiesScreen() {
           </TouchableOpacity>
         </DoubleBezelCard>
 
-        {/* 5 Sub-tabs scrollable pills with vibrant gradients */}
+        {/* 4 Sub-tabs scrollable pills with vibrant gradients */}
         <View style={styles.tabToggleWrapper}>
           <ScrollView
             horizontal
@@ -523,7 +396,6 @@ export default function CookiesScreen() {
               { key: 'ingredients', label: `Insumos (${ingredients.length})`, icon: 'nutrition', grad: gradients.purple },
               { key: 'sales', label: `Ventas (${sales.length})`, icon: 'cart', grad: gradients.emerald },
               { key: 'promotions', label: `Promos (${promotions.length})`, icon: 'pricetag', grad: gradients.rose },
-              { key: 'orders', label: `Pedidos (${orders.length})`, icon: 'bag-check', grad: gradients.brand },
             ].map((tab) => {
               const isActive = subTab === tab.key;
               return (
@@ -882,95 +754,6 @@ export default function CookiesScreen() {
             />
           </View>
         )}
-
-        {/* SUBTAB 5: ORDERS & DELIVERIES */}
-        {subTab === 'orders' && (
-          <View style={{ flex: 1 }}>
-            <View style={styles.subtabActionBar}>
-              <View>
-                <Text style={[styles.subtabTitle, { color: colors.textMain }]}>Pedidos de Clientes</Text>
-                <Text style={{ fontSize: 11, color: colors.textDim }}>
-                  {orders.filter((o) => o.status === 'Pendiente' || o.status === 'En Preparación').length} por hornear / entregar
-                </Text>
-              </View>
-              <Button
-                title="+ Pedido"
-                variant="amber"
-                icon={<Ionicons name="add" size={16} color="#fff" />}
-                onPress={handleOpenAddOrder}
-                style={{ paddingVertical: 6, paddingHorizontal: 12 }}
-              />
-            </View>
-
-            {/* Status Filter Chips */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={{ flexGrow: 0, marginBottom: 14 }}
-              contentContainerStyle={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 8,
-                paddingVertical: 4,
-                paddingHorizontal: 2,
-              }}
-            >
-              {['Todos', 'Pendiente', 'En Preparación', 'Listo', 'Completado'].map((statusChip) => (
-                <TouchableOpacity
-                  key={statusChip}
-                  onPress={() => setOrderStatusFilter(statusChip)}
-                  style={[
-                    styles.filterChip,
-                    {
-                      backgroundColor: orderStatusFilter === statusChip ? colors.brandBg : colors.bgCard,
-                      borderColor: orderStatusFilter === statusChip ? colors.brandBorder : colors.borderSubtle,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      {
-                        color: orderStatusFilter === statusChip ? colors.brandText : colors.textMuted,
-                        fontWeight: orderStatusFilter === statusChip ? '800' : '600',
-                      },
-                    ]}
-                  >
-                    {statusChip === 'En Preparación' ? 'En Horno' : statusChip}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <FlatList
-              data={orders.filter((o) => orderStatusFilter === 'Todos' || o.status === orderStatusFilter)}
-              keyExtractor={(item) => String(item.id)}
-              renderItem={({ item }) => (
-                <OrderCard
-                  order={item}
-                  onEdit={handleEditOrder}
-                  onDelete={handleDeleteOrder}
-                  onStatusChange={handleStatusChange}
-                  onPaymentStatusChange={handlePaymentStatusChange}
-                />
-              )}
-              contentContainerStyle={{ paddingBottom: 110 }}
-              onRefresh={loadAllData}
-              refreshing={isLoading}
-              ListEmptyComponent={
-                <View style={styles.emptyBox}>
-                  <Ionicons name="bag-check-outline" size={40} color={colors.textDim} />
-                  <Text style={styles.emptyTitle}>Sin Pedidos</Text>
-                  <Text style={styles.emptyText}>
-                    {orderStatusFilter === 'Todos'
-                      ? 'Toca "+ Pedido" para agendar tu primer pedido personalizado.'
-                      : `No hay pedidos con estatus "${orderStatusFilter}".`}
-                  </Text>
-                </View>
-              }
-            />
-          </View>
-        )}
       </View>
       </SwipeTabWrapper>
 
@@ -983,12 +766,16 @@ export default function CookiesScreen() {
         onDeleteCookie={deleteCookieProduct}
       />
 
-      {/* Edit Cookie Recipe & Batch Profit Modal */}
-      <EditCookieModal
-        visible={!!editingCookieProduct}
+      {/* Add / Edit Cookie Recipe Modal */}
+      <CookieModal
+        visible={isAddCookieOpen || !!editingCookieProduct}
         cookie={editingCookieProduct}
-        onClose={() => setEditingCookieProduct(null)}
-        onUpdateCookie={updateCookieProduct}
+        onClose={() => {
+          setIsAddCookieOpen(false);
+          setEditingCookieProduct(null);
+        }}
+        onSave={addCookieProduct}
+        onUpdate={updateCookieProduct}
       />
 
       {/* Cookie Quick Actions Sheet (Long-Press Menu) */}
@@ -1172,13 +959,6 @@ export default function CookiesScreen() {
         onDeleteSale={deleteCookieSale}
       />
 
-      {/* Add Cookie Recipe Modal */}
-      <AddCookieModal
-        visible={isAddCookieOpen}
-        onClose={() => setIsAddCookieOpen(false)}
-        onAddCookie={addCookieProduct}
-      />
-
       {/* Add / Edit Ingredient Modal */}
       <AddIngredientModal
         visible={isAddIngredientOpen}
@@ -1204,30 +984,38 @@ export default function CookiesScreen() {
         onUpdatePromotion={updatePromotion}
       />
 
-      {/* Add / Edit Order Modal */}
-      <OrderModal
-        visible={isOrderModalOpen}
-        onClose={() => setIsOrderModalOpen(false)}
-        cookies={cookies}
-        promotions={promotions}
-        customers={customers}
-        editingOrder={editingOrder}
-        onSave={handleSaveOrder}
-        onSaveCustomer={addCustomer}
-      />
-
       {/* Quick Sale Stepper Modal */}
       <Modal visible={isSaleModalOpen} animationType="slide" transparent onRequestClose={() => setIsSaleModalOpen(false)}>
         <View style={styles.modalBackdrop}>
-          <View style={[styles.modalDialog, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: colors.borderSubtle }]}>
-              <View>
-                <Text style={[styles.modalEyebrow, { color: colors.amberLight }]}>Caja Registradora</Text>
-                <Text style={[styles.modalTitle, { color: colors.textMain }]}>Registrar Venta de Galleta</Text>
+          <Animated.View
+            style={[
+              styles.modalDialog,
+              {
+                backgroundColor: colors.bgCard,
+                borderColor: colors.borderSubtle,
+                transform: [{ translateY: saleModalTranslateY }],
+              },
+            ]}
+          >
+            {/* Top Drag Handle Bar with Swipe-down Gesture */}
+            <View {...saleModalPanResponder.panHandlers}>
+              <View style={styles.sheetHandleWrapper}>
+                <View
+                  style={[
+                    styles.sheetHandleBar,
+                    { backgroundColor: colors.isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)' },
+                  ]}
+                />
               </View>
-              <TouchableOpacity onPress={() => setIsSaleModalOpen(false)}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </TouchableOpacity>
+              <View style={[styles.modalHeader, { borderBottomColor: colors.borderSubtle }]}>
+                <View>
+                  <Text style={[styles.modalEyebrow, { color: colors.amberLight }]}>Caja Registradora</Text>
+                  <Text style={[styles.modalTitle, { color: colors.textMain }]}>Registrar Venta de Galleta</Text>
+                </View>
+                <TouchableOpacity onPress={() => setIsSaleModalOpen(false)}>
+                  <Ionicons name="close" size={22} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {selectedCookie && (
@@ -1362,7 +1150,7 @@ export default function CookiesScreen() {
                 />
               </ScrollView>
             )}
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </SafeAreaView>

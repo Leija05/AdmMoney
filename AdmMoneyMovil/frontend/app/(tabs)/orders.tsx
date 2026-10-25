@@ -48,9 +48,14 @@ export default function OrdersScreen() {
     (o) => o.status === 'Pendiente' || o.status === 'En Preparación'
   );
   const readyOrders = orders.filter((o) => o.status === 'Listo');
-  const totalToCollect = orders
-    .filter((o) => o.payment_status !== 'Pagado' && o.status !== 'Cancelado')
-    .reduce((sum, o) => sum + (o.total_amount - (o.deposit_amount || 0)), 0);
+  const pendingPaymentOrders = orders.filter(
+    (o) => o.payment_status !== 'Pagado' && o.status !== 'Cancelado'
+  );
+  const totalPendingPaymentsCount = pendingPaymentOrders.length;
+  const totalToCollect = pendingPaymentOrders.reduce(
+    (sum, o) => sum + (o.payment_status === 'Anticipo' ? Math.max(0, o.total_amount - (o.deposit_amount || 0)) : o.total_amount),
+    0
+  );
 
   const handleOpenAddOrder = () => {
     setEditingOrder(null);
@@ -115,6 +120,9 @@ export default function OrdersScreen() {
 
   const filteredOrders = orders.filter((o) => {
     if (orderStatusFilter === 'Todos') return true;
+    if (orderStatusFilter === 'Pagos Pendientes') {
+      return o.payment_status !== 'Pagado' && o.status !== 'Cancelado';
+    }
     return o.status === orderStatusFilter;
   });
 
@@ -193,17 +201,32 @@ export default function OrdersScreen() {
                 </DoubleBezelCard>
               </View>
 
-              <View style={{ flex: 1.2 }}>
-                <DoubleBezelCard style={styles.metricCard}>
+              <TouchableOpacity
+                style={{ flex: 1.35 }}
+                activeOpacity={0.8}
+                onPress={() => setOrderStatusFilter(orderStatusFilter === 'Pagos Pendientes' ? 'Todos' : 'Pagos Pendientes')}
+              >
+                <DoubleBezelCard
+                  style={[
+                    styles.metricCard,
+                    orderStatusFilter === 'Pagos Pendientes' && {
+                      borderColor: colors.amberBorder,
+                      backgroundColor: colors.amberBg,
+                    },
+                  ]}
+                >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="cash-outline" size={16} color={colors.brandText} />
-                    <Text style={[styles.metricLabel, { color: colors.textDim }]}>Por Cobrar</Text>
+                    <Ionicons name="hourglass-outline" size={16} color={colors.amberLight} />
+                    <Text style={[styles.metricLabel, { color: colors.amberLight }]}>Dinero Pendiente</Text>
                   </View>
-                  <Text style={[styles.metricVal, { color: colors.brandText }]}>
+                  <Text style={[styles.metricVal, { color: colors.amberLight }]}>
                     ${totalToCollect.toFixed(2)}
                   </Text>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textDim, marginTop: 2 }}>
+                    {totalPendingPaymentsCount} {totalPendingPaymentsCount === 1 ? 'pago pendiente' : 'pagos pendientes'}
+                  </Text>
                 </DoubleBezelCard>
-              </View>
+              </TouchableOpacity>
             </View>
 
             {/* Filter Chips */}
@@ -213,7 +236,7 @@ export default function OrdersScreen() {
               style={{ marginTop: 12 }}
               contentContainerStyle={{ flexDirection: 'row', gap: 8, paddingVertical: 4 }}
             >
-              {['Todos', 'Pendiente', 'En Preparación', 'Listo', 'Completado', 'Cancelado'].map(
+              {['Todos', 'Pagos Pendientes', 'Pendiente', 'En Preparación', 'Listo', 'Completado', 'Cancelado'].map(
                 (statusChip) => {
                   const isActive = orderStatusFilter === statusChip;
                   return (
@@ -223,8 +246,8 @@ export default function OrdersScreen() {
                       style={[
                         styles.filterChip,
                         {
-                          backgroundColor: isActive ? colors.brandBg : colors.bgCard,
-                          borderColor: isActive ? colors.brandBorder : colors.borderSubtle,
+                          backgroundColor: isActive ? (statusChip === 'Pagos Pendientes' ? colors.amberBg : colors.brandBg) : colors.bgCard,
+                          borderColor: isActive ? (statusChip === 'Pagos Pendientes' ? colors.amberBorder : colors.brandBorder) : colors.borderSubtle,
                         },
                       ]}
                       activeOpacity={0.7}
@@ -233,12 +256,16 @@ export default function OrdersScreen() {
                         style={[
                           styles.filterChipText,
                           {
-                            color: isActive ? colors.brandText : colors.textMuted,
+                            color: isActive ? (statusChip === 'Pagos Pendientes' ? colors.amberText : colors.brandText) : colors.textMuted,
                             fontWeight: isActive ? '800' : '600',
                           },
                         ]}
                       >
-                        {statusChip === 'En Preparación' ? 'En Horno' : statusChip}
+                        {statusChip === 'En Preparación'
+                          ? 'En Horno'
+                          : statusChip === 'Pagos Pendientes'
+                          ? `⏳ Pagos Pendientes (${totalPendingPaymentsCount})`
+                          : statusChip}
                       </Text>
                     </TouchableOpacity>
                   );

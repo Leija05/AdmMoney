@@ -41,6 +41,17 @@ class AnalyticsService:
         pending_orders_cnt = len(pending_orders)
         pending_orders_amount = round(sum(float(o.get("total_amount", 0.0)) for o in pending_orders), 2)
 
+        # Dinero y pagos pendientes de cobro (pedidos no cancelados con saldo por liquidar)
+        pending_payment_orders = list(db.orders.find({
+            "status": {"$ne": "Cancelado"},
+            "payment_status": {"$in": ["Pendiente", "Anticipo"]}
+        }))
+        pending_payment_amount = round(sum(
+            float(o.get("total_amount", 0.0)) - (float(o.get("deposit_amount", 0.0)) if o.get("payment_status") == "Anticipo" else 0.0)
+            for o in pending_payment_orders
+        ), 2)
+        pending_payment_count = len(pending_payment_orders)
+
         # Alertas de stock
         stock_alerts_count = len(CookieService.get_stock_alerts())
 
@@ -139,6 +150,8 @@ class AnalyticsService:
             "overall_net_balance": overall_net_balance,
             "pending_orders_count": pending_orders_cnt,
             "pending_orders_amount": pending_orders_amount,
+            "pending_payment_amount": pending_payment_amount,
+            "pending_payment_count": pending_payment_count,
             "stock_alerts_count": stock_alerts_count,
             "top_selling_cookie": top_selling,
             "category_breakdown": category_breakdown,

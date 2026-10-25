@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal,
   View,
@@ -8,6 +8,9 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  Animated,
+  PanResponder,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -274,32 +277,87 @@ export const OrderModal: React.FC<OrderModalProps> = ({
     }
   };
 
+  const screenHeight = Dimensions.get('window').height;
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
+        return gestureState.dy > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.3;
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        if (gestureState.dy > 0) {
+          translateY.setValue(gestureState.dy);
+        } else {
+          translateY.setValue(gestureState.dy * 0.15);
+        }
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (gestureState.dy > 110 || (gestureState.dy > 30 && gestureState.vy > 0.35)) {
+          Animated.timing(translateY, {
+            toValue: screenHeight,
+            duration: 180,
+            useNativeDriver: true,
+          }).start(() => {
+            onClose();
+            translateY.setValue(0);
+          });
+        } else {
+          Animated.spring(translateY, {
+            toValue: 0,
+            friction: 8,
+            tension: 80,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  useEffect(() => {
+    if (visible) {
+      translateY.setValue(0);
+    }
+  }, [visible]);
+
   return (
     <Modal visible={visible} animationType="slide" transparent={false} statusBarTranslucent onRequestClose={onClose}>
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['top', 'bottom']}>
-        {/* Top Navigation Bar */}
-        <View style={[styles.topBar, { backgroundColor: colors.bgCard, borderBottomColor: colors.borderSubtle }]}>
-          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-            <Ionicons name="close" size={24} color={colors.textMain} />
-          </TouchableOpacity>
-          <Text style={[styles.topBarTitle, { color: colors.textMain }]}>
-            {editingOrder ? 'Editar Pedido' : 'Nuevo Pedido Personalizado'}
-          </Text>
-          <TouchableOpacity
-            onPress={handleSaveOrder}
-            disabled={isSubmitting}
-            style={[styles.saveBtn, isSubmitting && { opacity: 0.6 }]}
-          >
-            <Text style={styles.saveBtnText}>Guardar</Text>
-          </TouchableOpacity>
-        </View>
+        <Animated.View style={{ flex: 1, transform: [{ translateY }] }}>
+          {/* Top Drag Handle & Navigation Bar with PanResponder */}
+          <View {...panResponder.panHandlers} style={{ backgroundColor: colors.bgCard }}>
+            <View style={styles.dragHandleContainer}>
+              <View
+                style={[
+                  styles.dragHandleBar,
+                  { backgroundColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)' },
+                ]}
+              />
+            </View>
+            <View style={[styles.topBar, { backgroundColor: colors.bgCard, borderBottomColor: colors.borderSubtle }]}>
+              <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                <Ionicons name="close" size={24} color={colors.textMain} />
+              </TouchableOpacity>
+              <Text style={[styles.topBarTitle, { color: colors.textMain }]}>
+                {editingOrder ? 'Editar Pedido' : 'Nuevo Pedido Personalizado'}
+              </Text>
+              <TouchableOpacity
+                onPress={handleSaveOrder}
+                disabled={isSubmitting}
+                style={[styles.saveBtn, isSubmitting && { opacity: 0.6 }]}
+              >
+                <Text style={styles.saveBtnText}>Guardar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={[styles.content, { paddingBottom: 60 }]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={true}
-        >
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={[styles.content, { paddingBottom: 60 }]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={true}
+          >
           {/* Customer info card */}
           <DoubleBezelCard style={styles.card}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -787,6 +845,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
 
           <View style={{ height: 40 }} />
         </ScrollView>
+        </Animated.View>
       </SafeAreaView>
     </Modal>
   );
@@ -796,6 +855,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bgPrimary,
+  },
+  dragHandleContainer: {
+    width: '100%',
+    alignItems: 'center',
+    paddingTop: 8,
+    paddingBottom: 2,
+  },
+  dragHandleBar: {
+    width: 40,
+    height: 5,
+    borderRadius: 2.5,
   },
   topBar: {
     flexDirection: 'row',

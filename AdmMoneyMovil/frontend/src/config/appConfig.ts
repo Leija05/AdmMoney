@@ -12,9 +12,6 @@
  */
 
 export const APP_CONFIG = {
-  // Datos reales en vivo directamente desde la base de datos
-  USE_MOCK_DATA: false,
-
   // Host por defecto del backend FastAPI (lee .env EXPO_PUBLIC_API_URL o usa localhost:8000)
   DEFAULT_API_HOST: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000',
 
@@ -24,11 +21,3 @@ export const APP_CONFIG = {
   BACKEND_STATUS_MESSAGE_ONLINE: 'Servidor Activo',       // 👈 Mensaje cuando el backend está conectado
   BACKEND_STATUS_MESSAGE_OFFLINE: 'Servidor Desconectado', // 👈 Mensaje cuando no hay conexión
 };
-
-export function isMobileMockDataEnabled(): boolean {
-  return false;
-}
-
-export function setMobileMockDataEnabled(_enabled: boolean): void {
-  // Desactivado a petición del usuario
-}

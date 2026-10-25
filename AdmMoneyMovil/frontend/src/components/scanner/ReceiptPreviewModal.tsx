@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal,
   View,
@@ -9,7 +9,10 @@ import {
   Image,
   TextInput,
   Alert,
-  Platform
+  Platform,
+  Animated,
+  PanResponder,
+  Dimensions,
 } from 'react-native';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -370,6 +373,49 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
   };
 
   const displayTotal = parseFloat(amount || '0') || 0;
+  const screenHeight = Dimensions.get('window').height;
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
+        return gestureState.dy > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.3;
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        if (gestureState.dy > 0) {
+          translateY.setValue(gestureState.dy);
+        } else {
+          translateY.setValue(gestureState.dy * 0.15);
+        }
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (gestureState.dy > 110 || (gestureState.dy > 30 && gestureState.vy > 0.35)) {
+          Animated.timing(translateY, {
+            toValue: screenHeight,
+            duration: 180,
+            useNativeDriver: true,
+          }).start(() => {
+            onClose();
+            translateY.setValue(0);
+          });
+        } else {
+          Animated.spring(translateY, {
+            toValue: 0,
+            friction: 8,
+            tension: 80,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  useEffect(() => {
+    if (visible) {
+      translateY.setValue(0);
+    }
+  }, [visible]);
 
   return (
     <Modal
@@ -379,19 +425,39 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.backdrop}>
-        <View style={[styles.dialog, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
-          {/* Header (Always fixed at top) */}
-          <View style={[styles.header, { borderBottomColor: colors.borderSubtle }]}>
-            <View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="sparkles" size={13} color={colors.emeraldLight} />
-                <Text style={[styles.headerEyebrow, { color: colors.emeraldLight }]}>OCR & VISIÓN INTELIGENTE</Text>
-              </View>
-              <Text style={[styles.headerTitle, { color: colors.textMain }]}>Verificar Ticket Escaneado</Text>
+        <Animated.View
+          style={[
+            styles.dialog,
+            {
+              backgroundColor: colors.bgCard,
+              borderColor: colors.borderSubtle,
+              transform: [{ translateY }],
+            },
+          ]}
+        >
+          {/* Top Drag Handle & Header with swipe-down handler */}
+          <View {...panResponder.panHandlers}>
+            <View style={styles.dragHandleContainer}>
+              <View
+                style={[
+                  styles.dragHandleBar,
+                  { backgroundColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)' },
+                ]}
+              />
             </View>
-            <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: colors.bgTertiary }]}>
-              <Ionicons name="close" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
+
+            <View style={[styles.header, { borderBottomColor: colors.borderSubtle }]}>
+              <View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="sparkles" size={13} color={colors.emeraldLight} />
+                  <Text style={[styles.headerEyebrow, { color: colors.emeraldLight }]}>OCR & VISIÓN INTELIGENTE</Text>
+                </View>
+                <Text style={[styles.headerTitle, { color: colors.textMain }]}>Verificar Ticket Escaneado</Text>
+              </View>
+              <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: colors.bgTertiary }]}>
+                <Ionicons name="close" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Scrollable Content Body */}
@@ -891,7 +957,7 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
               style={{ flex: 2 }}
             />
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -912,6 +978,16 @@ const styles = StyleSheet.create({
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
+  },
+  dragHandleContainer: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  dragHandleBar: {
+    width: 38,
+    height: 4.5,
+    borderRadius: 3,
   },
   header: {
     flexDirection: 'row',

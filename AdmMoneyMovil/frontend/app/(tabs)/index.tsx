@@ -10,6 +10,8 @@ import {
   TextInput,
   Alert,
   Animated,
+  PanResponder,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -36,7 +38,6 @@ export default function DashboardScreen() {
     promotions,
     summary,
     isOnline,
-    useMockData,
     loadAllData,
     isLoading,
     addExpense,
@@ -84,6 +85,93 @@ export default function DashboardScreen() {
   const [quickSaleQty, setQuickSaleQty] = useState(1);
   const [selectedPromoId, setSelectedPromoId] = useState<number | null>(null);
 
+  const isDark = colors.isDark;
+  const screenHeight = Dimensions.get('window').height;
+
+  const quickExpTranslateY = useRef(new Animated.Value(0)).current;
+  const quickExpPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
+        return gestureState.dy > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.3;
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        if (gestureState.dy > 0) {
+          quickExpTranslateY.setValue(gestureState.dy);
+        } else {
+          quickExpTranslateY.setValue(gestureState.dy * 0.15);
+        }
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (gestureState.dy > 110 || (gestureState.dy > 30 && gestureState.vy > 0.35)) {
+          Animated.timing(quickExpTranslateY, {
+            toValue: screenHeight,
+            duration: 180,
+            useNativeDriver: true,
+          }).start(() => {
+            setIsQuickExpenseOpen(false);
+            quickExpTranslateY.setValue(0);
+          });
+        } else {
+          Animated.spring(quickExpTranslateY, {
+            toValue: 0,
+            friction: 8,
+            tension: 80,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  useEffect(() => {
+    if (isQuickExpenseOpen) {
+      quickExpTranslateY.setValue(0);
+    }
+  }, [isQuickExpenseOpen]);
+
+  const quickSaleTranslateY = useRef(new Animated.Value(0)).current;
+  const quickSalePanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
+        return gestureState.dy > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.3;
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        if (gestureState.dy > 0) {
+          quickSaleTranslateY.setValue(gestureState.dy);
+        } else {
+          quickSaleTranslateY.setValue(gestureState.dy * 0.15);
+        }
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (gestureState.dy > 110 || (gestureState.dy > 30 && gestureState.vy > 0.35)) {
+          Animated.timing(quickSaleTranslateY, {
+            toValue: screenHeight,
+            duration: 180,
+            useNativeDriver: true,
+          }).start(() => {
+            setIsQuickSaleOpen(false);
+            quickSaleTranslateY.setValue(0);
+          });
+        } else {
+          Animated.spring(quickSaleTranslateY, {
+            toValue: 0,
+            friction: 8,
+            tension: 80,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  useEffect(() => {
+    if (isQuickSaleOpen) {
+      quickSaleTranslateY.setValue(0);
+    }
+  }, [isQuickSaleOpen]);
+
   const totalExpenses = summary?.total_all_expenses ?? expenses.reduce((acc, e) => acc + e.amount, 0);
   const cookieRevenue = summary?.total_cookie_revenue ?? sales.reduce((acc, s) => acc + s.total_revenue, 0);
   const cookieProfit = summary?.net_cookie_profit ?? sales.reduce((acc, s) => acc + s.net_profit, 0);
@@ -94,9 +182,16 @@ export default function DashboardScreen() {
     (o) => o.status === 'Pendiente' || o.status === 'En Preparación' || o.status === 'Listo'
   ).length;
   const completedDeliveries = orders.filter((o) => o.status === 'Completado').length;
-  const pendingCollections = orders.filter(
-    (o) => o.payment_status === 'Pendiente' || o.payment_status === 'Anticipo'
-  ).length;
+  const pendingPaymentOrders = orders.filter(
+    (o) => o.status !== 'Cancelado' && (o.payment_status === 'Pendiente' || o.payment_status === 'Anticipo')
+  );
+  const pendingPaymentsCount = summary?.pending_payment_count ?? pendingPaymentOrders.length;
+  const pendingPaymentTotal = summary?.pending_payment_amount ?? pendingPaymentOrders.reduce((sum, o) => {
+    if (o.payment_status === 'Pendiente') return sum + (o.total_amount || 0);
+    if (o.payment_status === 'Anticipo') return sum + Math.max(0, (o.total_amount || 0) - (o.deposit_amount || 0));
+    return sum;
+  }, 0);
+  const pendingCollections = pendingPaymentsCount;
 
   const starCookie = cookies[0] || {
     id: 1,
@@ -376,6 +471,78 @@ export default function DashboardScreen() {
           </View>
         </FadeSlideIn>
 
+        {/* Dinero Pendiente de Cobro */}
+        <FadeSlideIn delay={115}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => router.push('/orders')}
+            style={{ marginBottom: 12 }}
+          >
+            <DoubleBezelCard
+              gradient={
+                theme === 'dark'
+                  ? ['rgba(245, 158, 11, 0.14)', 'rgba(217, 119, 6, 0.05)']
+                  : ['#FFFBEB', '#FEF3C7']
+              }
+              style={{
+                borderColor: theme === 'dark' ? 'rgba(245, 158, 11, 0.35)' : '#FDE68A',
+                borderWidth: 1,
+              }}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: radii.md,
+                      backgroundColor: theme === 'dark' ? 'rgba(245, 158, 11, 0.22)' : '#FDE68A',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      borderColor: 'rgba(245, 158, 11, 0.35)',
+                    }}
+                  >
+                    <Ionicons name="hourglass" size={20} color={colors.amberLight} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: colors.amberLight, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                        Dinero Pendiente
+                      </Text>
+                      <View
+                        style={{
+                          backgroundColor: colors.amberBg,
+                          paddingHorizontal: 7,
+                          paddingVertical: 1.5,
+                          borderRadius: radii.pill,
+                          borderWidth: 1,
+                          borderColor: colors.amberBorder,
+                        }}
+                      >
+                        <Text style={{ color: colors.amberText, fontSize: 9, fontWeight: '800' }}>
+                          {pendingPaymentsCount} {pendingPaymentsCount === 1 ? 'pago pendiente' : 'pagos pendientes'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={{ fontSize: 19, fontWeight: '900', color: colors.textMain, marginTop: 2 }}>
+                      {privacyMode ? '••••••' : `$${pendingPaymentTotal.toFixed(2)}`}
+                      <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textDim }}> {currency} por cobrar</Text>
+                    </Text>
+                    <Text style={{ fontSize: 10, fontWeight: '600', color: colors.textMuted, marginTop: 1 }}>
+                      No sumado a ganancia hasta marcar como Pagado o Anticipo
+                    </Text>
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, paddingLeft: 4 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: colors.amberLight }}>Ver</Text>
+                  <Ionicons name="chevron-forward" size={14} color={colors.amberLight} />
+                </View>
+              </View>
+            </DoubleBezelCard>
+          </TouchableOpacity>
+        </FadeSlideIn>
+
         {/* Action Shortcuts with Tactical Gradients */}
         <FadeSlideIn delay={140}>
           <View style={styles.shortcutsRow}>
@@ -523,12 +690,32 @@ export default function DashboardScreen() {
       {/* Quick Add Expense Modal */}
       <Modal visible={isQuickExpenseOpen} animationType="slide" transparent onRequestClose={() => setIsQuickExpenseOpen(false)}>
         <View style={styles.modalBackdrop}>
-          <View style={[styles.modalDialog, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: colors.borderSubtle }]}>
-              <Text style={[styles.modalTitle, { color: colors.textMain }]}>Registrar Gasto Rápido</Text>
-              <TouchableOpacity onPress={() => setIsQuickExpenseOpen(false)}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </TouchableOpacity>
+          <Animated.View
+            style={[
+              styles.modalDialog,
+              {
+                backgroundColor: colors.bgCard,
+                borderColor: colors.borderSubtle,
+                transform: [{ translateY: quickExpTranslateY }],
+              },
+            ]}
+          >
+            {/* Top Drag Handle & Header with panResponder */}
+            <View {...quickExpPanResponder.panHandlers}>
+              <View style={styles.dragHandleContainer}>
+                <View
+                  style={[
+                    styles.dragHandleBar,
+                    { backgroundColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)' },
+                  ]}
+                />
+              </View>
+              <View style={[styles.modalHeader, { borderBottomColor: colors.borderSubtle }]}>
+                <Text style={[styles.modalTitle, { color: colors.textMain }]}>Registrar Gasto Rápido</Text>
+                <TouchableOpacity onPress={() => setIsQuickExpenseOpen(false)}>
+                  <Ionicons name="close" size={22} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
             </View>
             <View style={{ padding: 20 }}>
               <Text style={[styles.formLabel, { color: colors.textMuted }]}>Concepto</Text>
@@ -555,19 +742,39 @@ export default function DashboardScreen() {
                 style={{ marginTop: 10 }}
               />
             </View>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
 
       {/* Quick Sell Star Cookie Modal */}
       <Modal visible={isQuickSaleOpen} animationType="slide" transparent onRequestClose={() => setIsQuickSaleOpen(false)}>
         <View style={styles.modalBackdrop}>
-          <View style={[styles.modalDialog, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: colors.borderSubtle }]}>
-              <Text style={[styles.modalTitle, { color: colors.textMain }]}>Venta Rápida: {starCookie.name}</Text>
-              <TouchableOpacity onPress={() => setIsQuickSaleOpen(false)}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </TouchableOpacity>
+          <Animated.View
+            style={[
+              styles.modalDialog,
+              {
+                backgroundColor: colors.bgCard,
+                borderColor: colors.borderSubtle,
+                transform: [{ translateY: quickSaleTranslateY }],
+              },
+            ]}
+          >
+            {/* Top Drag Handle & Header with panResponder */}
+            <View {...quickSalePanResponder.panHandlers}>
+              <View style={styles.dragHandleContainer}>
+                <View
+                  style={[
+                    styles.dragHandleBar,
+                    { backgroundColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)' },
+                  ]}
+                />
+              </View>
+              <View style={[styles.modalHeader, { borderBottomColor: colors.borderSubtle }]}>
+                <Text style={[styles.modalTitle, { color: colors.textMain }]}>Venta Rápida: {starCookie.name}</Text>
+                <TouchableOpacity onPress={() => setIsQuickSaleOpen(false)}>
+                  <Ionicons name="close" size={22} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
             </View>
             <View style={{ padding: 20 }}>
               <Text style={[styles.formLabel, { color: colors.textMuted }]}>Esquema de Venta / Promociones</Text>
@@ -665,7 +872,7 @@ export default function DashboardScreen() {
                 style={{ marginTop: 12 }}
               />
             </View>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
       </SwipeTabWrapper>
@@ -874,6 +1081,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderHighlight,
     maxHeight: '90%',
+  },
+  dragHandleContainer: {
+    width: '100%',
+    alignItems: 'center',
+    paddingTop: 10,
+    paddingBottom: 2,
+  },
+  dragHandleBar: {
+    width: 40,
+    height: 5,
+    borderRadius: 2.5,
   },
   modalHeader: {
     flexDirection: 'row',

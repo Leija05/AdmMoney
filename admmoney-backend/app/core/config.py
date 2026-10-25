@@ -9,7 +9,6 @@ load_dotenv(BASE_DIR / ".env")
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-DB_PATH = BASE_DIR / "admmoney.db"
 
 # Server configuration
 PORT = int(os.getenv("PORT", "8000"))

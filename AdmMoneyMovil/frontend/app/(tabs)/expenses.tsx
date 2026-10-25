@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,10 @@ import {
   Modal,
   TextInput,
   ScrollView,
-  Alert
+  Alert,
+  Animated,
+  PanResponder,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -68,6 +71,51 @@ export default function ExpensesScreen() {
   const [category, setCategory] = useState(CATEGORIES[1]);
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0]);
   const [notes, setNotes] = useState('');
+
+  const isDark = colors.isDark;
+  const screenHeight = Dimensions.get('window').height;
+  const modalTranslateY = useRef(new Animated.Value(0)).current;
+
+  const modalPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
+        return gestureState.dy > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.3;
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        if (gestureState.dy > 0) {
+          modalTranslateY.setValue(gestureState.dy);
+        } else {
+          modalTranslateY.setValue(gestureState.dy * 0.15);
+        }
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (gestureState.dy > 110 || (gestureState.dy > 30 && gestureState.vy > 0.35)) {
+          Animated.timing(modalTranslateY, {
+            toValue: screenHeight,
+            duration: 180,
+            useNativeDriver: true,
+          }).start(() => {
+            setIsModalOpen(false);
+            modalTranslateY.setValue(0);
+          });
+        } else {
+          Animated.spring(modalTranslateY, {
+            toValue: 0,
+            friction: 8,
+            tension: 80,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  useEffect(() => {
+    if (isModalOpen) {
+      modalTranslateY.setValue(0);
+    }
+  }, [isModalOpen]);
 
   const filtered = expenses.filter((e) => {
     const matchesCat = selectedCategory === 'Todas' || e.category === selectedCategory;
@@ -295,15 +343,35 @@ export default function ExpensesScreen() {
       {/* Add Expense Modal */}
       <Modal visible={isModalOpen} animationType="slide" transparent onRequestClose={() => setIsModalOpen(false)}>
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalDialog}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalEyebrow}>Nuevo Registro</Text>
-                <Text style={styles.modalTitle}>Registrar Gasto Manual</Text>
+          <Animated.View
+            style={[
+              styles.modalDialog,
+              {
+                backgroundColor: colors.bgCard,
+                borderColor: colors.borderSubtle,
+                transform: [{ translateY: modalTranslateY }],
+              },
+            ]}
+          >
+            {/* Top Drag Handle & Header with panResponder */}
+            <View {...modalPanResponder.panHandlers}>
+              <View style={styles.dragHandleContainer}>
+                <View
+                  style={[
+                    styles.dragHandleBar,
+                    { backgroundColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)' },
+                  ]}
+                />
               </View>
-              <TouchableOpacity onPress={() => setIsModalOpen(false)}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </TouchableOpacity>
+              <View style={styles.modalHeader}>
+                <View>
+                  <Text style={styles.modalEyebrow}>Nuevo Registro</Text>
+                  <Text style={styles.modalTitle}>Registrar Gasto Manual</Text>
+                </View>
+                <TouchableOpacity onPress={() => setIsModalOpen(false)}>
+                  <Ionicons name="close" size={22} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <ScrollView style={{ padding: 20 }}>
@@ -382,7 +450,7 @@ export default function ExpensesScreen() {
                 style={{ marginTop: 10, marginBottom: 20 }}
               />
             </ScrollView>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
 
@@ -518,6 +586,17 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radii.outer,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
+  },
+  dragHandleContainer: {
+    width: '100%',
+    alignItems: 'center',
+    paddingTop: 10,
+    paddingBottom: 2,
+  },
+  dragHandleBar: {
+    width: 40,
+    height: 5,
+    borderRadius: 2.5,
   },
   modalHeader: {
     flexDirection: 'row',
