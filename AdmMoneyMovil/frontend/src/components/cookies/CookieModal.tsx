@@ -18,7 +18,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { colors, useThemeColors, radii, spacing } from '../../theme';
-import { CookieProduct, RecipeIngredientItem, Ingredient } from '../../lib/types';
+import { CookieProduct, RecipeIngredientItem, Ingredient, Promotion } from '../../lib/types';
 import { useAppStore } from '../../stores/app.store';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -36,10 +36,11 @@ export interface CookieModalProps {
 const DEFAULT_RECIPE_INGREDIENTS: RecipeIngredientItem[] = [
   { name: 'Masa Base & Mantequilla', quantity: 200, unit: 'g', cost: 4.80 },
   { name: 'Chispas de Chocolate', quantity: 150, unit: 'g', cost: 2.90 },
-  { name: 'Empaque Individual Kraft', quantity: 1, unit: 'pza', cost: 1.97 },
+  { name: 'Empaque Individual Kraft', quantity: 1, unit: 'pza', cost: 2.00 },
 ];
 
 const PRESET_IMAGE_URL = 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=500&auto=format&fit=crop&q=60';
+const YIELD_PRESETS = [12, 16, 20, 24, 30];
 
 export const CookieModal: React.FC<CookieModalProps> = ({
   visible,
@@ -54,41 +55,44 @@ export const CookieModal: React.FC<CookieModalProps> = ({
   const isDark = colors.isDark;
   const isEditing = !!cookie;
 
+  const promotions = useAppStore((state) => state.promotions);
+  const registeredIngredients = useAppStore((state) => state.ingredients);
+
+  // Form Fields
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [batchYield, setBatchYield] = useState('16');
-  const [ingredientCost, setIngredientCost] = useState('6.77');
-  const [packagingCost, setPackagingCost] = useState('2.90');
-  const registeredIngredients = useAppStore((state) => state.ingredients);
+  const [ingredientCost, setIngredientCost] = useState('6.50');
+  const [packagingCost, setPackagingCost] = useState('2.00');
   const [salePrice, setSalePrice] = useState('35.00');
-  const [targetBatchProfit, setTargetBatchProfit] = useState('');
+  const [targetBatchProfit, setTargetBatchProfit] = useState('424.00');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [ingredients, setIngredients] = useState<RecipeIngredientItem[]>([]);
   const [isPhotoPickerOpen, setIsPhotoPickerOpen] = useState(false);
   const [isIngredientPickerOpen, setIsIngredientPickerOpen] = useState(false);
   const [pickerSearch, setPickerSearch] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'economics' | 'ingredients' | 'info'>('economics');
+  const [activeTab, setActiveTab] = useState<'economics' | 'promos' | 'ingredients' | 'info'>('economics');
 
   const screenHeight = Dimensions.get('window').height;
-  const modalHeight = Math.round(screenHeight * 0.92);
+  const modalHeight = Math.round(screenHeight * 0.93);
   const translateY = useRef(new Animated.Value(0)).current;
 
   // Swipe-down to close panResponder
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (evt, gestureState) => {
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
         return gestureState.dy > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.3;
       },
-      onPanResponderMove: (evt, gestureState) => {
+      onPanResponderMove: (_evt, gestureState) => {
         if (gestureState.dy > 0) {
           translateY.setValue(gestureState.dy);
         } else {
           translateY.setValue(gestureState.dy * 0.15);
         }
       },
-      onPanResponderRelease: (evt, gestureState) => {
+      onPanResponderRelease: (_evt, gestureState) => {
         if (gestureState.dy > 110 || (gestureState.dy > 30 && gestureState.vy > 0.35)) {
           Animated.timing(translateY, {
             toValue: screenHeight,
@@ -110,6 +114,7 @@ export const CookieModal: React.FC<CookieModalProps> = ({
     })
   ).current;
 
+  // Initial populate when opening
   useEffect(() => {
     if (visible) {
       translateY.setValue(0);
@@ -119,15 +124,18 @@ export const CookieModal: React.FC<CookieModalProps> = ({
         const yieldVal = cookie.batch_yield || 16;
         setBatchYield(String(yieldVal));
 
-        const totalCost = cookie.recipe_cost || 9.67;
-        const packCost = 2.90;
-        const rawCost = Math.max(0.5, totalCost - packCost);
+        const totalCost = cookie.recipe_cost || 8.50;
+        const packCost = typeof cookie.packaging_cost === 'number' ? cookie.packaging_cost : 2.00;
+        const rawCost = typeof cookie.cost_per_cookie === 'number'
+          ? cookie.cost_per_cookie
+          : Math.max(0.5, totalCost - packCost);
 
         setIngredientCost(rawCost.toFixed(2));
         setPackagingCost(packCost.toFixed(2));
-        setSalePrice(cookie.sale_price ? cookie.sale_price.toFixed(2) : '35.00');
+        const price = cookie.sale_price ? cookie.sale_price : 35.00;
+        setSalePrice(price.toFixed(2));
 
-        const profitPerCookie = Math.max(0, (cookie.sale_price || 35) - totalCost);
+        const profitPerCookie = Math.max(0, price - totalCost);
         const batchProf = profitPerCookie * yieldVal;
         setTargetBatchProfit(batchProf.toFixed(2));
 
@@ -138,10 +146,10 @@ export const CookieModal: React.FC<CookieModalProps> = ({
         setName('');
         setDescription('');
         setBatchYield('16');
-        setIngredientCost('6.77');
-        setPackagingCost('2.90');
+        setIngredientCost('6.50');
+        setPackagingCost('2.00');
         setSalePrice('35.00');
-        setTargetBatchProfit('405.28');
+        setTargetBatchProfit('424.00');
         setImageUri(null);
         setIngredients([...DEFAULT_RECIPE_INGREDIENTS]);
         setActiveTab('economics');
@@ -150,15 +158,53 @@ export const CookieModal: React.FC<CookieModalProps> = ({
   }, [visible, cookie]);
 
   // Numeric derivations
-  const yieldNum = Math.max(1, parseInt(batchYield) || 16);
-  const ingCostNum = parseFloat(ingredientCost) || 0;
-  const packCostNum = parseFloat(packagingCost) || 0;
+  const yieldNum = Math.max(1, parseInt(batchYield) || 1);
+  const ingCostNum = Math.max(0, parseFloat(ingredientCost) || 0);
+  const packCostNum = Math.max(0, parseFloat(packagingCost) || 0);
   const unitCostTotal = ingCostNum + packCostNum;
-  const priceNum = parseFloat(salePrice) || 0;
+  const priceNum = Math.max(0, parseFloat(salePrice) || 0);
   const profitPerCookie = priceNum - unitCostTotal;
-  const calcBatchProfit = profitPerCookie * yieldNum;
   const marginPct = priceNum > 0 ? (profitPerCookie / priceNum) * 100 : 0;
   const totalBatchCost = unitCostTotal * yieldNum;
+  const totalBatchRevenue = priceNum * yieldNum;
+  const calcBatchProfit = profitPerCookie * yieldNum;
+
+  // Live Bidirectional Handlers
+  const handleBatchYieldChange = (text: string) => {
+    setBatchYield(text);
+    const y = Math.max(1, parseInt(text) || 1);
+    const prof = (priceNum - unitCostTotal) * y;
+    setTargetBatchProfit(prof.toFixed(2));
+  };
+
+  const handleSetPresetYield = (preset: number) => {
+    setBatchYield(String(preset));
+    const prof = (priceNum - unitCostTotal) * preset;
+    setTargetBatchProfit(prof.toFixed(2));
+  };
+
+  const handleIngredientCostChange = (text: string) => {
+    setIngredientCost(text);
+    const ing = parseFloat(text) || 0;
+    const c = ing + packCostNum;
+    const prof = (priceNum - c) * yieldNum;
+    setTargetBatchProfit(prof.toFixed(2));
+  };
+
+  const handlePackagingCostChange = (text: string) => {
+    setPackagingCost(text);
+    const pack = parseFloat(text) || 0;
+    const c = ingCostNum + pack;
+    const prof = (priceNum - c) * yieldNum;
+    setTargetBatchProfit(prof.toFixed(2));
+  };
+
+  const handleSalePriceChange = (text: string) => {
+    setSalePrice(text);
+    const p = parseFloat(text) || 0;
+    const prof = (p - unitCostTotal) * yieldNum;
+    setTargetBatchProfit(prof.toFixed(2));
+  };
 
   const handleTargetBatchProfitChange = (text: string) => {
     setTargetBatchProfit(text);
@@ -170,15 +216,7 @@ export const CookieModal: React.FC<CookieModalProps> = ({
     }
   };
 
-  const handleSalePriceChange = (text: string) => {
-    setSalePrice(text);
-    const p = parseFloat(text);
-    if (!isNaN(p)) {
-      const prof = (p - unitCostTotal) * yieldNum;
-      setTargetBatchProfit(prof.toFixed(2));
-    }
-  };
-
+  // Image pickers
   const handlePickFromCamera = async () => {
     setIsPhotoPickerOpen(false);
     try {
@@ -223,6 +261,7 @@ export const CookieModal: React.FC<CookieModalProps> = ({
     }
   };
 
+  // Ingredients helpers
   const handleAddIngredientFromCatalog = (ing: Ingredient) => {
     const defaultQty = ing.unit === 'g' || ing.unit === 'ml' ? 100 : 1;
     const itemCost = Number((defaultQty * (ing.cost_per_unit || 0)).toFixed(2));
@@ -267,11 +306,23 @@ export const CookieModal: React.FC<CookieModalProps> = ({
     const totalIngredientsCost = ingredients.reduce((acc, curr) => acc + (Number(curr.cost) || 0), 0);
     const perCookieIngCost = totalIngredientsCost / yieldNum;
     setIngredientCost(perCookieIngCost.toFixed(2));
+    const c = perCookieIngCost + packCostNum;
+    const prof = (priceNum - c) * yieldNum;
+    setTargetBatchProfit(prof.toFixed(2));
     Alert.alert(
       '¡Costos Actualizados!',
       `Costo total lote: $${totalIngredientsCost.toFixed(2)} MXN\nCosto insumo por pieza (${yieldNum} pzas): $${perCookieIngCost.toFixed(2)} MXN`
     );
   };
+
+  // Active promotions simulation for this cookie
+  const activePromos = promotions.filter((p) => {
+    if (!p.is_active) return false;
+    if (p.target_type === 'all_products') return true;
+    if (p.target_type === 'specific_products' && cookie && (p.target_product_ids || []).includes(cookie.id)) return true;
+    if (p.target_type === 'category' && p.target_category && cookie?.category === p.target_category) return true;
+    return false;
+  });
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -289,10 +340,12 @@ export const CookieModal: React.FC<CookieModalProps> = ({
         name: name.trim(),
         description: description.trim(),
         sale_price: priceNum,
+        batch_yield: yieldNum,
+        packaging_cost: packCostNum,
+        cost_per_cookie: ingCostNum,
         recipe_cost: unitCostTotal,
         profit_per_unit: profitPerCookie,
         profit_margin_pct: marginPct,
-        batch_yield: yieldNum,
         image_url: imageUri || (cookie?.image_url || PRESET_IMAGE_URL),
         ingredients: ingredients.filter((i) => i.name.trim().length > 0),
       };
@@ -300,7 +353,7 @@ export const CookieModal: React.FC<CookieModalProps> = ({
       if (cookie && (onUpdate || onUpdateCookie)) {
         const updater = onUpdate || onUpdateCookie!;
         await updater(cookie.id, payload);
-        Alert.alert('¡Receta Guardada!', `Se actualizaron los costos y ganancia de ${name}.`);
+        Alert.alert('¡Receta Guardada!', `Se actualizaron los costos, tanda y ganancia de ${name}.`);
       } else if (onSave || onAddCookie) {
         const saver = onSave || onAddCookie!;
         await saver(payload);
@@ -328,33 +381,40 @@ export const CookieModal: React.FC<CookieModalProps> = ({
           style={[
             styles.dialog,
             {
-              backgroundColor: colors.bgCard,
-              borderColor: colors.borderSubtle,
               height: modalHeight,
+              maxHeight: modalHeight,
+              backgroundColor: isDark ? '#1C202A' : '#FFFFFF',
+              borderColor: isDark ? '#2E384D' : '#E2E8F0',
               transform: [{ translateY }],
             },
           ]}
         >
-          {/* Header & PanResponder Drag Handle */}
+          {/* Drag Handle Bar for Swipe-Down to Dismiss */}
           <View {...panResponder.panHandlers}>
             <View style={styles.dragHandleContainer}>
-              <View style={[styles.dragHandleBar, { backgroundColor: colors.borderSubtle }]} />
+              <View
+                style={[
+                  styles.dragHandleBar,
+                  { backgroundColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)' },
+                ]}
+              />
             </View>
 
-            <View style={[styles.header, { borderBottomColor: colors.borderSubtle }]}>
+            {/* Header */}
+            <View style={styles.header}>
               <View style={{ flex: 1, paddingRight: 8 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={[styles.headerEyebrow, { color: colors.amberLight }]}>
-                    {isEditing ? 'Configurar Receta & Rendimiento' : 'Alta de Nueva Receta'}
-                  </Text>
-                  <Badge label={isEditing ? 'Edición' : 'Nueva Receta'} variant={isEditing ? 'amber' : 'emerald'} />
-                </View>
-                <Text style={[styles.headerTitle, { color: colors.textMain }]} numberOfLines={1}>
-                  {isEditing && cookie ? cookie.name : (name || 'Nueva Galleta')}
+                <Text style={[styles.title, { color: colors.textMain }]} numberOfLines={1}>
+                  {isEditing ? `Editar ${name || 'Galleta'}` : 'Nueva Receta de Galleta'}
+                </Text>
+                <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+                  {isEditing ? 'Tanda, insumo, empaque, precio y ganancia libre' : 'Configura tanda, costos y precio de venta'}
                 </Text>
               </View>
-              <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
+              <TouchableOpacity
+                onPress={onClose}
+                style={[styles.closeCircle, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+              >
+                <Ionicons name="close" size={20} color={colors.textMain} />
               </TouchableOpacity>
             </View>
           </View>
@@ -362,9 +422,10 @@ export const CookieModal: React.FC<CookieModalProps> = ({
           {/* Subtabs switcher */}
           <View style={[styles.tabsRow, { borderBottomColor: colors.borderSubtle }]}>
             {[
-              { id: 'economics', label: 'Tanda & Ganancia', icon: 'calculator' },
+              { id: 'economics', label: 'Tanda & Costos', icon: 'calculator' },
+              { id: 'promos', label: `Promos (${activePromos.length})`, icon: 'pricetag' },
               { id: 'ingredients', label: `Insumos (${ingredients.length})`, icon: 'nutrition' },
-              { id: 'info', label: 'Nombre & Foto', icon: 'image' },
+              { id: 'info', label: 'Detalles & Foto', icon: 'image' },
             ].map((tab) => {
               const active = activeTab === tab.id;
               return (
@@ -395,7 +456,7 @@ export const CookieModal: React.FC<CookieModalProps> = ({
           </View>
 
           <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-            {/* TAB 1: ECONOMICS & BATCH PROFIT */}
+            {/* TAB 1: ECONOMICS & BATCH CONFIGURATION */}
             {activeTab === 'economics' && (
               <View>
                 {/* Visual Unit Economics Live Summary Box */}
@@ -405,23 +466,24 @@ export const CookieModal: React.FC<CookieModalProps> = ({
                       Estructura por Tanda ({yieldNum} pzas)
                     </Text>
                     <Badge
-                      label={`${marginPct.toFixed(2)}% Margen`}
+                      label={`${marginPct.toFixed(1)}% Margen`}
                       variant={marginPct >= 60 ? 'emerald' : 'amber'}
                     />
                   </View>
 
                   <View style={[styles.pillBadgeRow, { backgroundColor: isDark ? '#202636' : '#FFFFFF', borderColor: colors.borderSubtle }]}>
                     <Text style={[styles.pillBadgeText, { color: colors.textMain }]}>
-                      🍪 Tanda: {yieldNum} pzas • Insumo: ${ingCostNum.toFixed(2)} • Empaque: ${packCostNum.toFixed(2)} • Total Lote: ${totalBatchCost.toFixed(2)}
+                      🍪 Tanda: {yieldNum} pzas • Insumo: ${ingCostNum.toFixed(2)} • Empaque: ${packCostNum.toFixed(2)} • Total: ${unitCostTotal.toFixed(2)} c/u
                     </Text>
                   </View>
 
                   <View style={styles.liveMetricsGrid}>
                     <View style={styles.liveMetricItem}>
-                      <Text style={[styles.liveMetricLabel, { color: colors.textDim }]}>Costo x Pza</Text>
+                      <Text style={[styles.liveMetricLabel, { color: colors.textDim }]}>Costo Unitario</Text>
                       <Text style={[styles.liveMetricVal, { color: colors.roseLight }]}>
                         ${unitCostTotal.toFixed(2)}
                       </Text>
+                      <Text style={[styles.liveMetricSub, { color: colors.textDim }]}>con empaque</Text>
                     </View>
                     <View style={styles.liveMetricDivider} />
                     <View style={styles.liveMetricItem}>
@@ -429,6 +491,7 @@ export const CookieModal: React.FC<CookieModalProps> = ({
                       <Text style={[styles.liveMetricVal, { color: colors.amberLight }]}>
                         ${priceNum.toFixed(2)}
                       </Text>
+                      <Text style={[styles.liveMetricSub, { color: colors.textDim }]}>individual</Text>
                     </View>
                     <View style={styles.liveMetricDivider} />
                     <View style={styles.liveMetricItem}>
@@ -436,34 +499,83 @@ export const CookieModal: React.FC<CookieModalProps> = ({
                       <Text style={[styles.liveMetricVal, { color: colors.emeraldLight }]}>
                         +${profitPerCookie.toFixed(2)}
                       </Text>
+                      <Text style={[styles.liveMetricSub, { color: colors.emeraldLight, fontWeight: '700' }]}>neta libre</Text>
                     </View>
                   </View>
                 </View>
 
                 {/* FORM INPUTS */}
                 <Text style={[styles.formLabel, { color: colors.textDim, marginTop: 14 }]}>
-                  Rendimiento de la Tanda (Galletas producidas)
+                  Nombre de la Galleta *
                 </Text>
                 <TextInput
                   style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
-                  value={batchYield}
-                  onChangeText={setBatchYield}
-                  keyboardType="numeric"
-                  placeholder="16"
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Ej. Chispas Clásicas NY"
                   placeholderTextColor={colors.textDim}
                 />
 
-                <View style={{ flexDirection: 'row', gap: 10 }}>
+                {/* BATCH YIELD WITH CHIP PRESETS */}
+                <View style={{ marginTop: 10 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={[styles.formLabel, { color: colors.textDim, marginBottom: 0 }]}>
+                      Tamaño de Tanda (Galletas producidas) *
+                    </Text>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: colors.amberLight }}>
+                      {yieldNum} piezas
+                    </Text>
+                  </View>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain, marginTop: 6 }]}
+                    value={batchYield}
+                    onChangeText={handleBatchYieldChange}
+                    keyboardType="numeric"
+                    placeholder="16"
+                    placeholderTextColor={colors.textDim}
+                  />
+
+                  {/* Quick Chips */}
+                  <View style={styles.chipRow}>
+                    <Text style={{ fontSize: 11, color: colors.textDim, alignSelf: 'center', marginRight: 4 }}>
+                      Atajos:
+                    </Text>
+                    {YIELD_PRESETS.map((preset) => {
+                      const selected = yieldNum === preset;
+                      return (
+                        <TouchableOpacity
+                          key={preset}
+                          onPress={() => handleSetPresetYield(preset)}
+                          style={[
+                            styles.chipBtn,
+                            {
+                              backgroundColor: selected ? colors.amberBg : colors.bgTertiary,
+                              borderColor: selected ? colors.amberBorder : colors.borderSubtle,
+                            },
+                          ]}
+                        >
+                          <Text style={[styles.chipText, { color: selected ? colors.amberLight : colors.textMuted }]}>
+                            {preset} pzas
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* SEPARATE INGREDIENTS & PACKAGING COSTS */}
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.formLabel, { color: colors.textDim }]}>Insumo x Pza ($ MXN)</Text>
+                    <Text style={[styles.formLabel, { color: colors.textDim }]}>Insumo / Masa x Pza ($ MXN)</Text>
                     <TextInput
                       style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
                       value={ingredientCost}
-                      onChangeText={setIngredientCost}
+                      onChangeText={handleIngredientCostChange}
                       keyboardType="numeric"
-                      placeholder="6.77"
+                      placeholder="6.50"
                       placeholderTextColor={colors.textDim}
                     />
+                    <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 2 }}>Mantequilla, harina, chocolate</Text>
                   </View>
 
                   <View style={{ flex: 1 }}>
@@ -471,17 +583,19 @@ export const CookieModal: React.FC<CookieModalProps> = ({
                     <TextInput
                       style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
                       value={packagingCost}
-                      onChangeText={setPackagingCost}
+                      onChangeText={handlePackagingCostChange}
                       keyboardType="numeric"
-                      placeholder="2.90"
+                      placeholder="2.00"
                       placeholderTextColor={colors.textDim}
                     />
+                    <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 2 }}>Bolsita kraft, sticker, etc.</Text>
                   </View>
                 </View>
 
-                <View style={{ flexDirection: 'row', gap: 10 }}>
+                {/* SALE PRICE & BATCH PROFIT GOAL */}
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.formLabel, { color: colors.textDim }]}>Precio Venta ($ MXN)</Text>
+                    <Text style={[styles.formLabel, { color: colors.textDim }]}>Precio Venta ($ MXN) *</Text>
                     <TextInput
                       style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain, fontWeight: '800' }]}
                       value={salePrice}
@@ -490,6 +604,7 @@ export const CookieModal: React.FC<CookieModalProps> = ({
                       placeholder="35.00"
                       placeholderTextColor={colors.textDim}
                     />
+                    <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 2 }}>Cobro individual</Text>
                   </View>
 
                   <View style={{ flex: 1 }}>
@@ -499,35 +614,174 @@ export const CookieModal: React.FC<CookieModalProps> = ({
                       value={targetBatchProfit}
                       onChangeText={handleTargetBatchProfitChange}
                       keyboardType="numeric"
-                      placeholder="405.00"
+                      placeholder="424.00"
                       placeholderTextColor={colors.textDim}
                     />
+                    <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 2 }}>Tanda de {yieldNum} piezas</Text>
                   </View>
                 </View>
 
-                {/* Return On Investment (ROI) */}
-                <View style={[styles.roiBox, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.08)' : '#ECFDF5', borderColor: isDark ? 'rgba(16, 185, 129, 0.25)' : '#A7F3D0' }]}>
-                  <Ionicons name="trending-up" size={18} color="#10B981" />
+                {/* RETURN ON INVESTMENT / LOT SUMMARY BANNER */}
+                <View style={[styles.roiBox, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.08)' : '#ECFDF5', borderColor: isDark ? 'rgba(16, 185, 129, 0.25)' : '#A7F3D0', marginTop: 14 }]}>
+                  <Ionicons name="trending-up" size={20} color="#10B981" />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#34D399' : '#047857' }}>
-                      Ganancia por Lote Calculada: +${calcBatchProfit.toFixed(2)} MXN
+                    <Text style={{ fontSize: 12.5, fontWeight: '800', color: isDark ? '#34D399' : '#047857' }}>
+                      Meta Ganancia Neta por Lote: +${calcBatchProfit.toFixed(2)} MXN
                     </Text>
-                    <Text style={{ fontSize: 10.5, color: isDark ? '#A7F3D0' : '#065F46', marginTop: 1 }}>
-                      Por cada ${totalBatchCost.toFixed(2)} invertidos en masa y empaque, cobras ${(priceNum * yieldNum).toFixed(2)}.
+                    <Text style={{ fontSize: 11, color: isDark ? '#A7F3D0' : '#065F46', marginTop: 2 }}>
+                      Inviertes ${totalBatchCost.toFixed(2)} en masa y empaque ({yieldNum} pzas) y cobras ${totalBatchRevenue.toFixed(2)}. Rendimiento: {unitCostTotal > 0 ? ((profitPerCookie / unitCostTotal) * 100).toFixed(1) : 0}% ROI.
                     </Text>
                   </View>
                 </View>
               </View>
             )}
 
-            {/* TAB 2: INGREDIENTS BREAKDOWN */}
+            {/* TAB 2: PROMOTIONS & BATCH PROFIT SIMULATOR */}
+            {activeTab === 'promos' && (
+              <View>
+                <View style={styles.promoSimHeader}>
+                  <Text style={[styles.subSectionTitle, { color: colors.textMain }]}>
+                    Simulador de Ganancia con Promociones
+                  </Text>
+                  <Text style={{ fontSize: 11.5, color: colors.textDim, marginTop: 2, lineHeight: 16 }}>
+                    Compara cuánto ganas vendiendo piezas individuales vs combos y promociones creadas en la app para una tanda de {yieldNum} piezas.
+                  </Text>
+                </View>
+
+                {/* Card 1: Venta Estándar (Regular) */}
+                <View style={[styles.promoSimCard, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
+                  <View style={styles.promoSimCardHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.promoSimCardTitle, { color: colors.textMain }]}>
+                        1. Venta Estándar Regular
+                      </Text>
+                      <Text style={{ fontSize: 11, color: colors.textDim }}>
+                        Sin promociones • 1 pieza a precio de lista
+                      </Text>
+                    </View>
+                    <Badge label={`$${priceNum.toFixed(2)} c/u`} variant="amber" />
+                  </View>
+
+                  <View style={styles.promoSimDivider} />
+
+                  <View style={styles.promoSimMetricsRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.promoSimLabel, { color: colors.textDim }]}>Costo c/empaque</Text>
+                      <Text style={[styles.promoSimVal, { color: colors.roseLight }]}>-${unitCostTotal.toFixed(2)}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.promoSimLabel, { color: colors.textDim }]}>Ganancia x Pza</Text>
+                      <Text style={[styles.promoSimVal, { color: colors.emeraldLight }]}>+${profitPerCookie.toFixed(2)}</Text>
+                    </View>
+                    <View style={{ flex: 1.2 }}>
+                      <Text style={[styles.promoSimLabel, { color: colors.textDim }]}>Meta Lote ({yieldNum} pzas)</Text>
+                      <Text style={[styles.promoSimVal, { color: colors.emeraldLight }]}>+${calcBatchProfit.toFixed(2)}</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Dynamic cards for each active promotion */}
+                {activePromos.length > 0 ? (
+                  activePromos.map((promo, idx) => {
+                    let qty = promo.min_quantity || 1;
+                    let promoRevenue = 0;
+                    if (promo.promo_type === 'combo_fixed_price') {
+                      qty = promo.min_quantity || 3;
+                      promoRevenue = promo.discount_value;
+                    } else if (promo.promo_type === 'percentage') {
+                      qty = promo.min_quantity || 12;
+                      promoRevenue = (priceNum * qty) * (1 - promo.discount_value / 100);
+                    } else if (promo.promo_type === 'two_for_one') {
+                      qty = 2;
+                      promoRevenue = priceNum * 1;
+                    } else if (promo.promo_type === 'fixed_amount') {
+                      qty = promo.min_quantity || 1;
+                      promoRevenue = Math.max(0, (priceNum * qty) - promo.discount_value);
+                    } else {
+                      qty = promo.min_quantity || 1;
+                      promoRevenue = priceNum * qty;
+                    }
+
+                    const promoCost = unitCostTotal * qty;
+                    const promoProfit = promoRevenue - promoCost;
+                    const promoMargin = promoRevenue > 0 ? (promoProfit / promoRevenue) * 100 : 0;
+
+                    // Extrapolación a la tanda completa
+                    const combosInBatch = Math.floor(yieldNum / qty);
+                    const remainder = yieldNum % qty;
+                    const batchRevenuePromo = (combosInBatch * promoRevenue) + (remainder * priceNum);
+                    const batchProfitPromo = batchRevenuePromo - totalBatchCost;
+
+                    return (
+                      <View
+                        key={promo.id || idx}
+                        style={[
+                          styles.promoSimCard,
+                          {
+                            backgroundColor: colors.bgTertiary,
+                            borderColor: colors.purpleBorder,
+                            marginTop: 10,
+                          },
+                        ]}
+                      >
+                        <View style={styles.promoSimCardHeader}>
+                          <View style={{ flex: 1, paddingRight: 6 }}>
+                            <Text style={[styles.promoSimCardTitle, { color: colors.textMain }]}>
+                              {idx + 2}. {promo.name}
+                            </Text>
+                            <Text style={{ fontSize: 11, color: colors.purpleLight, marginTop: 1 }}>
+                              {qty} pzas x ${promoRevenue.toFixed(2)} MXN • {promo.badge_text}
+                            </Text>
+                          </View>
+                          <Badge label={`${promoMargin.toFixed(1)}% Margen`} variant="purple" />
+                        </View>
+
+                        <View style={styles.promoSimDivider} />
+
+                        <View style={styles.promoSimMetricsRow}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.promoSimLabel, { color: colors.textDim }]}>Costo Combo</Text>
+                            <Text style={[styles.promoSimVal, { color: colors.roseLight }]}>-${promoCost.toFixed(2)}</Text>
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.promoSimLabel, { color: colors.textDim }]}>Ganas x Combo</Text>
+                            <Text style={[styles.promoSimVal, { color: colors.emeraldLight }]}>+${promoProfit.toFixed(2)}</Text>
+                          </View>
+                          <View style={{ flex: 1.2 }}>
+                            <Text style={[styles.promoSimLabel, { color: colors.textDim }]}>Meta Lote Promo</Text>
+                            <Text style={[styles.promoSimVal, { color: colors.purpleLight }]}>+${batchProfitPromo.toFixed(2)}</Text>
+                          </View>
+                        </View>
+
+                        <View style={[styles.batchDiffNote, { backgroundColor: isDark ? '#1F2433' : '#F1F5F9' }]}>
+                          <Ionicons name="information-circle-outline" size={13} color={colors.textDim} />
+                          <Text style={{ fontSize: 10, color: colors.textDim, flex: 1 }}>
+                            Si vendes la tanda en esta promo ({combosInBatch} combos{remainder > 0 ? ` + ${remainder} pzas sueltas` : ''}), ganas +${batchProfitPromo.toFixed(2)} MXN netos.
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })
+                ) : (
+                  <View style={[styles.emptyPromoBox, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
+                    <Ionicons name="pricetag-outline" size={32} color={colors.textDim} />
+                    <Text style={[styles.emptyPromoTitle, { color: colors.textMain }]}>Sin Promociones Específicas</Text>
+                    <Text style={[styles.emptyPromoSub, { color: colors.textDim }]}>
+                      Puedes crear promociones como '3 x $90' o 'Docena 15% OFF' en la subpestaña 'Promos' para ver aquí su rendimiento por tanda.
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* TAB 3: INGREDIENTS BREAKDOWN */}
             {activeTab === 'ingredients' && (
               <View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <View>
                     <Text style={[styles.subSectionTitle, { color: colors.textMain }]}>Ingredientes del Lote</Text>
                     <Text style={{ fontSize: 11, color: colors.textDim }}>
-                      {ingredients.length} insumos registrados para esta masa
+                      {ingredients.length} insumos registrados para esta masa ({yieldNum} galletas)
                     </Text>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -609,13 +863,13 @@ export const CookieModal: React.FC<CookieModalProps> = ({
                 >
                   <Ionicons name="calculator-outline" size={15} color={colors.brandText} />
                   <Text style={[styles.recalcCostBtnText, { color: colors.brandText }]}>
-                    Calcular y fijar costo de insumo x pieza
+                    Calcular y fijar costo de insumo x pieza ({yieldNum} pzas)
                   </Text>
                 </TouchableOpacity>
               </View>
             )}
 
-            {/* TAB 3: NAME, DESCRIPTION & PHOTO */}
+            {/* TAB 4: NAME, DESCRIPTION & PHOTO */}
             {activeTab === 'info' && (
               <View>
                 <View style={styles.imageSection}>
@@ -638,199 +892,135 @@ export const CookieModal: React.FC<CookieModalProps> = ({
                   </View>
                 </View>
 
-                <Text style={[styles.formLabel, { color: colors.textDim, marginTop: 14 }]}>Nombre Comercial</Text>
+                <Text style={[styles.formLabel, { color: colors.textDim, marginTop: 14 }]}>Descripción / Presentación</Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Ej. Galleta Chispas Gigante"
-                  placeholderTextColor={colors.textDim}
-                />
-
-                <Text style={[styles.formLabel, { color: colors.textDim }]}>Descripción / Presentación</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain, height: 70 }]}
+                  style={[styles.input, styles.textArea, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
                   value={description}
                   onChangeText={setDescription}
                   multiline
-                  placeholder="Detalles sobre ingredientes, textura y sabor..."
+                  numberOfLines={3}
+                  placeholder="Ej. Masa suave con mantequilla premium y 40% de chispas belgas semiamargas."
                   placeholderTextColor={colors.textDim}
                 />
               </View>
             )}
-
-            {/* Bottom Actions */}
-            <View style={styles.actionRow}>
-              <Button
-                title="Cancelar"
-                variant="secondary"
-                onPress={onClose}
-                style={{ flex: 1 }}
-              />
-              <Button
-                title={isSaving ? "Guardando..." : (isEditing ? "Guardar Cambios" : "Guardar Receta")}
-                variant="primary"
-                disabled={isSaving}
-                onPress={handleSave}
-                icon={<Ionicons name="checkmark-done" size={17} color="#fff" />}
-                style={{ flex: 2 }}
-              />
-            </View>
           </ScrollView>
 
-          {/* Photo source modal picker */}
-          <Modal
-            visible={isPhotoPickerOpen}
-            animationType="fade"
-            transparent
-            onRequestClose={() => setIsPhotoPickerOpen(false)}
-          >
-            <TouchableOpacity
-              style={styles.pickerBackdrop}
-              activeOpacity={1}
-              onPress={() => setIsPhotoPickerOpen(false)}
-            >
-              <View style={[styles.pickerDialog, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
-                <Text style={[styles.pickerTitle, { color: colors.textMain }]}>Seleccionar Foto</Text>
-                <Text style={[styles.pickerSub, { color: colors.textMuted }]}>
-                  Elige el origen de la imagen para {name || 'la galleta'}
-                </Text>
-
-                <TouchableOpacity
-                  style={[styles.pickerOption, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
-                  onPress={handlePickFromCamera}
-                >
-                  <Ionicons name="camera" size={20} color={colors.amberLight} />
-                  <Text style={[styles.pickerOptionText, { color: colors.textMain }]}>Tomar Foto con Cámara</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.pickerOption, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
-                  onPress={handlePickFromGallery}
-                >
-                  <Ionicons name="images" size={20} color={colors.brandLight} />
-                  <Text style={[styles.pickerOptionText, { color: colors.textMain }]}>Elegir de la Galería</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.pickerCancelBtn, { borderColor: colors.borderSubtle }]}
-                  onPress={() => setIsPhotoPickerOpen(false)}
-                >
-                  <Text style={[styles.pickerCancelText, { color: colors.textDim }]}>Cancelar</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          </Modal>
-
-          {/* Modal Selector de Insumos Registrados */}
-          <Modal
-            visible={isIngredientPickerOpen}
-            transparent
-            animationType="slide"
-            onRequestClose={() => setIsIngredientPickerOpen(false)}
-          >
-            <TouchableOpacity
-              style={styles.pickerBackdropSheet}
-              activeOpacity={1}
-              onPress={() => setIsIngredientPickerOpen(false)}
-            >
-              <TouchableOpacity
-                activeOpacity={1}
-                style={[
-                  styles.pickerSheetCard,
-                  {
-                    backgroundColor: isDark ? '#1C202A' : '#FFFFFF',
-                    borderColor: isDark ? '#2E384D' : '#E2E8F0',
-                    height: Math.round(screenHeight * 0.78),
-                  },
-                ]}
-              >
-                <View style={styles.dragHandleContainer}>
-                  <View
-                    style={[
-                      styles.dragHandleBar,
-                      { backgroundColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)' },
-                    ]}
-                  />
-                </View>
-
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <View>
-                    <Text style={[styles.pickerTitle, { color: isDark ? '#F1F3F7' : '#181A1F' }]}>
-                      Insumos Registrados ({registeredIngredients.length})
-                    </Text>
-                    <Text style={{ fontSize: 11, color: colors.textDim }}>
-                      Selecciona los insumos para esta receta
-                    </Text>
-                  </View>
-                  <TouchableOpacity onPress={() => setIsIngredientPickerOpen(false)}>
-                    <Ionicons name="close" size={20} color={colors.textDim} />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Search */}
-                <View style={[styles.pickerSearchRow, { backgroundColor: isDark ? '#242936' : '#F1F5F9', borderColor: colors.borderSubtle }]}>
-                  <Ionicons name="search" size={16} color={colors.textDim} />
-                  <TextInput
-                    style={[styles.pickerSearchInput, { color: isDark ? '#F1F3F7' : '#181A1F' }]}
-                    placeholder="Buscar insumo (ej. Harina, Chispas, Huevo)..."
-                    placeholderTextColor={colors.textDim}
-                    value={pickerSearch}
-                    onChangeText={setPickerSearch}
-                  />
-                </View>
-
-                <FlatList
-                  data={registeredIngredients.filter((ing) =>
-                    ing.name.toLowerCase().includes(pickerSearch.toLowerCase())
-                  )}
-                  keyExtractor={(item) => String(item.id)}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      onPress={() => handleAddIngredientFromCatalog(item)}
-                      style={[
-                        styles.pickerIngItem,
-                        {
-                          backgroundColor: isDark ? '#242936' : '#F8F9FA',
-                          borderColor: isDark ? '#2E384D' : '#E2E8F0',
-                        },
-                      ]}
-                    >
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.pickerIngName, { color: isDark ? '#F1F3F7' : '#181A1F' }]}>
-                          {item.name}
-                        </Text>
-                        <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>
-                          {item.package_quantity} {item.unit} • Proveedor: {item.supplier || 'Local'}
-                        </Text>
-                      </View>
-                      <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={{ fontSize: 13, fontWeight: '800', color: colors.emeraldLight }}>
-                          ${item.cost_per_unit.toFixed(2)} / {item.unit}
-                        </Text>
-                        <Text style={{ fontSize: 10, color: colors.textDim }}>Costo Unitario</Text>
-                      </View>
-                    </TouchableOpacity>
-                  )}
-                  ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-                  contentContainerStyle={{ paddingBottom: 30 }}
-                  ListEmptyComponent={
-                    <View style={{ alignItems: 'center', padding: 30 }}>
-                      <Ionicons name="nutrition-outline" size={36} color={colors.textDim} />
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted, marginTop: 8 }}>
-                        No hay insumos registrados
-                      </Text>
-                      <Text style={{ fontSize: 11, color: colors.textDim, textAlign: 'center', marginTop: 4 }}>
-                        Registra insumos desde la pestaña de Insumos para asignarlos a tus recetas.
-                      </Text>
-                    </View>
-                  }
-                />
-              </TouchableOpacity>
-            </TouchableOpacity>
-          </Modal>
+          {/* Bottom Action Footer */}
+          <View style={[styles.footer, { borderTopColor: colors.borderSubtle, backgroundColor: isDark ? '#1C202A' : '#FFFFFF' }]}>
+            <Button
+              title="Cancelar"
+              variant="secondary"
+              onPress={onClose}
+              style={{ flex: 1 }}
+              disabled={isSaving}
+            />
+            <Button
+              title={isSaving ? 'Guardando...' : (isEditing ? 'Guardar Cambios' : 'Crear Galleta')}
+              variant="amber"
+              onPress={handleSave}
+              style={{ flex: 2 }}
+              disabled={isSaving}
+              icon={<Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />}
+            />
+          </View>
         </Animated.View>
       </View>
+
+      {/* PHOTO SOURCE SELECTION BOTTOM SHEET */}
+      <Modal
+        visible={isPhotoPickerOpen}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setIsPhotoPickerOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.pickerBackdrop}
+          activeOpacity={1}
+          onPress={() => setIsPhotoPickerOpen(false)}
+        >
+          <View style={[styles.photoPickerSheet, { backgroundColor: isDark ? '#1C202A' : '#FFFFFF', borderColor: colors.borderSubtle }]}>
+            <Text style={[styles.photoPickerTitle, { color: colors.textMain }]}>Foto de la Galleta</Text>
+            <TouchableOpacity
+              onPress={handlePickFromCamera}
+              style={[styles.photoOptionBtn, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+            >
+              <Ionicons name="camera" size={20} color={colors.amberLight} />
+              <Text style={[styles.photoOptionText, { color: colors.textMain }]}>Tomar Foto con la Cámara</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handlePickFromGallery}
+              style={[styles.photoOptionBtn, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+            >
+              <Ionicons name="images" size={20} color={colors.brandLight} />
+              <Text style={[styles.photoOptionText, { color: colors.textMain }]}>Elegir de la Galería</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setIsPhotoPickerOpen(false)}
+              style={[styles.cancelBtn, { borderColor: colors.borderSubtle }]}
+            >
+              <Text style={[styles.cancelBtnText, { color: colors.textDim }]}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* CATALOG INGREDIENT PICKER MODAL */}
+      <Modal
+        visible={isIngredientPickerOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setIsIngredientPickerOpen(false)}
+      >
+        <View style={styles.backdrop}>
+          <View style={[styles.pickerDialog, { backgroundColor: isDark ? '#1C202A' : '#FFFFFF', borderColor: colors.borderSubtle }]}>
+            <View style={styles.header}>
+              <View>
+                <Text style={[styles.title, { color: colors.textMain }]}>Agregar Insumo de Catálogo</Text>
+                <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+                  Selecciona una materia prima registrada
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setIsIngredientPickerOpen(false)}
+                style={[styles.closeCircle, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+              >
+                <Ionicons name="close" size={18} color={colors.textMain} />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain, marginHorizontal: 16, marginBottom: 12 }]}
+              value={pickerSearch}
+              onChangeText={setPickerSearch}
+              placeholder="Buscar insumo (ej. Harina, Mantequilla)..."
+              placeholderTextColor={colors.textDim}
+            />
+
+            <FlatList
+              data={registeredIngredients.filter((i) =>
+                i.name.toLowerCase().includes(pickerSearch.toLowerCase())
+              )}
+              keyExtractor={(item) => String(item.id)}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.pickerItem, { borderBottomColor: colors.borderSubtle }]}
+                  onPress={() => handleAddIngredientFromCatalog(item)}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.pickerItemName, { color: colors.textMain }]}>{item.name}</Text>
+                    <Text style={{ fontSize: 11, color: colors.textDim }}>
+                      ${item.cost_per_unit.toFixed(4)} MXN por {item.unit}
+                    </Text>
+                  </View>
+                  <Ionicons name="add-circle" size={24} color={colors.amberLight} />
+                </TouchableOpacity>
+              )}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
+            />
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 };
@@ -838,77 +1028,76 @@ export const CookieModal: React.FC<CookieModalProps> = ({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: 'rgba(0,0,0,0.65)',
     justifyContent: 'flex-end',
   },
   dialog: {
-    borderTopLeftRadius: radii.outer,
-    borderTopRightRadius: radii.outer,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     borderWidth: 1,
     borderBottomWidth: 0,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    elevation: 20,
   },
   dragHandleContainer: {
     alignItems: 'center',
-    paddingTop: 10,
+    paddingTop: 8,
     paddingBottom: 4,
   },
   dragHandleBar: {
-    width: 42,
+    width: 44,
     height: 5,
-    borderRadius: 2.5,
+    borderRadius: 3,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 18,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
+    paddingVertical: 10,
   },
-  headerEyebrow: {
-    fontSize: 10,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  headerTitle: {
+  title: {
     fontSize: 17,
-    fontWeight: '900',
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  subtitle: {
+    fontSize: 11.5,
     marginTop: 2,
   },
-  closeBtn: {
-    padding: 6,
+  closeCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabsRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
+    paddingHorizontal: 16,
   },
   tabBtn: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 11,
+    gap: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    marginRight: 8,
   },
   tabBtnText: {
     fontSize: 12,
     fontWeight: '700',
   },
   body: {
-    padding: 18,
+    flex: 1,
+    paddingHorizontal: 18,
+    paddingTop: 14,
   },
   liveSummaryBox: {
-    borderWidth: 1,
     borderRadius: radii.md,
-    padding: 14,
-    marginBottom: 8,
+    borderWidth: 1,
+    padding: 12,
   },
   liveSummaryHeader: {
     flexDirection: 'row',
@@ -921,79 +1110,159 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   pillBadgeRow: {
+    borderRadius: radii.sm,
     borderWidth: 1,
-    borderRadius: radii.pill,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
     marginBottom: 10,
   },
   pillBadgeText: {
     fontSize: 10.5,
     fontWeight: '700',
-    textAlign: 'center',
   },
   liveMetricsGrid: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingTop: 6,
   },
   liveMetricItem: {
-    alignItems: 'center',
     flex: 1,
+    alignItems: 'center',
   },
   liveMetricLabel: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
   },
   liveMetricVal: {
     fontSize: 16,
     fontWeight: '900',
-    marginTop: 2,
+    marginVertical: 1,
+  },
+  liveMetricSub: {
+    fontSize: 9,
   },
   liveMetricDivider: {
     width: 1,
-    height: 24,
-    backgroundColor: 'rgba(150, 150, 150, 0.2)',
+    height: 28,
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   formLabel: {
     fontSize: 11,
     fontWeight: '700',
+    marginBottom: 5,
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    marginBottom: 6,
+    letterSpacing: 0.3,
   },
   input: {
-    borderWidth: 1,
     borderRadius: radii.md,
+    borderWidth: 1,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
-    marginBottom: 12,
+    paddingVertical: 9,
+    fontSize: 14,
+  },
+  textArea: {
+    height: 72,
+    textAlignVertical: 'top',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 6,
+    flexWrap: 'wrap',
+  },
+  chipBtn: {
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  chipText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   roiBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    borderWidth: 1,
     borderRadius: radii.md,
-    padding: 12,
-    marginTop: 4,
+    borderWidth: 1,
+    padding: 10,
+  },
+  promoSimHeader: {
+    marginBottom: 12,
   },
   subSectionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  promoSimCard: {
+    borderRadius: radii.md,
+    borderWidth: 1,
+    padding: 12,
+  },
+  promoSimCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  promoSimCardTitle: {
     fontSize: 13,
     fontWeight: '800',
+  },
+  promoSimDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginVertical: 8,
+  },
+  promoSimMetricsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  promoSimLabel: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  promoSimVal: {
+    fontSize: 14,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  batchDiffNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: radii.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginTop: 8,
+  },
+  emptyPromoBox: {
+    borderRadius: radii.md,
+    borderWidth: 1,
+    padding: 24,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  emptyPromoTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    marginTop: 8,
+  },
+  emptyPromoSub: {
+    fontSize: 11.5,
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 16,
   },
   smallActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    borderRadius: radii.sm,
+    borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: radii.pill,
-    borderWidth: 1,
   },
   smallActionBtnText: {
     fontSize: 11,
@@ -1003,141 +1272,115 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    borderRadius: radii.sm,
     borderWidth: 1,
-    borderRadius: radii.md,
     paddingHorizontal: 8,
-    paddingVertical: 6,
-    marginBottom: 8,
+    paddingVertical: 4,
+    marginBottom: 6,
   },
   itemInput: {
     fontSize: 12,
-    fontWeight: '600',
     paddingVertical: 4,
   },
   removeIngBtn: {
-    padding: 6,
+    padding: 4,
   },
   recalcCostBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderRadius: radii.pill,
     paddingVertical: 9,
-    marginTop: 6,
+    marginTop: 10,
   },
   recalcCostBtnText: {
-    fontSize: 11.5,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
   },
   imageSection: {
     flexDirection: 'row',
+    gap: 12,
     alignItems: 'center',
-    gap: 14,
-    marginBottom: 10,
   },
   imagePreviewWrapper: {
     width: 80,
     height: 80,
     borderRadius: radii.md,
-    borderWidth: 1,
     overflow: 'hidden',
+    borderWidth: 1,
   },
   imagePreview: {
     width: '100%',
     height: '100%',
+    resizeMode: 'cover',
   },
-  actionRow: {
+  footer: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 18,
-    marginBottom: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderTopWidth: 1,
   },
   pickerBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
   },
-  pickerDialog: {
-    width: '100%',
-    maxWidth: 340,
-    borderRadius: radii.outer,
+  photoPickerSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     borderWidth: 1,
+    borderBottomWidth: 0,
     padding: 20,
-    alignItems: 'center',
+    gap: 10,
   },
-  pickerTitle: {
+  photoPickerTitle: {
     fontSize: 15,
     fontWeight: '800',
+    marginBottom: 4,
   },
-  pickerSub: {
-    fontSize: 11.5,
-    textAlign: 'center',
-    marginTop: 4,
-    marginBottom: 16,
-  },
-  pickerOption: {
+  photoOptionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    width: '100%',
-    padding: 12,
+    gap: 12,
     borderRadius: radii.md,
     borderWidth: 1,
-    marginBottom: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
-  pickerOptionText: {
+  photoOptionText: {
     fontSize: 13,
     fontWeight: '700',
   },
-  pickerCancelBtn: {
-    paddingVertical: 8,
+  cancelBtn: {
+    borderRadius: radii.md,
+    borderWidth: 1,
+    paddingVertical: 11,
+    alignItems: 'center',
     marginTop: 4,
   },
-  pickerCancelText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  pickerBackdropSheet: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'flex-end',
-  },
-  pickerSheetCard: {
-    borderTopLeftRadius: radii.outer,
-    borderTopRightRadius: radii.outer,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
-  pickerSearchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderRadius: radii.md,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginVertical: 10,
-  },
-  pickerSearchInput: {
-    flex: 1,
+  cancelBtnText: {
     fontSize: 13,
-    paddingVertical: 2,
+    fontWeight: '700',
   },
-  pickerIngItem: {
+  pickerDialog: {
+    height: '75%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+  },
+  pickerItem: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 12,
-    borderRadius: radii.md,
-    borderWidth: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
-  pickerIngName: {
-    fontSize: 13,
-    fontWeight: '800',
+  pickerItemName: {
+    fontSize: 13.5,
+    fontWeight: '700',
   },
 });

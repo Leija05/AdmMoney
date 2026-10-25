@@ -177,6 +177,19 @@ export default function CookiesScreen() {
   const totalUnits = sales.reduce((acc, s) => acc + s.quantity, 0);
   const avgMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
+  // Catalogue batch statistics (dynamic, never hardcoded)
+  const avgYield = cookies.length > 0
+    ? Math.round(cookies.reduce((acc, c) => acc + (c.batch_yield || 16), 0) / cookies.length)
+    : 16;
+  const avgUnitCost = cookies.length > 0
+    ? cookies.reduce((acc, c) => acc + (c.recipe_cost || 0), 0) / cookies.length
+    : 0;
+  const avgPrice = cookies.length > 0
+    ? cookies.reduce((acc, c) => acc + (c.sale_price || 0), 0) / cookies.length
+    : 0;
+  const avgProfitPerUnit = Math.max(0, avgPrice - avgUnitCost);
+  const avgBatchProfit = avgProfitPerUnit * avgYield;
+
   const handleOpenSale = (cookie: CookieProduct) => {
     setSelectedCookie(cookie);
     setSaleQty(1);
@@ -360,26 +373,22 @@ export default function CookiesScreen() {
             </View>
           </View>
 
-          {/* Unit Economics Highlights Bar (Screenshot 4) - Tap to edit batch parameters & profit */}
+          {/* Dynamic Catalogue & Batch Overview Bar */}
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => {
-              if (cookies.length > 0) {
-                setEditingCookieProduct(cookies[0]);
-              }
-            }}
+            onPress={() => setIsAddCookieOpen(true)}
             style={[styles.economicsMiniBar, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
           >
             <View style={{ flex: 1, paddingRight: 6 }}>
               <Text style={[styles.economicsMiniText, { color: colors.textMuted }]}>
                 {privacyMode
-                  ? '🍪 Tanda: 16 pzas • Insumo: •••••• • Empaque: •••••• • Total: ••••••'
-                  : '🍪 Tanda: 16 pzas • Insumo: $6.77 • Empaque: $2.90 • Total Lote: $9.67'}
+                  ? '🍪 •••••• Recetas • Tanda Prom: •••••• • Meta: ••••••'
+                  : `🍪 ${cookies.length} Recetas • Tanda prom: ${avgYield} pzas • Meta lote prom: +$${avgBatchProfit.toFixed(2)}`}
               </Text>
             </View>
             <View style={[styles.editTandaBadge, { backgroundColor: colors.amberBg, borderColor: colors.amberBorder }]}>
-              <Ionicons name="pencil" size={11} color={colors.amberLight} />
-              <Text style={[styles.editTandaText, { color: colors.amberLight }]}>Editar Tanda</Text>
+              <Ionicons name="add-circle" size={12} color={colors.amberLight} />
+              <Text style={[styles.editTandaText, { color: colors.amberLight }]}>+ Receta / Tanda</Text>
             </View>
           </TouchableOpacity>
         </DoubleBezelCard>

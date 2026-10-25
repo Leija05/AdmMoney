@@ -159,11 +159,18 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
   if (!cookie) return null;
 
   const batchYield = cookie.batch_yield || 16;
-  const unitCost = cookie.recipe_cost || 9.67;
-  const salePrice = cookie.sale_price || 35.0;
-  const netProfit = cookie.profit_per_unit || (salePrice - unitCost);
-  const marginPct = cookie.profit_margin_pct || (salePrice > 0 ? (netProfit / salePrice) * 100 : 0);
+  const unitCost = cookie.recipe_cost || 0;
+  const packCost = typeof cookie.packaging_cost === 'number' ? cookie.packaging_cost : 2.0;
+  const ingCost = typeof cookie.cost_per_cookie === 'number'
+    ? cookie.cost_per_cookie
+    : Math.max(0, unitCost - packCost);
+  const salePrice = cookie.sale_price || 0;
+  const netProfit = cookie.profit_per_unit ?? (salePrice - unitCost);
+  const marginPct = cookie.profit_margin_pct ?? (salePrice > 0 ? (netProfit / salePrice) * 100 : 0);
   const roiPct = unitCost > 0 ? (netProfit / unitCost) * 100 : 0;
+  const batchCost = unitCost * batchYield;
+  const batchRevenue = salePrice * batchYield;
+  const batchProfit = netProfit * batchYield;
 
   // Filtrar promociones activas que apliquen a este producto (todo el menú o galleta específica)
   const applicablePromotions = promotions.filter((p) => {
@@ -183,70 +190,62 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
   });
 
   // Generamos esquemas calculados dinámicamente
-  const dynamicPromoSchemes =
-    applicablePromotions.length > 0
-      ? applicablePromotions.map((p) => {
-          let qty = p.min_quantity || 1;
-          let promoRevenue = 0;
+  const dynamicPromoSchemes = applicablePromotions.map((p) => {
+    let qty = p.min_quantity || 1;
+    let promoRevenue = 0;
 
-          if (p.promo_type === 'combo_fixed_price') {
-            qty = p.min_quantity || 3;
-            promoRevenue = p.discount_value;
-          } else if (p.promo_type === 'percentage') {
-            qty = p.min_quantity || 12;
-            const reg = salePrice * qty;
-            promoRevenue = reg * (1 - p.discount_value / 100);
-          } else if (p.promo_type === 'two_for_one') {
-            qty = 2;
-            promoRevenue = salePrice * 1;
-          } else if (p.promo_type === 'fixed_amount') {
-            qty = p.min_quantity || 3;
-            promoRevenue = Math.max(0, salePrice * qty - p.discount_value);
-          } else {
-            qty = p.min_quantity || 1;
-            promoRevenue = salePrice * qty;
-          }
+    if (p.promo_type === 'combo_fixed_price') {
+      qty = p.min_quantity || 3;
+      promoRevenue = p.discount_value;
+    } else if (p.promo_type === 'percentage') {
+      qty = p.min_quantity || 12;
+      const reg = salePrice * qty;
+      promoRevenue = reg * (1 - p.discount_value / 100);
+    } else if (p.promo_type === 'two_for_one') {
+      qty = 2;
+      promoRevenue = salePrice * 1;
+    } else if (p.promo_type === 'fixed_amount') {
+      qty = p.min_quantity || 3;
+      promoRevenue = Math.max(0, salePrice * qty - p.discount_value);
+    } else {
+      qty = p.min_quantity || 1;
+      promoRevenue = salePrice * qty;
+    }
 
-          const promoCost = unitCost * qty;
-          const promoProfit = promoRevenue - promoCost;
-          const profitPerPiece = qty > 0 ? promoProfit / qty : 0;
-          const roi = promoCost > 0 ? (promoProfit / promoCost) * 100 : 0;
-          const pricePerPiece = qty > 0 ? promoRevenue / qty : 0;
+    const promoCost = unitCost * qty;
+    const promoProfit = promoRevenue - promoCost;
+    const profitPerPiece = qty > 0 ? promoProfit / qty : 0;
+    const roi = promoCost > 0 ? (promoProfit / promoCost) * 100 : 0;
+    const pricePerPiece = qty > 0 ? promoRevenue / qty : 0;
 
-          return {
-            id: p.id,
-            name: p.name,
-            badge: p.badge_text || `${qty} pzas`,
-            scopeLabel:
-              p.target_type === 'all_products'
-                ? 'Todo el Menú'
-                : p.target_type === 'category'
-                ? 'Categoría'
-                : 'Galleta Específica',
-            qty,
-            promoRevenue,
-            pricePerPiece,
-            promoCost,
-            promoProfit,
-            profitPerPiece,
-            roi,
-          };
-        })
-      : [
-          {
-            id: 999,
-            name: 'Promoción 3 x $90',
-            badge: '3 x $90',
-            scopeLabel: 'Todo el Menú',
-            qty: 3,
-            promoRevenue: 90.0,
-            pricePerPiece: 30.0,
-            promoCost: unitCost * 3,
-            promoProfit: 90.0 - unitCost * 3,
-            profitPerPiece: (90.0 - unitCost * 3) / 3,
-            roi: unitCost * 3 > 0 ? ((90.0 - unitCost * 3) / (unitCost * 3)) * 100 : 0,
-          },
-        ];
+    // Extrapolación a lote completo
+    const combosInBatch = Math.floor(batchYield / qty);
+    const remainder = batchYield % qty;
+    const batchRevPromo = (combosInBatch * promoRevenue) + (remainder * salePrice);
+    const batchProfitPromo = batchRevPromo - batchCost;
+
+    return {
+      id: p.id,
+      name: p.name,
+      badge: p.badge_text || `${qty} pzas`,
+      scopeLabel:
+        p.target_type === 'all_products'
+          ? 'Todo el Menú'
+          : p.target_type === 'category'
+          ? 'Categoría'
+          : 'Galleta Específica',
+      qty,
+      promoRevenue,
+      pricePerPiece,
+      promoCost,
+      promoProfit,
+      profitPerPiece,
+      roi,
+      batchProfitPromo,
+      combosInBatch,
+      remainder,
+    };
+  });
 
   const totalIngredientsCost = cookie.ingredients
     ? cookie.ingredients.reduce((acc, i) => acc + (typeof i.cost === 'number' ? i.cost : 0), 0)
@@ -486,90 +485,112 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
                   </View>
                   <View style={styles.schemeMetricRow}>
                     <Text style={[styles.schemeKey, { color: isDark ? '#94A3B8' : '#64748B' }]}>
-                      Costo Unitario Lote (Insumos + Empaque):
+                      Costo Unitario (Insumo + Empaque):
                     </Text>
-                    <Text style={styles.schemeValRed}>-${unitCost.toFixed(2)} MXN</Text>
+                    <Text style={styles.schemeValRed}>-${unitCost.toFixed(2)} MXN (${ingCost.toFixed(2)} + ${packCost.toFixed(2)})</Text>
                   </View>
                   <View style={styles.schemeMetricRow}>
                     <Text style={[styles.schemeKeyBold, { color: isDark ? '#F1F3F7' : '#0F172A' }]}>
                       Ganancia Neta Libre por Pieza:
                     </Text>
-                    <Text style={styles.schemeValGreen}>+${netProfit.toFixed(2)} MXN</Text>
+                    <Text style={styles.schemeValGreen}>+${netProfit.toFixed(2)} MXN ({marginPct.toFixed(1)}%)</Text>
+                  </View>
+                  <View style={styles.schemeMetricRow}>
+                    <Text style={[styles.schemeKeyBold, { color: colors.amberLight }]}>
+                      Meta Ganancia Lote ({batchYield} pzas):
+                    </Text>
+                    <Text style={[styles.schemeValGreen, { color: colors.emeraldLight, fontWeight: '900' }]}>
+                      +${batchProfit.toFixed(2)} MXN
+                    </Text>
                   </View>
                   <View style={styles.schemeMetricRow}>
                     <Text style={[styles.schemeKey, { color: isDark ? '#94A3B8' : '#64748B' }]}>
                       Rendimiento sobre costo (ROI):
                     </Text>
-                    <Text style={styles.schemeValGold}>~{roiPct.toFixed(2)}% ROI</Text>
+                    <Text style={styles.schemeValGold}>~{roiPct.toFixed(1)}% ROI</Text>
                   </View>
                 </View>
 
                 {/* Esquemas Dinámicos de Promociones Aplicables */}
-                {dynamicPromoSchemes.map((scheme, idx) => (
-                  <View
-                    key={scheme.id || idx}
-                    style={[
-                      styles.schemeBox,
-                      {
-                        marginTop: 10,
-                        backgroundColor: isDark ? '#1C2230' : '#FFFFFF',
-                        borderColor: isDark ? '#2E3A52' : '#E2E8F0',
-                      },
-                    ]}
-                  >
-                    <View style={styles.schemeHeader}>
-                      <View style={{ flex: 1, paddingRight: 6 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <Text style={[styles.schemeName, { color: isDark ? '#F1F3F7' : '#0F172A' }]}>
-                            {idx + 2}. {scheme.name}
-                          </Text>
-                          <View
-                            style={[
-                              styles.scopeTag,
-                              {
-                                backgroundColor: isDark ? 'rgba(56,189,248,0.15)' : '#E0F2FE',
-                                borderColor: isDark ? 'rgba(56,189,248,0.3)' : '#BAE6FD',
-                              },
-                            ]}
-                          >
-                            <Text style={[styles.scopeTagText, { color: colors.brandLight }]}>
-                              {scheme.scopeLabel}
+                {dynamicPromoSchemes.length > 0 ? (
+                  dynamicPromoSchemes.map((scheme, idx) => (
+                    <View
+                      key={scheme.id || idx}
+                      style={[
+                        styles.schemeBox,
+                        {
+                          marginTop: 10,
+                          backgroundColor: isDark ? '#1C2230' : '#FFFFFF',
+                          borderColor: isDark ? '#2E3A52' : '#E2E8F0',
+                        },
+                      ]}
+                    >
+                      <View style={styles.schemeHeader}>
+                        <View style={{ flex: 1, paddingRight: 6 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <Text style={[styles.schemeName, { color: isDark ? '#F1F3F7' : '#0F172A' }]}>
+                              {idx + 2}. {scheme.name}
                             </Text>
+                            <View
+                              style={[
+                                styles.scopeTag,
+                                {
+                                  backgroundColor: isDark ? 'rgba(56,189,248,0.15)' : '#E0F2FE',
+                                  borderColor: isDark ? 'rgba(56,189,248,0.3)' : '#BAE6FD',
+                                },
+                              ]}
+                            >
+                              <Text style={[styles.scopeTagText, { color: colors.brandLight }]}>
+                                {scheme.scopeLabel}
+                              </Text>
+                            </View>
                           </View>
+                          <Text style={[styles.schemeSubTitle, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                            ${scheme.pricePerPiece.toFixed(2)} c/u ({scheme.qty} pzas en promo)
+                          </Text>
                         </View>
-                        <Text style={[styles.schemeSubTitle, { color: isDark ? '#94A3B8' : '#64748B' }]}>
-                          ${scheme.pricePerPiece.toFixed(2)} c/u ({scheme.qty} pzas en promo)
+                        <Text style={[styles.schemePrice, { color: colors.emeraldLight }]}>
+                          ${scheme.promoRevenue.toFixed(2)} MXN
                         </Text>
                       </View>
-                      <Text style={[styles.schemePrice, { color: colors.emeraldLight }]}>
-                        ${scheme.promoRevenue.toFixed(2)} MXN
-                      </Text>
-                    </View>
 
-                    <View style={styles.schemeMetricRow}>
-                      <Text style={[styles.schemeKey, { color: isDark ? '#94A3B8' : '#64748B' }]}>
-                        Costo Lote {scheme.qty} piezas (${unitCost.toFixed(2)} x {scheme.qty}):
-                      </Text>
-                      <Text style={styles.schemeValRed}>-${scheme.promoCost.toFixed(2)} MXN</Text>
-                    </View>
+                      <View style={styles.schemeMetricRow}>
+                        <Text style={[styles.schemeKey, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                          Costo Combo {scheme.qty} piezas (${unitCost.toFixed(2)} x {scheme.qty}):
+                        </Text>
+                        <Text style={styles.schemeValRed}>-${scheme.promoCost.toFixed(2)} MXN</Text>
+                      </View>
 
-                    <View style={styles.schemeMetricRow}>
-                      <Text style={[styles.schemeKeyBold, { color: isDark ? '#F1F3F7' : '#0F172A' }]}>
-                        Ganancia Neta Libre del Paquete:
-                      </Text>
-                      <Text style={styles.schemeValGreen}>+${scheme.promoProfit.toFixed(2)} MXN</Text>
-                    </View>
+                      <View style={styles.schemeMetricRow}>
+                        <Text style={[styles.schemeKeyBold, { color: isDark ? '#F1F3F7' : '#0F172A' }]}>
+                          Ganancia Neta Libre del Paquete:
+                        </Text>
+                        <Text style={styles.schemeValGreen}>+${scheme.promoProfit.toFixed(2)} MXN</Text>
+                      </View>
 
-                    <View style={styles.schemeMetricRow}>
-                      <Text style={[styles.schemeKey, { color: isDark ? '#94A3B8' : '#64748B' }]}>
-                        Ganancia por galleta en promo:
-                      </Text>
-                      <Text style={styles.schemeValGold}>
-                        +${scheme.profitPerPiece.toFixed(2)} MXN (~{scheme.roi.toFixed(2)}% ROI)
+                      <View style={styles.schemeMetricRow}>
+                        <Text style={[styles.schemeKeyBold, { color: colors.purpleLight }]}>
+                          Meta Lote con Promo ({batchYield} pzas):
+                        </Text>
+                        <Text style={[styles.schemeValGreen, { color: colors.purpleLight, fontWeight: '800' }]}>
+                          +${scheme.batchProfitPromo.toFixed(2)} MXN
+                        </Text>
+                      </View>
+                    </View>
+                  ))
+                ) : (
+                  <View style={[styles.schemeBox, { marginTop: 10, backgroundColor: isDark ? '#1C2230' : '#FFFFFF', borderColor: isDark ? '#2E3A52' : '#E2E8F0', padding: 12 }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="pricetag-outline" size={15} color={colors.textDim} />
+                      <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.textDim }}>
+                        Sin Promociones Activas
                       </Text>
                     </View>
+                    <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 4, lineHeight: 15 }}>
+                      Esta galleta se vende con margen individual estándar (+${netProfit.toFixed(2)} MXN/pza). Puedes crear promociones en la pestaña 'Promos'.
+                    </Text>
                   </View>
-                ))}
+                )}
               </View>
             )}
 

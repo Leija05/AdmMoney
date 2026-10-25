@@ -182,23 +182,40 @@ class CookieService:
         ingredients: List[Any],
         sale_price: float,
         batch_yield: int,
-        waste_pct: float = 2.0
+        waste_pct: float = 2.0,
+        packaging_cost: float = 0.0,
+        direct_ingredient_cost: Optional[float] = None,
+        direct_recipe_cost: Optional[float] = None
     ) -> Dict[str, float]:
-        total_batch_cost = sum(
-            float(item.cost if hasattr(item, "cost") else item.get("cost", 0.0))
-            for item in ingredients
-        )
-        # Factor de merma / pérdida técnica
-        waste_factor = 1.0 + (waste_pct / 100.0) if waste_pct > 0 else 1.0
-        adjusted_batch_cost = total_batch_cost * waste_factor
-
         yield_count = max(batch_yield, 1)
-        cost_per_unit = round(adjusted_batch_cost / yield_count, 2)
-        profit_per_unit = round(sale_price - cost_per_unit, 2)
+        packaging_cost = float(packaging_cost or 0.0)
+
+        if direct_recipe_cost is not None and direct_recipe_cost > 0:
+            total_unit_cost = round(float(direct_recipe_cost), 2)
+            cost_per_unit_raw = round(max(0.0, total_unit_cost - packaging_cost), 2)
+        elif direct_ingredient_cost is not None and direct_ingredient_cost >= 0:
+            cost_per_unit_raw = round(float(direct_ingredient_cost), 2)
+            total_unit_cost = round(cost_per_unit_raw + packaging_cost, 2)
+        elif ingredients and len(ingredients) > 0:
+            total_batch_cost = sum(
+                float(item.cost if hasattr(item, "cost") else item.get("cost", 0.0))
+                for item in ingredients
+            )
+            waste_factor = 1.0 + (waste_pct / 100.0) if waste_pct > 0 else 1.0
+            adjusted_batch_cost = total_batch_cost * waste_factor
+            cost_per_unit_raw = round(adjusted_batch_cost / yield_count, 2)
+            total_unit_cost = round(cost_per_unit_raw + packaging_cost, 2)
+        else:
+            cost_per_unit_raw = 0.0
+            total_unit_cost = round(packaging_cost, 2)
+
+        profit_per_unit = round(sale_price - total_unit_cost, 2)
         profit_margin_pct = round((profit_per_unit / sale_price * 100), 2) if sale_price > 0 else 0.0
 
         return {
-            "recipe_cost": cost_per_unit,
+            "cost_per_cookie": cost_per_unit_raw,
+            "packaging_cost": packaging_cost,
+            "recipe_cost": total_unit_cost,
             "profit_per_unit": profit_per_unit,
             "profit_margin_pct": profit_margin_pct
         }
@@ -217,6 +234,10 @@ class CookieService:
                 c["waste_pct"] = 2.0
             if "base_recipe_weight_g" not in c:
                 c["base_recipe_weight_g"] = 75.0
+            if "packaging_cost" not in c:
+                c["packaging_cost"] = 0.0
+            if "cost_per_cookie" not in c:
+                c["cost_per_cookie"] = round(max(0.0, float(c.get("recipe_cost", 0.0)) - float(c["packaging_cost"])), 2)
         return cookies
 
     @staticmethod
@@ -230,6 +251,10 @@ class CookieService:
                 doc["waste_pct"] = 2.0
             if "base_recipe_weight_g" not in doc:
                 doc["base_recipe_weight_g"] = 75.0
+            if "packaging_cost" not in doc:
+                doc["packaging_cost"] = 0.0
+            if "cost_per_cookie" not in doc:
+                doc["cost_per_cookie"] = round(max(0.0, float(doc.get("recipe_cost", 0.0)) - float(doc["packaging_cost"])), 2)
         return doc
 
     @staticmethod
@@ -237,8 +262,17 @@ class CookieService:
         db = get_db()
         now_str = datetime.utcnow().isoformat()
         waste_pct = float(data.waste_pct if data.waste_pct is not None else 2.0)
+        packaging_cost = float(data.packaging_cost or 0.0)
 
-        metrics = CookieService.calculate_recipe_metrics(data.ingredients, data.sale_price, data.batch_yield, waste_pct)
+        metrics = CookieService.calculate_recipe_metrics(
+            ingredients=data.ingredients,
+            sale_price=float(data.sale_price),
+            batch_yield=data.batch_yield,
+            waste_pct=waste_pct,
+            packaging_cost=packaging_cost,
+            direct_ingredient_cost=data.cost_per_cookie,
+            direct_recipe_cost=data.recipe_cost
+        )
         ingredients_dicts = [i.model_dump() if hasattr(i, "model_dump") else dict(i) for i in data.ingredients]
 
         new_id = get_next_sequence("cookie_products")
@@ -248,6 +282,8 @@ class CookieService:
             "category": data.category or "Galletas Artesanales",
             "description": data.description or "",
             "sale_price": float(data.sale_price),
+            "packaging_cost": metrics["packaging_cost"],
+            "cost_per_cookie": metrics["cost_per_cookie"],
             "recipe_cost": metrics["recipe_cost"],
             "profit_per_unit": metrics["profit_per_unit"],
             "profit_margin_pct": metrics["profit_margin_pct"],
@@ -274,12 +310,26 @@ class CookieService:
         sale_price = float(data.sale_price) if data.sale_price is not None else float(current["sale_price"])
         batch_yield = data.batch_yield if data.batch_yield is not None else current["batch_yield"]
         waste_pct = float(data.waste_pct if data.waste_pct is not None else current.get("waste_pct", 2.0))
+        packaging_cost = float(data.packaging_cost) if data.packaging_cost is not None else float(current.get("packaging_cost", 0.0))
         raw_ingredients = data.ingredients if data.ingredients is not None else current.get("ingredients", [])
 
-        metrics = CookieService.calculate_recipe_metrics(raw_ingredients, sale_price, batch_yield, waste_pct)
+        direct_ing_cost = data.cost_per_cookie
+        direct_recipe_cost = data.recipe_cost
+
+        metrics = CookieService.calculate_recipe_metrics(
+            ingredients=raw_ingredients,
+            sale_price=sale_price,
+            batch_yield=batch_yield,
+            waste_pct=waste_pct,
+            packaging_cost=packaging_cost,
+            direct_ingredient_cost=direct_ing_cost,
+            direct_recipe_cost=direct_recipe_cost
+        )
         ingredients_dicts = [i.model_dump() if hasattr(i, "model_dump") else dict(i) for i in raw_ingredients]
 
         update_fields: Dict[str, Any] = {
+            "packaging_cost": metrics["packaging_cost"],
+            "cost_per_cookie": metrics["cost_per_cookie"],
             "recipe_cost": metrics["recipe_cost"],
             "profit_per_unit": metrics["profit_per_unit"],
             "profit_margin_pct": metrics["profit_margin_pct"]

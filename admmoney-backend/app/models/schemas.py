@@ -94,6 +94,11 @@ class CookieProductBase(BaseModel):
     ingredients: List[RecipeIngredientItem] = []
     image_url: Optional[str] = ""
     is_active: Optional[bool] = True
+    packaging_cost: Optional[float] = 0.0
+    cost_per_cookie: Optional[float] = None
+    recipe_cost: Optional[float] = None
+    profit_per_unit: Optional[float] = None
+    profit_margin_pct: Optional[float] = None
 
 class CookieProductCreate(CookieProductBase):
     pass
@@ -109,6 +114,11 @@ class CookieProductUpdate(BaseModel):
     ingredients: Optional[List[RecipeIngredientItem]] = None
     image_url: Optional[str] = None
     is_active: Optional[bool] = None
+    packaging_cost: Optional[float] = None
+    cost_per_cookie: Optional[float] = None
+    recipe_cost: Optional[float] = None
+    profit_per_unit: Optional[float] = None
+    profit_margin_pct: Optional[float] = None
 
 class CookieProductResponse(BaseModel):
     id: int
@@ -126,6 +136,8 @@ class CookieProductResponse(BaseModel):
     image_url: str
     is_active: bool
     created_at: str
+    packaging_cost: Optional[float] = 0.0
+    cost_per_cookie: Optional[float] = None
 
     class Config:
         from_attributes = True

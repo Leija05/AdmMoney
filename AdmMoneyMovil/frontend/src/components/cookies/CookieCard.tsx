@@ -5,6 +5,7 @@ import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { colors, useThemeColors, radii } from '../../theme';
 import { CookieProduct } from '../../lib/types';
+import { useAppStore } from '../../stores/app.store';
 import { Ionicons } from '@expo/vector-icons';
 
 interface CookieCardProps {
@@ -23,6 +24,64 @@ export const CookieCard: React.FC<CookieCardProps> = ({
   privacyMode = false,
 }) => {
   const colors = useThemeColors();
+  const promotions = useAppStore((state) => state.promotions);
+
+  const batchYield = cookie.batch_yield || 16;
+  const unitCost = cookie.recipe_cost || 0;
+  const packCost = typeof cookie.packaging_cost === 'number' ? cookie.packaging_cost : 2.0;
+  const ingCost = typeof cookie.cost_per_cookie === 'number'
+    ? cookie.cost_per_cookie
+    : Math.max(0, unitCost - packCost);
+  const salePrice = cookie.sale_price || 0;
+  const profitPerUnit = cookie.profit_per_unit ?? (salePrice - unitCost);
+  const marginPct = cookie.profit_margin_pct ?? (salePrice > 0 ? (profitPerUnit / salePrice) * 100 : 0);
+
+  // Rendimiento y meta por lote
+  const batchCost = unitCost * batchYield;
+  const batchRevenue = salePrice * batchYield;
+  const batchProfit = profitPerUnit * batchYield;
+
+  // Promociones activas reales para esta galleta
+  const activePromos = promotions.filter((p) => {
+    if (!p.is_active) return false;
+    if (p.target_type === 'all_products') return true;
+    if (p.target_type === 'specific_products' && (p.target_product_ids || []).includes(cookie.id)) return true;
+    if (p.target_type === 'category' && p.target_category && cookie.category === p.target_category) return true;
+    return false;
+  });
+
+  const firstPromo = activePromos[0] || null;
+  let promoDetails: { name: string; revenue: number; profit: number; badge: string } | null = null;
+
+  if (firstPromo) {
+    let qty = firstPromo.min_quantity || 1;
+    let promoRevenue = 0;
+    if (firstPromo.promo_type === 'combo_fixed_price') {
+      qty = firstPromo.min_quantity || 3;
+      promoRevenue = firstPromo.discount_value;
+    } else if (firstPromo.promo_type === 'percentage') {
+      qty = firstPromo.min_quantity || 12;
+      promoRevenue = (salePrice * qty) * (1 - firstPromo.discount_value / 100);
+    } else if (firstPromo.promo_type === 'two_for_one') {
+      qty = 2;
+      promoRevenue = salePrice * 1;
+    } else if (firstPromo.promo_type === 'fixed_amount') {
+      qty = firstPromo.min_quantity || 1;
+      promoRevenue = Math.max(0, (salePrice * qty) - firstPromo.discount_value);
+    } else {
+      qty = firstPromo.min_quantity || 1;
+      promoRevenue = salePrice * qty;
+    }
+    const promoCost = unitCost * qty;
+    const promoProfit = promoRevenue - promoCost;
+
+    promoDetails = {
+      name: firstPromo.name,
+      badge: firstPromo.badge_text || `${qty} pzas`,
+      revenue: promoRevenue,
+      profit: promoProfit,
+    };
+  }
 
   const handleCardPress = () => {
     if (onInspect) {
@@ -45,7 +104,7 @@ export const CookieCard: React.FC<CookieCardProps> = ({
         delayLongPress={300}
         style={styles.headerRow}
       >
-        <View style={styles.imageWrapper}>
+        <View style={[styles.imageWrapper, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
           <Image source={{ uri: cookie.image_url }} style={styles.image} />
         </View>
 
@@ -62,21 +121,21 @@ export const CookieCard: React.FC<CookieCardProps> = ({
             </TouchableOpacity>
           </View>
           <Text style={[styles.cookieDesc, { color: colors.textMuted }]} numberOfLines={2}>
-            {cookie.description || 'Receta artesanal neoyorquina.'}
+            {cookie.description || 'Receta artesanal optimizada para alto rendimiento.'}
           </Text>
           <View style={styles.badgeRow}>
             <Badge
-              label={privacyMode ? '•••% Margen' : `${cookie.profit_margin_pct.toFixed(2)}% Margen`}
-              variant="emerald"
+              label={privacyMode ? '•••% Margen' : `${marginPct.toFixed(1)}% Margen`}
+              variant={marginPct >= 60 ? 'emerald' : 'amber'}
             />
             <Text style={[styles.batchText, { color: colors.textDim }]}>
-              Tanda: {cookie.batch_yield || 16} pzas
+              Tanda: {batchYield} pzas
             </Text>
           </View>
         </View>
       </TouchableOpacity>
 
-      {/* THE REQUESTED UNIT ECONOMICS: LO QUE GASTO vs PRECIO vs LO QUE GANO */}
+      {/* UNIT ECONOMICS: LO QUE GASTO vs PRECIO vs LO QUE GANO */}
       <TouchableOpacity
         activeOpacity={0.75}
         onPress={handleCardPress}
@@ -87,23 +146,25 @@ export const CookieCard: React.FC<CookieCardProps> = ({
         <View style={styles.econBox}>
           <Text style={[styles.econLabel, { color: colors.textDim }]}>Lo que gasto</Text>
           <Text style={[styles.econValue, { color: colors.roseLight }]}>
-            {privacyMode ? '••••••' : `$${cookie.recipe_cost.toFixed(2)}`}
+            {privacyMode ? '••••••' : `$${unitCost.toFixed(2)}`}
           </Text>
-          <Text style={[styles.econSub, { color: colors.textDim }]}>con empaque</Text>
+          <Text style={[styles.econSub, { color: colors.textDim }]} numberOfLines={1}>
+            ${ingCost.toFixed(1)} + emp ${packCost.toFixed(1)}
+          </Text>
         </View>
 
-        <View style={[styles.econBox, styles.econBorderLeft]}>
+        <View style={[styles.econBox, styles.econBorderLeft, { borderLeftColor: colors.borderSubtle }]}>
           <Text style={[styles.econLabel, { color: colors.textDim }]}>Precio venta</Text>
           <Text style={[styles.econValue, { color: colors.amberLight }]}>
-            ${cookie.sale_price.toFixed(2)}
+            ${salePrice.toFixed(2)}
           </Text>
           <Text style={[styles.econSub, { color: colors.textDim }]}>individual</Text>
         </View>
 
-        <View style={[styles.econBox, styles.econBorderLeft]}>
+        <View style={[styles.econBox, styles.econBorderLeft, { borderLeftColor: colors.borderSubtle }]}>
           <Text style={[styles.econLabel, { color: colors.textDim }]}>Lo que gano</Text>
           <Text style={[styles.econValue, { color: colors.emeraldLight }]}>
-            {privacyMode ? '••••••' : `+$${cookie.profit_per_unit.toFixed(2)}`}
+            {privacyMode ? '••••••' : `+$${profitPerUnit.toFixed(2)}`}
           </Text>
           <Text style={[styles.econSub, { color: colors.emeraldLight, fontWeight: '700' }]}>
             neta libre
@@ -111,18 +172,48 @@ export const CookieCard: React.FC<CookieCardProps> = ({
         </View>
       </TouchableOpacity>
 
-      {/* Promo Banner */}
-      <View style={[styles.promoBanner, { backgroundColor: colors.purpleBg, borderColor: colors.purpleBorder }]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Ionicons name="pricetag" size={12} color={colors.purpleLight} />
-          <Text style={[styles.promoTitle, { color: colors.purpleLight }]}>Promoción 3 x $90</Text>
+      {/* META GANANCIA LOTE (TANDA COMPLETA) */}
+      <View style={[styles.batchGoalBanner, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, paddingRight: 6 }}>
+          <Ionicons name="flag" size={13} color={colors.amberLight} />
+          <View>
+            <Text style={[styles.batchGoalLabel, { color: colors.textDim }]}>
+              Meta Ganancia Lote ({batchYield} pzas)
+            </Text>
+            <Text style={{ fontSize: 9.5, color: colors.textMuted }}>
+              Gasto total ${batchCost.toFixed(1)} • Cobras ${batchRevenue.toFixed(1)}
+            </Text>
+          </View>
         </View>
-        <Text style={[styles.promoValue, { color: colors.purpleLight }]}>
-          {privacyMode ? '••••••' : '+$60.99 ganancia neta'}
+        <Text style={[styles.batchGoalValue, { color: colors.emeraldLight }]}>
+          {privacyMode ? '••••••' : `+$${batchProfit.toFixed(2)}`}
         </Text>
       </View>
 
-      <View style={{ flexDirection: 'row', gap: 8 }}>
+      {/* PROMO BANNER DINÁMICO (REAL O ESTADO ESTÁNDAR) */}
+      {promoDetails ? (
+        <View style={[styles.promoBanner, { backgroundColor: colors.purpleBg, borderColor: colors.purpleBorder }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1, paddingRight: 6 }}>
+            <Ionicons name="pricetag" size={12} color={colors.purpleLight} />
+            <Text style={[styles.promoTitle, { color: colors.purpleLight }]} numberOfLines={1}>
+              {promoDetails.name} ({promoDetails.badge})
+            </Text>
+          </View>
+          <Text style={[styles.promoValue, { color: colors.purpleLight }]}>
+            {privacyMode ? '••••••' : `+$${promoDetails.profit.toFixed(2)} neta`}
+          </Text>
+        </View>
+      ) : (
+        <View style={[styles.noPromoBanner, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
+          <Ionicons name="pricetag-outline" size={11} color={colors.textDim} />
+          <Text style={[styles.noPromoText, { color: colors.textDim }]}>
+            Sin promociones activas • Venta regular
+          </Text>
+        </View>
+      )}
+
+      {/* BOTONES DE ACCIÓN */}
+      <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
         {onInspect && (
           <Button
             title="Receta"
@@ -146,7 +237,8 @@ export const CookieCard: React.FC<CookieCardProps> = ({
 
 const styles = StyleSheet.create({
   cardWrapper: {
-    marginBottom: 16,
+    padding: 12,
+    marginBottom: 14,
   },
   headerRow: {
     flexDirection: 'row',
@@ -158,9 +250,7 @@ const styles = StyleSheet.create({
     height: 74,
     borderRadius: radii.md,
     overflow: 'hidden',
-    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
   },
   image: {
     width: '100%',
@@ -179,12 +269,10 @@ const styles = StyleSheet.create({
   cookieName: {
     fontSize: 16,
     fontWeight: '800',
-    color: colors.textMain,
     letterSpacing: -0.3,
   },
   cookieDesc: {
     fontSize: 12,
-    color: colors.textMuted,
     lineHeight: 16,
   },
   badgeRow: {
@@ -195,20 +283,17 @@ const styles = StyleSheet.create({
   },
   batchText: {
     fontSize: 11,
-    color: colors.textDim,
     fontWeight: '600',
   },
   econContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: colors.bgTertiary,
     borderRadius: radii.md,
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 8,
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: 10,
+    marginBottom: 6,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
   },
   econBox: {
     alignItems: 'center',
@@ -216,45 +301,73 @@ const styles = StyleSheet.create({
   },
   econBorderLeft: {
     borderLeftWidth: 1,
-    borderLeftColor: colors.borderSubtle,
   },
   econLabel: {
     fontSize: 9,
     fontWeight: '800',
     textTransform: 'uppercase',
-    color: colors.textDim,
     letterSpacing: 0.5,
   },
   econValue: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     marginVertical: 2,
     letterSpacing: -0.3,
   },
   econSub: {
     fontSize: 9,
-    color: colors.textDim,
+  },
+  batchGoalBanner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: radii.sm,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginBottom: 6,
+  },
+  batchGoalLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  batchGoalValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
   promoBanner: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: colors.purpleBg,
     borderWidth: 1,
-    borderColor: colors.purpleLight,
     borderRadius: radii.sm,
     paddingVertical: 6,
     paddingHorizontal: 10,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   promoTitle: {
     fontSize: 11,
     fontWeight: '800',
-    color: colors.purpleText,
   },
   promoValue: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.purpleText,
+  },
+  noPromoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderWidth: 1,
+    borderRadius: radii.sm,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+  },
+  noPromoText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
 });

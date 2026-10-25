@@ -54,6 +54,8 @@ export interface CookieProduct {
   profit_per_unit: number;
   profit_margin_pct: number;
   batch_yield: number;
+  cost_per_cookie?: number;
+  packaging_cost?: number;
   waste_pct?: number;
   base_recipe_weight_g?: number;
   ingredients: RecipeIngredientItem[];
