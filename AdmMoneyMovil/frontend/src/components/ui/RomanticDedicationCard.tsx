@@ -103,9 +103,9 @@ export const RomanticDedicationCard: React.FC = () => {
             {/* Header Row with Animated Beating Red Heart */}
             <View style={styles.topRow}>
               <View style={styles.badge}>
-                <Text style={styles.sparkle}>💜</Text>
+                <Ionicons name="sparkles" size={11} color="#C084FC" />
                 <Text style={styles.badgeText}>Para Mi Natycita</Text>
-                <Text style={styles.sparkle}>💜</Text>
+                <Ionicons name="sparkles" size={11} color="#C084FC" />
               </View>
 
               <Animated.View
@@ -138,7 +138,10 @@ export const RomanticDedicationCard: React.FC = () => {
                   Hecho con Amor • Jectorini
                 </Text>
               </View>
-              <Text style={styles.touchHint}>Toca aquí 💌</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={styles.touchHint}>Toca aquí</Text>
+                <Ionicons name="mail" size={12} color="#C084FC" />
+              </View>
             </View>
           </LinearGradient>
         </View>

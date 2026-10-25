@@ -131,7 +131,7 @@ export const DigitalReceiptModal: React.FC<DigitalReceiptModalProps> = ({
         .join('\n');
 
       const message =
-        `🧾 COMPROBANTE DIGITALIZADO\n` +
+        `COMPROBANTE DIGITALIZADO - ADM MONEY\n` +
         `TIENDA: ${merchantName}\n` +
         `FECHA: ${expense.date}\n` +
         `MÉTODO DE PAGO: ${paymentMethod}\n` +

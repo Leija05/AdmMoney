@@ -142,7 +142,7 @@ export default function ExpensesScreen() {
         payment_method: exp.payment_method,
         notes: exp.notes ? `Copia: ${exp.notes}` : 'Gasto duplicado',
       });
-      Alert.alert('¡Gasto Duplicado! 📋', `Se creó una copia de "${exp.title}" por $${exp.amount.toFixed(2)}.`);
+      Alert.alert('¡Gasto Duplicado!', `Se creó una copia de "${exp.title}" por $${exp.amount.toFixed(2)}.`);
     } catch {
       Alert.alert('Error', 'No se pudo duplicar el gasto.');
     }

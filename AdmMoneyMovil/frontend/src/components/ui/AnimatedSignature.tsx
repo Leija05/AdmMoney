@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import Svg, { G, Path } from 'react-native-svg';
+import { Ionicons } from '@expo/vector-icons';
 
 // Exact signature paths from the user's vector file (Firma2.svg)
 export const FIRMA_PATH_1 =
@@ -172,9 +173,12 @@ export const AnimatedSignature: React.FC<AnimatedSignatureProps> = ({
           disabled={isDrawing}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text style={[styles.replayText, { color }]}>
-            {isDrawing ? '✍️ Dibujando trazo...' : '✍️ Repetir trazo en vivo'}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+            <Ionicons name="pencil" size={11} color={color} />
+            <Text style={[styles.replayText, { color }]}>
+              {isDrawing ? 'Dibujando trazo...' : 'Repetir trazo en vivo'}
+            </Text>
+          </View>
         </TouchableOpacity>
       </View>
     </View>

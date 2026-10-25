@@ -21,7 +21,8 @@ interface FloatingHeart {
   animY: Animated.Value;
   animScale: Animated.Value;
   animOpacity: Animated.Value;
-  symbol: string;
+  iconName: keyof typeof Ionicons.glyphMap;
+  color: string;
   size: number;
 }
 
@@ -99,13 +100,21 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
   }, [heartPulse]);
 
   const spawnHearts = (count: number = 8) => {
-    const symbols = ['💖', '💕', '❤️', '✨', '🌹', '🥰', '💌', '🌸'];
+    const iconChoices: { name: keyof typeof Ionicons.glyphMap; color: string }[] = [
+      { name: 'heart', color: '#F43F5E' },
+      { name: 'heart', color: '#FB7185' },
+      { name: 'sparkles', color: '#FBBF24' },
+      { name: 'heart', color: '#EC4899' },
+      { name: 'star', color: '#A855F7' },
+      { name: 'heart', color: '#E11D48' },
+    ];
     const newHearts: FloatingHeart[] = [];
 
     for (let i = 0; i < count; i++) {
       const animY = new Animated.Value(0);
       const animScale = new Animated.Value(0.3);
       const animOpacity = new Animated.Value(0);
+      const chosen = iconChoices[Math.floor(Math.random() * iconChoices.length)];
 
       const h: FloatingHeart = {
         id: Date.now() + Math.random(),
@@ -113,8 +122,9 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
         animY,
         animScale,
         animOpacity,
-        symbol: symbols[Math.floor(Math.random() * symbols.length)],
-        size: isSmallScreen ? (18 + Math.random() * 12) : (22 + Math.random() * 18),
+        iconName: chosen.name,
+        color: chosen.color,
+        size: isSmallScreen ? (16 + Math.random() * 10) : (20 + Math.random() * 14),
       };
 
       newHearts.push(h);
@@ -229,14 +239,17 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
 
               {/* Dedication Header Badge */}
               <View style={styles.pillBadge}>
-                <Text style={styles.sparkle}>✨</Text>
+                <Ionicons name="sparkles" size={11} color="#C084FC" />
                 <Text style={styles.pillText}>DEDICATORIA DE AMOR</Text>
-                <Text style={styles.sparkle}>✨</Text>
+                <Ionicons name="sparkles" size={11} color="#C084FC" />
               </View>
 
-              <Text style={[styles.mainTitle, { color: isDark ? '#FFF1F2' : '#881337', fontSize: isSmallScreen ? 17 : 19 }]}>
-                Para el Amor de Mi Vida 💖
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginVertical: 4 }}>
+                <Text style={[styles.mainTitle, { color: isDark ? '#FFF1F2' : '#881337', fontSize: isSmallScreen ? 17 : 19, marginBottom: 0 }]}>
+                  Para el Amor de Mi Vida
+                </Text>
+                <Ionicons name="heart" size={18} color="#F43F5E" />
+              </View>
 
               {/* Heartfelt Letter Box */}
               <View
@@ -280,17 +293,20 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
                 onPress={handleSendMoreLove}
                 style={[styles.loveBtn, { backgroundColor: isDark ? '#E11D48' : '#F43F5E' }]}
               >
-                <Ionicons name="sparkles" size={17} color="#FFF" />
+                <Ionicons name="heart" size={17} color="#FFF" />
                 <Text style={styles.loveBtnText}>
-                  {loveCount > 0 ? `¡Enviando Amor! (+${loveCount} 💕)` : 'Enviar Más Amor 💕'}
+                  {loveCount > 0 ? `¡Enviando Amor! (+${loveCount})` : 'Enviar Más Amor'}
                 </Text>
               </TouchableOpacity>
 
               {/* Sweet Footer Close */}
               <TouchableOpacity onPress={onClose} style={styles.footerCloseBtn}>
-                <Text style={[styles.footerCloseText, { color: isDark ? '#FDA4AF' : '#9F1239' }]}>
-                  Cerrar con Amor 💌
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <Text style={[styles.footerCloseText, { color: isDark ? '#FDA4AF' : '#9F1239' }]}>
+                    Cerrar con Amor
+                  </Text>
+                  <Ionicons name="heart-outline" size={13} color={isDark ? '#FDA4AF' : '#9F1239'} />
+                </View>
               </TouchableOpacity>
             </ScrollView>
           </LinearGradient>
@@ -312,7 +328,7 @@ export const RomanticDedicationModal: React.FC<RomanticDedicationModalProps> = (
                 opacity: h.animOpacity,
               }}
             >
-              <Text style={{ fontSize: h.size }}>{h.symbol}</Text>
+              <Ionicons name={h.iconName} size={h.size} color={h.color} />
             </Animated.View>
           ))}
         </View>

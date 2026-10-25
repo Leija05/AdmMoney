@@ -388,11 +388,12 @@ export default function CookiesScreen() {
             onPress={() => setIsAddCookieOpen(true)}
             style={[styles.economicsMiniBar, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
           >
-            <View style={{ flex: 1, paddingRight: 6 }}>
+            <View style={{ flex: 1, paddingRight: 6, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="nutrition-outline" size={13} color={colors.amberLight} />
               <Text style={[styles.economicsMiniText, { color: colors.textMuted }]}>
                 {privacyMode
-                  ? '🍪 •••••• Recetas • Tanda Prom: •••••• • Meta: ••••••'
-                  : `🍪 ${cookies.length} Recetas • Tanda prom: ${avgYield} pzas • Meta lote prom: +$${avgBatchProfit.toFixed(2)}`}
+                  ? '•••••• Recetas • Tanda Prom: •••••• • Meta: ••••••'
+                  : `${cookies.length} Recetas • Tanda prom: ${avgYield} pzas • Meta lote prom: +$${avgBatchProfit.toFixed(2)}`}
               </Text>
             </View>
             <View style={[styles.editTandaBadge, { backgroundColor: colors.amberBg, borderColor: colors.amberBorder }]}>
@@ -513,9 +514,10 @@ export default function CookiesScreen() {
                       </Text>
                       {stockAlertsEnabled && item.stock_quantity <= 2 ? (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
-                          <View style={{ backgroundColor: colors.roseBg, borderColor: colors.roseBorder, borderWidth: 1, borderRadius: radii.sm, paddingHorizontal: 6, paddingVertical: 2 }}>
+                          <View style={{ backgroundColor: colors.roseBg, borderColor: colors.roseBorder, borderWidth: 1, borderRadius: radii.sm, paddingHorizontal: 6, paddingVertical: 2, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Ionicons name="alert-circle" size={11} color={colors.roseText} />
                             <Text style={{ fontSize: 10, fontWeight: '800', color: colors.roseText }}>
-                              ⚠️ Stock Crítico: {item.stock_quantity} {item.unit} restantes
+                              Stock Crítico: {item.stock_quantity} {item.unit} restantes
                             </Text>
                           </View>
                         </View>

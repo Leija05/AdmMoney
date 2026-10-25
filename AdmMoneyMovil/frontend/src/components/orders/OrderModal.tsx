@@ -447,7 +447,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
 
               <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 6 }}>
                 <View style={styles.luckyBadgeRow}>
-                  <Text style={{ fontSize: 11 }}>🍪</Text>
+                  <Ionicons name="nutrition" size={11} color={colors.amberLight} />
                   <Text style={[styles.luckyBadgeText, { color: colors.amberLight }]}>
                     LUCKY COOKIES
                   </Text>
@@ -715,14 +715,21 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                                     {c.name}
                                   </Text>
                                   {Boolean(c.phone) && (
-                                    <Text
-                                      style={[
-                                        styles.customerChipPhone,
-                                        { color: isSelected ? colors.amberLight : colors.textDim },
-                                      ]}
-                                    >
-                                      📞 {c.phone}
-                                    </Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 1 }}>
+                                      <Ionicons
+                                        name="call-outline"
+                                        size={9}
+                                        color={isSelected ? colors.amberLight : colors.textDim}
+                                      />
+                                      <Text
+                                        style={[
+                                          styles.customerChipPhone,
+                                          { color: isSelected ? colors.amberLight : colors.textDim },
+                                        ]}
+                                      >
+                                        {c.phone}
+                                      </Text>
+                                    </View>
                                   )}
                                 </View>
                               </TouchableOpacity>
@@ -903,7 +910,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
 
                     <View style={styles.sectionHeaderRow}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={{ fontSize: 17 }}>🍪</Text>
+                        <Ionicons name="nutrition-outline" size={16} color={colors.amberLight} />
                         <Text style={[styles.sectionTitle, { color: colors.textMain, marginBottom: 0 }]}>
                           Galletas del Pedido
                         </Text>
@@ -1232,18 +1239,25 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                               },
                             ]}
                           >
-                            <Text
-                              style={[
-                                styles.statusSelectText,
-                                { color: colors.textMuted },
-                                paymentMethod === method && {
-                                  color: colors.emeraldLight,
-                                  fontWeight: '800',
-                                },
-                              ]}
-                            >
-                              {method === 'Efectivo' ? '💵 Efectivo' : '🏦 Transferencia'}
-                            </Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                              <Ionicons
+                                name={method === 'Efectivo' ? 'cash-outline' : 'business-outline'}
+                                size={13}
+                                color={paymentMethod === method ? colors.emeraldLight : colors.textMuted}
+                              />
+                              <Text
+                                style={[
+                                  styles.statusSelectText,
+                                  { color: colors.textMuted },
+                                  paymentMethod === method && {
+                                    color: colors.emeraldLight,
+                                    fontWeight: '800',
+                                  },
+                                ]}
+                              >
+                                {method}
+                              </Text>
+                            </View>
                           </TouchableOpacity>
                         ))}
                       </View>
@@ -1279,27 +1293,48 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                               },
                             ]}
                           >
-                            <Text
-                              style={[
-                                styles.statusSelectText,
-                                { color: colors.textMuted },
-                                paymentStatus === st && {
-                                  color:
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                <Ionicons
+                                  name={
                                     st === 'Pagado'
-                                      ? colors.emeraldLight
+                                      ? 'checkmark-circle'
                                       : st === 'Anticipo'
-                                      ? colors.brandText
-                                      : colors.amberLight,
-                                  fontWeight: '800',
-                                },
-                              ]}
-                            >
-                              {st === 'Pendiente' ? '⏳ Pendiente' : st === 'Anticipo' ? '🪙 Anticipo' : '✅ Pagado'}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
+                                      ? 'cash-outline'
+                                      : 'time-outline'
+                                  }
+                                  size={13}
+                                  color={
+                                    paymentStatus === st
+                                      ? (st === 'Pagado'
+                                          ? colors.emeraldLight
+                                          : st === 'Anticipo'
+                                          ? colors.brandText
+                                          : colors.amberLight)
+                                      : colors.textMuted
+                                  }
+                                />
+                                <Text
+                                  style={[
+                                    styles.statusSelectText,
+                                    { color: colors.textMuted },
+                                    paymentStatus === st && {
+                                      color:
+                                        st === 'Pagado'
+                                          ? colors.emeraldLight
+                                          : st === 'Anticipo'
+                                          ? colors.brandText
+                                          : colors.amberLight,
+                                      fontWeight: '800',
+                                    },
+                                  ]}
+                                >
+                                  {st}
+                                </Text>
+                              </View>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
                       </View>
-                    </View>
 
                     {/* Deposit amount input */}
                     {paymentStatus === 'Anticipo' && (
@@ -1385,13 +1420,19 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                             </Text>
                           </View>
                           {Boolean(customerPhone) && (
-                            <Text style={[styles.reviewBlockDetail, { color: colors.textMuted }]}>
-                              📞 Teléfono: {customerPhone}
-                            </Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                              <Ionicons name="call-outline" size={11} color={colors.textMuted} />
+                              <Text style={[styles.reviewBlockDetail, { color: colors.textMuted }]}>
+                                {customerPhone}
+                              </Text>
+                            </View>
                           )}
-                          <Text style={[styles.reviewBlockDetail, { color: colors.textMuted }]}>
-                            📅 Entrega: {deliveryDate}
-                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                            <Ionicons name="calendar-outline" size={11} color={colors.textMuted} />
+                            <Text style={[styles.reviewBlockDetail, { color: colors.textMuted }]}>
+                              Entrega: {deliveryDate}
+                            </Text>
+                          </View>
                         </View>
                         <TouchableOpacity
                           onPress={() => goToStep(1)}
@@ -1408,7 +1449,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <View style={{ flex: 1, paddingRight: 8 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}>
-                            <Text style={{ fontSize: 13 }}>🍪</Text>
+                            <Ionicons name="nutrition" size={13} color={colors.amberLight} />
                             <Text style={[styles.reviewBlockTitle, { color: colors.textMain }]}>
                               {totalUnits} galletas seleccionadas
                             </Text>

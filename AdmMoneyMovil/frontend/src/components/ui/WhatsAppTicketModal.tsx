@@ -144,23 +144,23 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
 
   // Build the live preview text matching the exact requested structure
   const buildMessage = () => {
-    let msg = `🍪 *${businessName}* 🍪\n\n`;
+    let msg = `*${businessName.toUpperCase()}*\n\n`;
     msg += `¡Hola *${customerName}*! Muchas gracias por tu compra. Te compartimos el comprobante de tu ${ticketType.toLowerCase()}:\n\n`;
-    msg += `📋 *Comprobante Oficial • Ticket #${ticketId}*\n`;
-    msg += `📅 *${dateText}*\n`;
-    msg += `🍪 *Detalle del Pedido:* ${itemsSummary}\n`;
-    msg += `💰 *Total a Cobrar:* ${totalFormatted}\n`;
-    msg += `💳 *Método de Pago:* ${paymentText}\n`;
+    msg += `• *Comprobante Oficial:* Ticket #${ticketId}\n`;
+    msg += `• *Fecha:* ${dateText}\n`;
+    msg += `• *Detalle del Pedido:* ${itemsSummary}\n`;
+    msg += `• *Total a Cobrar:* ${totalFormatted}\n`;
+    msg += `• *Método de Pago:* ${paymentText}\n`;
 
     if (customNote.trim()) {
-      msg += `\n📝 *Nota:* ${customNote.trim()}\n`;
+      msg += `\n• *Nota:* ${customNote.trim()}\n`;
     }
 
     if (includePdf) {
-      msg += `\n📄 *Descarga tu comprobante oficial en PDF con logo:*\n${pdfUrl}\n`;
+      msg += `\n• *Descarga tu comprobante oficial en PDF con logo:*\n${pdfUrl}\n`;
     }
 
-    msg += `\n✨ ${ticketFooterText} ❤️🍪`;
+    msg += `\n"${ticketFooterText}"`;
     return msg;
   };
 
@@ -180,11 +180,11 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
     const cleanPhone = phoneDigits.replace(/\D/g, '');
     if (!cleanPhone || cleanPhone.length === 0) {
       if (Platform.OS === 'web') {
-        alert('⚠️ Por favor ingresa el número de WhatsApp del cliente para poder enviarle el ticket.');
+        alert('Por favor ingresa el número de WhatsApp del cliente para poder enviarle el ticket.');
       } else {
         Alert.alert(
           'Número Requerido',
-          '⚠️ Por favor ingresa el número de WhatsApp del cliente para poder enviarle el ticket.'
+          'Por favor ingresa el número de WhatsApp del cliente para poder enviarle el ticket.'
         );
       }
       return;
@@ -192,11 +192,11 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
 
     if (cleanPhone.length < 10) {
       if (Platform.OS === 'web') {
-        alert('⚠️ Por favor ingresa los 10 dígitos completos del número telefónico (ej. 5512345678).');
+        alert('Por favor ingresa los 10 dígitos completos del número telefónico (ej. 5512345678).');
       } else {
         Alert.alert(
           'Número Incompleto',
-          '⚠️ Por favor ingresa los 10 dígitos del número telefónico (ej. 5512345678).'
+          'Por favor ingresa los 10 dígitos del número telefónico (ej. 5512345678).'
         );
       }
       return;

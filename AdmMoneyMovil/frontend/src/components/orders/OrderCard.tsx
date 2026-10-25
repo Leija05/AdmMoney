@@ -86,7 +86,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               {order.customer_name}
             </Text>
             {order.customer_phone ? (
-              <Text style={[styles.customerPhone, { color: colors.textMuted }]}>📞 {order.customer_phone}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                <Ionicons name="call-outline" size={11} color={colors.textMuted} />
+                <Text style={[styles.customerPhone, { color: colors.textMuted }]}>{order.customer_phone}</Text>
+              </View>
             ) : null}
           </View>
         </View>
@@ -134,22 +137,46 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           ]}
           activeOpacity={0.7}
         >
-          <Text
-            style={[
-              styles.paymentText,
-              {
-                color:
-                  order.payment_status === 'Pagado'
-                    ? colors.emeraldText
-                    : order.payment_status === 'Anticipo'
-                    ? colors.amberText
-                    : colors.amberLight,
-                fontWeight: '700',
-              },
-            ]}
-          >
-            {order.payment_status === 'Pagado' ? '✓ Pagado' : order.payment_status === 'Anticipo' ? `💵 Anticipo ($${order.deposit_amount || 0})` : '⏳ Pago Pendiente'} ▾
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons
+              name={
+                order.payment_status === 'Pagado'
+                  ? 'checkmark-circle'
+                  : order.payment_status === 'Anticipo'
+                  ? 'cash-outline'
+                  : 'time-outline'
+              }
+              size={12}
+              color={
+                order.payment_status === 'Pagado'
+                  ? colors.emeraldText
+                  : order.payment_status === 'Anticipo'
+                  ? colors.amberText
+                  : colors.amberLight
+              }
+            />
+            <Text
+              style={[
+                styles.paymentText,
+                {
+                  color:
+                    order.payment_status === 'Pagado'
+                      ? colors.emeraldText
+                      : order.payment_status === 'Anticipo'
+                      ? colors.amberText
+                      : colors.amberLight,
+                  fontWeight: '700',
+                },
+              ]}
+            >
+              {order.payment_status === 'Pagado'
+                ? 'Pagado'
+                : order.payment_status === 'Anticipo'
+                ? `Anticipo ($${order.deposit_amount || 0})`
+                : 'Pago Pendiente'}{' '}
+              ▾
+            </Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -178,9 +205,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
       {/* Notes */}
       {order.notes ? (
-        <Text style={[styles.notesText, { color: colors.textMuted }]} numberOfLines={2}>
-          💬 "{order.notes}"
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+          <Ionicons name="chatbubble-ellipses-outline" size={12} color={colors.textMuted} />
+          <Text style={[styles.notesText, { color: colors.textMuted, flex: 1 }]} numberOfLines={2}>
+            "{order.notes}"
+          </Text>
+        </View>
       ) : null}
 
       {/* Bottom Financial & Action Bar */}
@@ -204,9 +234,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               </Text>
             </View>
           ) : (
-            <Text style={[styles.profitSubtext, { color: colors.emeraldLight }]}>
-              ✓ Ganancia libre: +${order.net_profit.toFixed(2)}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+              <Ionicons name="trending-up" size={12} color={colors.emeraldLight} />
+              <Text style={[styles.profitSubtext, { color: colors.emeraldLight }]}>
+                Ganancia libre: +${order.net_profit.toFixed(2)}
+              </Text>
+            </View>
           )}
         </View>
 

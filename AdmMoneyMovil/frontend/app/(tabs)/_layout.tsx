@@ -5,6 +5,8 @@ import { useThemeColors } from '../../src/theme';
 import { Platform, View, StyleSheet, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import { SalesCelebrationOverlay } from '../../src/components/ui/SalesCelebrationOverlay';
+
 export default function TabLayout() {
   const colors = useThemeColors();
   const isDark = colors.isDark;
@@ -32,7 +34,9 @@ export default function TabLayout() {
   }, [pulseAnim]);
 
   return (
-    <Tabs
+    <View style={{ flex: 1 }}>
+      <SalesCelebrationOverlay />
+      <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
@@ -239,7 +243,8 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
-  );
+  </View>
+);
 }
 
 const styles = StyleSheet.create({

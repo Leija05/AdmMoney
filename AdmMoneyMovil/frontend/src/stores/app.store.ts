@@ -16,6 +16,7 @@ import {
 import { MobileApiService, setApiHost } from '../services/api';
 import { APP_CONFIG } from '../config/appConfig';
 import { checkAndSendOrderDeliveryNotification } from '../services/notificationService';
+import { triggerSaleCelebration } from './celebration.store';
 
 const customStorage: StateStorage = {
   getItem: async (name: string): Promise<string | null> => {
@@ -98,6 +99,12 @@ interface AppState {
   ticketFooterText: string;
   privacyMode: boolean;
   autoCategorizeAi: boolean;
+  monthlyGoal: number;
+  whatsappPhone1: string;
+  whatsappPhone2: string;
+  whatsappLabel1: string;
+  whatsappLabel2: string;
+  defaultQrPhone: 'phone1' | 'phone2';
 
   setCurrency: (currency: string) => void;
   setSwipeEnabled: (enabled: boolean) => void;
@@ -110,6 +117,12 @@ interface AppState {
   setTicketFooterText: (text: string) => void;
   setPrivacyMode: (enabled: boolean) => void;
   setAutoCategorizeAi: (enabled: boolean) => void;
+  setMonthlyGoal: (goal: number) => void;
+  setWhatsappPhone1: (phone: string) => void;
+  setWhatsappPhone2: (phone: string) => void;
+  setWhatsappLabel1: (label: string) => void;
+  setWhatsappLabel2: (label: string) => void;
+  setDefaultQrPhone: (choice: 'phone1' | 'phone2') => void;
 
   setTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
@@ -181,6 +194,12 @@ export const useAppStore = create<AppState>()(
   ticketFooterText: '¡Gracias por endulzar tu día con nosotros!',
   privacyMode: false,
   autoCategorizeAi: true,
+  monthlyGoal: 15000,
+  whatsappPhone1: '',
+  whatsappPhone2: '',
+  whatsappLabel1: 'Ventas / Pedidos',
+  whatsappLabel2: 'Atención / Soporte',
+  defaultQrPhone: 'phone1',
 
   setCurrency: (currency: string) => set({ currency }),
   setSwipeEnabled: (swipeEnabled: boolean) => set({ swipeEnabled }),
@@ -198,6 +217,12 @@ export const useAppStore = create<AppState>()(
   setTicketFooterText: (ticketFooterText: string) => set({ ticketFooterText }),
   setPrivacyMode: (privacyMode: boolean) => set({ privacyMode }),
   setAutoCategorizeAi: (autoCategorizeAi: boolean) => set({ autoCategorizeAi }),
+  setMonthlyGoal: (monthlyGoal: number) => set({ monthlyGoal }),
+  setWhatsappPhone1: (whatsappPhone1: string) => set({ whatsappPhone1 }),
+  setWhatsappPhone2: (whatsappPhone2: string) => set({ whatsappPhone2 }),
+  setWhatsappLabel1: (whatsappLabel1: string) => set({ whatsappLabel1 }),
+  setWhatsappLabel2: (whatsappLabel2: string) => set({ whatsappLabel2 }),
+  setDefaultQrPhone: (defaultQrPhone: 'phone1' | 'phone2') => set({ defaultQrPhone }),
 
   setTheme: (theme: 'light' | 'dark') => {
     try {
@@ -300,6 +325,7 @@ export const useAppStore = create<AppState>()(
     const created = await MobileApiService.registerSale(data);
     set((state) => ({ sales: [created, ...state.sales] }));
     get().loadAllData();
+    triggerSaleCelebration(created.total_revenue, '¡Venta Registrada! 🍪', `${data.quantity} galletas cobradas exitosamente`);
     return created;
   },
 
@@ -397,6 +423,9 @@ export const useAppStore = create<AppState>()(
     const created = await MobileApiService.createOrder(data);
     set((state) => ({ orders: [created, ...state.orders] }));
     await get().loadAllData();
+    if (data.payment_status === 'Pagado') {
+      triggerSaleCelebration(created.total_amount, '¡Pedido Pagado! 💵', `Cobraste el pedido de ${created.customer_name}`);
+    }
     return created;
   },
 
@@ -406,6 +435,9 @@ export const useAppStore = create<AppState>()(
       orders: state.orders.map((o) => (o.id === id ? updated : o)),
     }));
     await get().loadAllData();
+    if (data.payment_status === 'Pagado') {
+      triggerSaleCelebration(updated.total_amount, '¡Pedido Pagado! 💵', `Cobraste el pedido de ${updated.customer_name}`);
+    }
     return updated;
   },
 
@@ -493,6 +525,12 @@ export const useAppStore = create<AppState>()(
         autoCategorizeAi: state.autoCategorizeAi,
         scannedTickets: state.scannedTickets,
         backendUrl: state.backendUrl,
+        monthlyGoal: state.monthlyGoal,
+        whatsappPhone1: state.whatsappPhone1,
+        whatsappPhone2: state.whatsappPhone2,
+        whatsappLabel1: state.whatsappLabel1,
+        whatsappLabel2: state.whatsappLabel2,
+        defaultQrPhone: state.defaultQrPhone,
       }),
       onRehydrateStorage: () => (state) => {
         if (state?.backendUrl) {

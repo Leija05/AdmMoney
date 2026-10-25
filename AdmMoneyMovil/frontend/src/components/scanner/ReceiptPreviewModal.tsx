@@ -732,7 +732,7 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
 
                           <View style={[styles.stockTransformRow, { backgroundColor: isDark ? '#11221F' : '#F0FDF4', borderColor: isDark ? 'rgba(16, 185, 129, 0.25)' : '#DCFCE7', marginTop: 6 }]}>
                             <Text style={{ fontSize: 11, color: isDark ? '#D1FAE5' : '#065F46' }}>
-                              Stock: <Text style={{ fontWeight: '700' }}>{match.matchedIngredient.stock_quantity} {match.matchedIngredient.unit}</Text> ➔ Nuevo: <Text style={{ fontWeight: '900', color: colors.emeraldLight }}>{newStock} {match.matchedIngredient.unit}</Text> (+{match.quantity})
+                              Stock: <Text style={{ fontWeight: '700' }}>{match.matchedIngredient.stock_quantity} {match.matchedIngredient.unit}</Text> → Nuevo: <Text style={{ fontWeight: '900', color: colors.emeraldLight }}>{newStock} {match.matchedIngredient.unit}</Text> (+{match.quantity})
                             </Text>
                           </View>
                         </View>
@@ -928,17 +928,28 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
                                     },
                                   ]}
                                 >
-                                  <Text
-                                    style={{
-                                      fontSize: 10,
-                                      fontWeight: isTActive ? '800' : '600',
-                                      color: isTActive
-                                        ? (t === 'packaging' ? colors.purpleLight : colors.amberLight)
-                                        : colors.textDim,
-                                    }}
-                                  >
-                                    {t === 'edible' ? '🍪 Comestible' : '📦 Empaque'}
-                                  </Text>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                                    <Ionicons
+                                      name={t === 'edible' ? 'nutrition-outline' : 'cube-outline'}
+                                      size={11}
+                                      color={
+                                        isTActive
+                                          ? (t === 'packaging' ? colors.purpleLight : colors.amberLight)
+                                          : colors.textDim
+                                      }
+                                    />
+                                    <Text
+                                      style={{
+                                        fontSize: 10,
+                                        fontWeight: isTActive ? '800' : '600',
+                                        color: isTActive
+                                          ? (t === 'packaging' ? colors.purpleLight : colors.amberLight)
+                                          : colors.textDim,
+                                      }}
+                                    >
+                                      {t === 'edible' ? 'Comestible' : 'Empaque'}
+                                    </Text>
+                                  </View>
                                 </TouchableOpacity>
                               );
                             })}

@@ -14,6 +14,7 @@ import { useThemeColors, radii, spacing, gradients } from '../../src/theme';
 import { OrderCard } from '../../src/components/orders/OrderCard';
 import { OrderModal } from '../../src/components/orders/OrderModal';
 import { OrderDeliveryReminderBanner } from '../../src/components/orders/OrderDeliveryReminderBanner';
+import { BakingProductionModal } from '../../src/components/orders/BakingProductionModal';
 import { Button } from '../../src/components/ui/Button';
 import { BackendHeartbeat } from '../../src/components/ui/BackendHeartbeat';
 import { DoubleBezelCard } from '../../src/components/ui/DoubleBezelCard';
@@ -30,6 +31,7 @@ export default function OrdersScreen() {
   const {
     orders,
     cookies,
+    ingredients,
     promotions,
     customers,
     addOrder,
@@ -42,6 +44,7 @@ export default function OrdersScreen() {
 
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('Todos');
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [isProductionModalOpen, setIsProductionModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
   // Quick stats
@@ -151,16 +154,27 @@ export default function OrdersScreen() {
             </Text>
           </View>
 
-          <TouchableOpacity
-            onPress={handleOpenAddOrder}
-            activeOpacity={0.85}
-            style={[styles.newOrderBtn, { backgroundColor: colors.amber }]}
-          >
-            <View style={styles.newOrderIconWrap}>
-              <Ionicons name="add" size={15} color="#FFFFFF" />
-            </View>
-            <Text style={styles.newOrderBtnText}>Nuevo Pedido</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+            <TouchableOpacity
+              onPress={() => setIsProductionModalOpen(true)}
+              activeOpacity={0.85}
+              style={[styles.planBtn, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+            >
+              <Ionicons name="flame" size={14} color={colors.amberLight} />
+              <Text style={[styles.planBtnText, { color: colors.textMain }]}>Plan Horno</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleOpenAddOrder}
+              activeOpacity={0.85}
+              style={[styles.newOrderBtn, { backgroundColor: colors.amber }]}
+            >
+              <View style={styles.newOrderIconWrap}>
+                <Ionicons name="add" size={15} color="#FFFFFF" />
+              </View>
+              <Text style={styles.newOrderBtnText}>Nuevo</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -227,12 +241,17 @@ export default function OrdersScreen() {
                     backgroundColor: orderStatusFilter === 'Pagos Pendientes' ? colors.amberLight : (isDark ? '#1C2230' : '#EEF2F6'),
                     borderColor: orderStatusFilter === 'Pagos Pendientes' ? colors.amberLight : colors.borderSubtle,
                   }]}>
-                    <Text style={[styles.filterActionText, {
-                      color: orderStatusFilter === 'Pagos Pendientes' ? '#FFFFFF' : colors.textMuted,
-                      fontWeight: orderStatusFilter === 'Pagos Pendientes' ? '800' : '600',
-                    }]}>
-                      {orderStatusFilter === 'Pagos Pendientes' ? '✓ Filtrado' : 'Filtrar'}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                      {orderStatusFilter === 'Pagos Pendientes' && (
+                        <Ionicons name="checkmark" size={11} color="#FFFFFF" />
+                      )}
+                      <Text style={[styles.filterActionText, {
+                        color: orderStatusFilter === 'Pagos Pendientes' ? '#FFFFFF' : colors.textMuted,
+                        fontWeight: orderStatusFilter === 'Pagos Pendientes' ? '800' : '600',
+                      }]}>
+                        {orderStatusFilter === 'Pagos Pendientes' ? 'Filtrado' : 'Filtrar'}
+                      </Text>
+                    </View>
                   </View>
                 </View>
               </DoubleBezelCard>
@@ -364,6 +383,15 @@ export default function OrdersScreen() {
         onSave={handleSaveOrder}
         onSaveCustomer={addCustomer}
       />
+
+      {/* Baking Production Plan Modal */}
+      <BakingProductionModal
+        visible={isProductionModalOpen}
+        onClose={() => setIsProductionModalOpen(false)}
+        orders={orders}
+        cookies={cookies}
+        ingredients={ingredients}
+      />
     </SafeAreaView>
   );
 }
@@ -413,11 +441,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
   },
+  planBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+  },
+  planBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
   newOrderBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 9,
     borderRadius: radii.pill,
     elevation: 2,

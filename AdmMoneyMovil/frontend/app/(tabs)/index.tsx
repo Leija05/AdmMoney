@@ -27,6 +27,8 @@ import { FadeSlideIn } from '../../src/components/ui/FadeSlideIn';
 import { AmbientBackdrop } from '../../src/components/ui/AmbientBackdrop';
 import { StatSparkline } from '../../src/components/ui/StatSparkline';
 import { OrderDeliveryReminderBanner } from '../../src/components/orders/OrderDeliveryReminderBanner';
+import { MonthlyGoalCard } from '../../src/components/dashboard/MonthlyGoalCard';
+import { InflationAlertBanner } from '../../src/components/ui/InflationAlertBanner';
 import { useAppStore } from '../../src/stores/app.store';
 import { Expense, CookieProduct } from '../../src/lib/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -304,7 +306,7 @@ export default function DashboardScreen() {
         <View style={styles.header}>
           <View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-              <Text style={{ fontSize: 13 }}>🍪</Text>
+              <Ionicons name="nutrition" size={13} color={colors.amberLight} />
               <Text style={{ fontSize: 10.5, fontWeight: '900', color: colors.amberLight, letterSpacing: 0.8, textTransform: 'uppercase' }}>
                 {businessName || 'LUCKY COOKIES'}
               </Text>
@@ -347,6 +349,9 @@ export default function DashboardScreen() {
 
         {/* Order Delivery Reminder Banner */}
         <OrderDeliveryReminderBanner />
+
+        {/* AI Margin & Inflation Alert Banner */}
+        <InflationAlertBanner />
 
         {/* Global Net Balance Vault Holographic Card */}
         <FadeSlideIn delay={40}>
@@ -410,9 +415,16 @@ export default function DashboardScreen() {
                     borderColor: 'rgba(255,255,255,0.30)',
                   }}
                 >
-                  <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
-                    {netBalance >= 0 ? '✓ Superávit Operativo' : '⚠ Déficit Operativo'}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Ionicons
+                      name={netBalance >= 0 ? 'checkmark-circle' : 'alert-circle'}
+                      size={12}
+                      color="#FFFFFF"
+                    />
+                    <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
+                      {netBalance >= 0 ? 'Superávit Operativo' : 'Déficit Operativo'}
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -463,6 +475,11 @@ export default function DashboardScreen() {
               </View>
             </View>
           </DoubleBezelCard>
+        </FadeSlideIn>
+
+        {/* Monthly Net Profit Holographic Goal Card */}
+        <FadeSlideIn delay={65}>
+          <MonthlyGoalCard currentProfit={cookieProfit} />
         </FadeSlideIn>
 
         {/* Quick Bento Stats with Sparklines (2 Clickable Columns) */}

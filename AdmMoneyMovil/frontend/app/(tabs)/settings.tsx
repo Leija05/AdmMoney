@@ -19,6 +19,7 @@ import { RomanticDedicationCard } from '../../src/components/ui/RomanticDedicati
 import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
 import { AmbientBackdrop } from '../../src/components/ui/AmbientBackdrop';
 import { useAppStore } from '../../src/stores/app.store';
+import { WhatsAppQrSettingsCard } from '../../src/components/settings/WhatsAppQrSettingsCard';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function SettingsScreen() {
@@ -85,13 +86,13 @@ export default function SettingsScreen() {
         setLastSyncTime(timeStr);
         setIsTesting(false);
         Alert.alert(
-          '¡Sincronización Exitosa! 🟢',
+          '¡Sincronización Exitosa!',
           `Conexión verificada con la nube en ${latency} ms.\n\nTodas tus ventas, recetas, gastos e inventario están al día.`
         );
       } else {
         setIsTesting(false);
         Alert.alert(
-          'Sin Conexión a la Nube 🔴',
+          'Sin Conexión a la Nube',
           'No se pudo establecer conexión con el servidor. Verifica tu conexión a internet e inténtalo de nuevo.'
         );
       }
@@ -129,7 +130,7 @@ export default function SettingsScreen() {
             </Text>
           </View>
 
-          {/* 💌 DEDICATORIA ESPECIAL HECHA CON AMOR */}
+          {/* DEDICATORIA ESPECIAL HECHA CON AMOR */}
           <RomanticDedicationCard />
 
           {/* 1. SINCRONIZACIÓN Y CONEXIÓN A LA NUBE (LIMPIO, SIN URLS EXPUESTAS) */}
@@ -202,7 +203,10 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </DoubleBezelCard>
 
-          {/* 2. APARIENCIA & MONEDA DEL SISTEMA */}
+          {/* 2. CANALES DE WHATSAPP & CÓDIGO QR DIRECTO */}
+          <WhatsAppQrSettingsCard />
+
+          {/* 3. APARIENCIA & MONEDA DEL SISTEMA */}
           <DoubleBezelCard style={styles.sectionCard}>
             <View style={styles.statusRow}>
               <View style={{ flex: 1, paddingRight: 12 }}>
@@ -234,8 +238,8 @@ export default function SettingsScreen() {
               <Text style={[styles.subLabel, { color: colors.textDim }]}>Moneda del Sistema</Text>
               <View style={styles.presetsRow}>
                 {[
-                  { code: 'MXN', label: '🇲🇽 MXN ($) Pesos Mexicanos' },
-                  { code: 'USD', label: '🇺🇸 USD ($) Dólares' },
+                  { code: 'MXN', label: 'MXN ($) Pesos Mexicanos' },
+                  { code: 'USD', label: 'USD ($) Dólares' },
                 ].map((item) => {
                   const isActive = currency === item.code;
                   return (
