@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Query
 from ...models.schemas import (
     IngredientCreate, IngredientUpdate, IngredientPurchaseCreate, IngredientResponse,
     CookieProductCreate, CookieProductUpdate, CookieProductResponse,
-    CookieSaleCreate, CookieSaleResponse,
+    CookieSaleCreate, CookieSaleUpdate, CookieSaleResponse,
     BatchScaleResponse, ProductionCapacityResponse
 )
 from ...services.cookie_service import CookieService
@@ -101,6 +101,13 @@ def register_cookie_sale(data: CookieSaleCreate):
         return CookieService.register_sale(data)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.put("/sales/{sale_id}", response_model=CookieSaleResponse)
+def update_cookie_sale(sale_id: int, data: CookieSaleUpdate):
+    updated = CookieService.update_sale(sale_id, data.dict(exclude_unset=True))
+    if not updated:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    return updated
 
 @router.delete("/sales/{sale_id}")
 def delete_cookie_sale(sale_id: int):

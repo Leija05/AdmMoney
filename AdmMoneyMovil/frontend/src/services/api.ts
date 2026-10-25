@@ -388,6 +388,13 @@ export class MobileApiService {
     });
   }
 
+  static async updateSale(id: number, data: Partial<CookieSale>): Promise<CookieSale> {
+    return this.request<CookieSale>(`/cookies/sales/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
   static async deleteSale(id: number): Promise<void> {
     await this.request(`/cookies/sales/${id}`, { method: 'DELETE' });
   }

@@ -146,6 +146,16 @@ def detect_total(text: str) -> float:
         return max(amounts)
     return 0.0
 
+def detect_payment_method(text: str) -> str:
+    upper = text.upper()
+    if any(k in upper for k in ["TARJETA", "DEBITO", "DÉBITO", "CREDITO", "CRÉDITO", "VISA", "MASTERCARD", "AMEX", "AMERICAN EXPRESS", "TDC", "TDD", "BBVA", "SANTANDER", "BANORTE", "BANAMEX"]):
+        return "Tarjeta"
+    if any(k in upper for k in ["TRANSFERENCIA", "SPEI", "TRANSFER", "DEPOSITO", "DEPÓSITO"]):
+        return "Transferencia"
+    if any(k in upper for k in ["EFECTIVO", "CASH", "CAMBIO"]):
+        return "Efectivo"
+    return "Efectivo"
+
 def detect_category(text: str, items: List[ReceiptItem]) -> str:
     combined = (text + " " + " ".join(item.name for item in items)).lower()
     for category, keywords in CATEGORY_RULES.items():
@@ -158,6 +168,7 @@ def parse_receipt_heuristics(raw_text: str) -> ReceiptScanResponse:
     merchant = detect_merchant(raw_text)
     receipt_date = detect_date(raw_text)
     total_amount = detect_total(raw_text)
+    payment_method = detect_payment_method(raw_text)
 
     items: List[ReceiptItem] = []
     lines = raw_text.split("\n")
@@ -229,6 +240,7 @@ def parse_receipt_heuristics(raw_text: str) -> ReceiptScanResponse:
         tax=tax,
         items=items,
         suggested_category=category,
+        payment_method=payment_method,
         confidence=0.88 if items else 0.60,
         raw_text=raw_text[:800],
     )
@@ -244,29 +256,29 @@ def scan_with_gemini(image_bytes: bytes, api_key: str) -> Optional[ReceiptScanRe
     b64_img = base64.b64encode(image_bytes).decode("utf-8")
 
     prompt = (
-        "Eres un analizador contable y experto en lectura de tickets y notas de compra en México y Latinoamérica. "
-        "Analiza minuciosamente la imagen de este ticket de compra (puede ser de Costco, Walmart, Sam's Club, Oxxo, "
-        "Soriana, Bodega Aurrera, tiendita de materias primas, o cualquier comercio).\n\n"
-        "Extrae todos los datos y responde EXCLUSIVAMENTE con un JSON válido con la siguiente estructura exacta:\n"
+        "Eres un analizador contable y experto en digitalización de tickets físicos en México y Latinoamérica. "
+        "Analiza minuciosamente la imagen de este ticket de compra.\n"
+        "Extrae únicamente los datos de compra y responde EXCLUSIVAMENTE con un JSON válido con la siguiente estructura exacta:\n"
         "{\n"
         '  "merchant": "Nombre del negocio o tienda comercial (ej: Costco Wholesale, OXXO, Walmart)",\n'
         '  "date": "YYYY-MM-DD",\n'
         '  "items": [\n'
-        '    {"name": "Nombre claro y limpio del producto o insumo", "quantity": 1.0, "price": 45.50}\n'
+        '    {"name": "Nombre limpio del producto o insumo", "quantity": 1.0, "price": 45.50}\n'
         "  ],\n"
         '  "subtotal": 0.0,\n'
         '  "tax": 0.0,\n'
         '  "total_amount": 0.0,\n'
+        '  "payment_method": "Efectivo",\n'
         '  "suggested_category": "Insumos Galletas",\n'
         '  "confidence": 0.98,\n'
-        '  "raw_text": "Transcripción sintetizada de los renglones y total"\n'
+        '  "raw_text": "Resumen de productos y total"\n'
         "}\n\n"
-        "Reglas importantes:\n"
-        "1. 'items': cada producto debe tener su nombre comprensible, la cantidad (número flotante) y el importe total de ese renglón (precio final con cualquier descuento aplicado).\n"
-        "2. 'total_amount': debe ser el monto total final cobrado o pagado. Si el total no se lee explícitamente pero hay artículos, calcula la suma de los artículos.\n"
-        "3. 'suggested_category': clasifica según los productos en una de estas opciones: 'Insumos Galletas', 'Empaques y Envíos', 'Servicios y Luz', 'Transporte', 'Supermercado', 'Hogar y Personales', 'Otros Gastos'.\n"
-        "4. Si la fecha no está clara, usa la fecha de hoy.\n"
-        "5. Devuelve ÚNICAMENTE el bloque JSON, sin introducciones ni etiquetas markdown extras."
+        "Reglas obligatorias:\n"
+        "1. 'items': solo incluye productos o artículos reales comprados. NO agregues subtotales, iva, cambio, propina ni descuentos como si fueran productos.\n"
+        "2. 'total_amount': debe ser el monto total final cobrado o pagado en el ticket.\n"
+        "3. 'payment_method': especifica si el ticket fue pagado con 'Efectivo', 'Tarjeta' (débito/crédito/visa/mastercard) o 'Transferencia'. Si no se menciona, usa 'Efectivo'.\n"
+        "4. 'suggested_category': clasifica según los productos en: 'Insumos Galletas', 'Empaques y Envíos', 'Servicios y Luz', 'Transporte', 'Supermercado', 'Hogar y Personales' u 'Otros Gastos'.\n"
+        "5. Devuelve ÚNICAMENTE el bloque JSON sin etiquetas markdown extras."
     )
 
     models_to_try = ["gemini-2.0-flash", "gemini-1.5-flash"]
@@ -350,6 +362,14 @@ def scan_with_gemini(image_bytes: bytes, api_key: str) -> Optional[ReceiptScanRe
                 if tax == 0.0 and total_amt > subtotal:
                     tax = round(total_amt - subtotal, 2)
 
+                detected_pay = str(parsed_data.get("payment_method") or "Efectivo").strip()
+                if "tarjeta" in detected_pay.lower() or "credito" in detected_pay.lower() or "debito" in detected_pay.lower():
+                    detected_pay = "Tarjeta"
+                elif "transferencia" in detected_pay.lower():
+                    detected_pay = "Transferencia"
+                else:
+                    detected_pay = "Efectivo"
+
                 return ReceiptScanResponse(
                     merchant=str(parsed_data.get("merchant") or "Ticket Registrado").strip(),
                     date=str(parsed_data.get("date") or date.today().isoformat()).strip(),
@@ -358,6 +378,7 @@ def scan_with_gemini(image_bytes: bytes, api_key: str) -> Optional[ReceiptScanRe
                     tax=round(tax, 2),
                     items=extracted_items,
                     suggested_category=str(parsed_data.get("suggested_category") or "Insumos Galletas"),
+                    payment_method=detected_pay,
                     confidence=float(parsed_data.get("confidence", 0.98)),
                     raw_text=str(parsed_data.get("raw_text") or "Ticket analizado exitosamente con Gemini AI"),
                 )
@@ -406,14 +427,112 @@ def scan_with_pytesseract(pil_image: Image.Image) -> str:
     except Exception:
         return ""
 
+def corroborate_ai_and_algorithm(
+    ai_res: Optional[ReceiptScanResponse],
+    algo_res: Optional[ReceiptScanResponse]
+) -> ReceiptScanResponse:
+    """
+    Compara y corrobora los resultados del escaneo de la IA con el algoritmo OCR:
+    - Compara productos, cantidades, precios unitarios y total.
+    - Filtra ruido de renglones que no son productos.
+    - Si la IA falla o regresa vacío, usa directamente el resultado del algoritmo.
+    - Corrobora método de pago y nombre de la tienda.
+    """
+    # 1. Si la IA falló por completo, usar directamente el resultado del algoritmo
+    if not ai_res or (ai_res.total_amount == 0.0 and len(ai_res.items) == 0):
+        if algo_res:
+            algo_res.raw_text = f"[Verificado por Algoritmo OCR]\n{algo_res.raw_text}"
+            return algo_res
+        return ReceiptScanResponse(
+            merchant="Ticket de Compra",
+            date=date.today().isoformat(),
+            total_amount=0.0,
+            subtotal=0.0,
+            tax=0.0,
+            items=[],
+            suggested_category="Insumos Galletas",
+            payment_method="Efectivo",
+            confidence=0.40,
+            raw_text="No se detectó información legible en el ticket.",
+        )
+
+    # 2. Si el algoritmo no extrajo texto pero la IA sí, validar y retornar IA
+    if not algo_res or (algo_res.total_amount == 0.0 and len(algo_res.items) == 0):
+        return ai_res
+
+    # 3. Ambos generaron resultados: Corroboración cruzada de alta fidelidad
+    # A. Nombre de tienda:
+    final_merchant = ai_res.merchant
+    if final_merchant in ["Ticket Registrado", "Comercio Local / Tienda", "Ticket De Compra"] and algo_res.merchant not in ["Comercio Local / Tienda", "Ticket De Compra"]:
+        final_merchant = algo_res.merchant
+
+    # B. Método de pago:
+    final_payment = ai_res.payment_method or "Efectivo"
+    if final_payment == "Efectivo" and algo_res.payment_method and algo_res.payment_method != "Efectivo":
+        final_payment = algo_res.payment_method
+
+    # C. Limpieza y corroboración de productos
+    ignore_tokens = {"TOTAL", "SUBTOTAL", "IVA", "CAMBIO", "EFECTIVO", "FECHA", "TARJETA", "PAGO", "CLIENTE", "RFC", "FOLIO", "CAJERO", "TERMINAL"}
+    clean_ai_items: List[ReceiptItem] = []
+    for it in ai_res.items:
+        it_name = it.name.strip()
+        it_upper = it_name.upper()
+        if any(token in it_upper for token in ignore_tokens) or len(it_name) < 2:
+            continue
+        if it.price > 0:
+            clean_ai_items.append(ReceiptItem(name=it_name, quantity=max(0.1, it.quantity), price=round(it.price, 2)))
+
+    # Verificar si el algoritmo encontró algún artículo omitido por la IA
+    algo_extra_items: List[ReceiptItem] = []
+    ai_item_names_lower = [it.name.lower() for it in clean_ai_items]
+    for algo_item in algo_res.items:
+        algo_name = algo_item.name.strip()
+        if len(algo_name) >= 3 and not any(token in algo_name.upper() for token in ignore_tokens):
+            matched = any(
+                algo_name.lower() in ai_name or ai_name in algo_name.lower() or abs(algo_item.price - ai_it.price) < 0.05
+                for ai_name, ai_it in zip(ai_item_names_lower, clean_ai_items)
+            )
+            if not matched and algo_item.price > 0:
+                algo_extra_items.append(algo_item)
+
+    corroborated_items = clean_ai_items if clean_ai_items else algo_res.items
+    if len(clean_ai_items) < len(algo_res.items) and algo_extra_items:
+        corroborated_items.extend(algo_extra_items)
+
+    # D. Corroboración de Total
+    items_sum = round(sum(i.price for i in corroborated_items), 2)
+    final_total = ai_res.total_amount
+    if final_total == 0.0 or (algo_res.total_amount > 0 and abs(final_total - algo_res.total_amount) > 1.0 and abs(algo_res.total_amount - items_sum) < 0.05):
+        final_total = algo_res.total_amount
+    elif final_total == 0.0 and items_sum > 0:
+        final_total = items_sum
+
+    subtotal = ai_res.subtotal if ai_res.subtotal and ai_res.subtotal > 0 else round(final_total / 1.16, 2)
+    tax = ai_res.tax if ai_res.tax and ai_res.tax > 0 else round(final_total - subtotal, 2)
+
+    return ReceiptScanResponse(
+        merchant=final_merchant,
+        date=ai_res.date or algo_res.date or date.today().isoformat(),
+        total_amount=round(final_total, 2),
+        subtotal=round(subtotal, 2),
+        tax=round(tax, 2),
+        items=corroborated_items,
+        suggested_category=ai_res.suggested_category or algo_res.suggested_category or "Insumos Galletas",
+        payment_method=final_payment,
+        confidence=0.98,
+        raw_text=f"Ticket corroborado con IA y Algoritmo OCR ({len(corroborated_items)} productos detectados)",
+        image_url=ai_res.image_url or algo_res.image_url
+    )
+
 async def scan_receipt_image(file_bytes: bytes, filename: str) -> ReceiptScanResponse:
     """
-    Flujo principal de escaneo con arquitectura en cascada:
+    Flujo principal de escaneo híbrido inteligente:
     1. Optimización y compresión con Pillow (reduce MB a ~250KB y corrige rotación).
-    2. Guardado seguro en UPLOAD_DIR.
-    3. Nivel 1: Análisis inteligente con Gemini Vision (si está configurada la API key).
-    4. Nivel 2: Cloud OCR (OCR.Space optimizado).
-    5. Nivel 3: Local Tesseract + Parser heurístico de alta precisión.
+    2. Guardado seguro en UPLOAD_DIR para digitalización física.
+    3. Nivel 1: Análisis inteligente con Gemini Vision.
+    4. Nivel 2 y 3: Algoritmo OCR (Cloud OCR.Space y/o Tesseract local).
+    5. Corroboración cruzada: Compara productos, precios, total y método de pago.
+       Si la IA falla, aplica directamente el resultado del algoritmo OCR.
     """
     # 1. Optimizar imagen
     try:
@@ -423,7 +542,7 @@ async def scan_receipt_image(file_bytes: bytes, filename: str) -> ReceiptScanRes
         optimized_bytes = file_bytes
         pil_img = None
 
-    # 2. Guardar en disco para referencia futura y preview
+    # 2. Guardar en disco para referencia futura y visualización del ticket digitalizado
     ext = ".jpg"
     unique_name = f"receipt_{uuid.uuid4().hex[:12]}{ext}"
     saved_path = UPLOAD_DIR / unique_name
@@ -437,35 +556,24 @@ async def scan_receipt_image(file_bytes: bytes, filename: str) -> ReceiptScanRes
 
     # 3. Nivel 1: IA Multimodal Gemini Vision
     gemini_key = GEMINI_API_KEY or os.getenv("GEMINI_API_KEY", "")
+    gemini_result: Optional[ReceiptScanResponse] = None
     if gemini_key:
-        gemini_result = scan_with_gemini(optimized_bytes, gemini_key)
-        if gemini_result and (gemini_result.total_amount > 0 or len(gemini_result.items) > 0):
-            gemini_result.image_url = relative_url
-            return gemini_result
+        try:
+            gemini_result = scan_with_gemini(optimized_bytes, gemini_key)
+        except Exception as e:
+            print(f"Gemini scan error: {e}")
+            gemini_result = None
 
-    # 4. Nivel 2: Cloud OCR con OCR.Space (la imagen ya pesa < 400KB garantizado)
+    # 4. Nivel 2 y 3: Algoritmo OCR (Cloud OCR.Space y/o Tesseract local)
+    algo_result: Optional[ReceiptScanResponse] = None
     raw_text = scan_with_ocr_space(optimized_bytes)
-
-    # 5. Nivel 3: Tesseract local si OCR.Space no trajo texto
     if not raw_text and pil_img:
         raw_text = scan_with_pytesseract(pil_img)
 
-    # 6. Parsear heurísticamente el texto detectado
     if raw_text:
-        parsed_response = parse_receipt_heuristics(raw_text)
-        parsed_response.image_url = relative_url
-        return parsed_response
+        algo_result = parse_receipt_heuristics(raw_text)
 
-    # 7. Si no se pudo extraer texto (foto totalmente negra o borrosa)
-    return ReceiptScanResponse(
-        merchant="Ticket de Compra",
-        date=date.today().isoformat(),
-        total_amount=0.0,
-        subtotal=0.0,
-        tax=0.0,
-        items=[],
-        suggested_category="Insumos Galletas",
-        confidence=0.40,
-        raw_text="No se pudo extraer texto legible del ticket. Puedes ingresar el monto directamente.",
-        image_url=relative_url
-    )
+    # 5. Comparar y corroborar IA vs Algoritmo (o fallback al algoritmo si la IA falló)
+    final_response = corroborate_ai_and_algorithm(gemini_result, algo_result)
+    final_response.image_url = relative_url
+    return final_response

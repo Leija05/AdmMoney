@@ -51,6 +51,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
   onDelete,
 }) => {
   const colors = useThemeColors();
+  const isDark = colors.isDark;
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
@@ -243,12 +244,12 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
               <View style={[styles.dragHandleBar, { backgroundColor: colors.borderSubtle }]} />
             </View>
 
-            <View style={[styles.header, { borderBottomColor: colors.borderSubtle }]}>
+            <View style={[styles.header, { borderBottomColor: isDark ? '#2A303C' : '#E5E7EB' }]}>
               <View style={{ flex: 1, paddingRight: 8 }}>
                 <Text style={[styles.headerEyebrow, { color: colors.emeraldLight }]}>
                   {isEditing ? 'Editar Registro' : 'Detalle del Gasto'}
                 </Text>
-                <Text style={[styles.headerTitle, { color: colors.textMain }]} numberOfLines={1}>
+                <Text style={[styles.headerTitle, { color: isDark ? '#F1F3F7' : '#0F172A' }]} numberOfLines={1}>
                   {expense.title}
                 </Text>
               </View>
@@ -341,18 +342,32 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
             ) : (
               /* EDIT MODE */
               <View>
-                <Text style={[styles.formLabel, { color: colors.textMuted }]}>Concepto del Gasto</Text>
+                <Text style={[styles.formLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>Concepto del Gasto</Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                      borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                      color: isDark ? '#F1F3F7' : '#0F172A',
+                    },
+                  ]}
                   value={title}
                   onChangeText={setTitle}
                   placeholder="Ej. Harina, Mantequilla, CFE"
                   placeholderTextColor={colors.textDim}
                 />
 
-                <Text style={[styles.formLabel, { color: colors.textMuted }]}>Monto ($ MXN)</Text>
+                <Text style={[styles.formLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>Monto ($ MXN)</Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                      borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                      color: isDark ? '#F1F3F7' : '#0F172A',
+                    },
+                  ]}
                   value={amount}
                   onChangeText={setAmount}
                   keyboardType="numeric"
@@ -360,36 +375,82 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                   placeholderTextColor={colors.textDim}
                 />
 
-                <Text style={styles.formLabel}>Categoría</Text>
+                <Text style={[styles.formLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>Categoría</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
-                  <View style={{ flexDirection: 'row', gap: 6 }}>
-                    {CATEGORIES.map((cat) => (
-                      <TouchableOpacity
-                        key={cat}
-                        onPress={() => setCategory(cat)}
-                        style={[styles.pill, category === cat && styles.pillActive]}
-                      >
-                        <Text style={[styles.pillText, category === cat && styles.pillTextActive]}>
-                          {cat}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                  <View style={{ flexDirection: 'row', gap: 8, paddingRight: 10 }}>
+                    {CATEGORIES.map((cat) => {
+                      const isSelected = category === cat;
+                      return (
+                        <TouchableOpacity
+                          key={cat}
+                          onPress={() => setCategory(cat)}
+                          style={[
+                            styles.pill,
+                            {
+                              backgroundColor: isSelected
+                                ? (isDark ? '#059669' : '#10B981')
+                                : (isDark ? '#242936' : '#F1F5F9'),
+                              borderColor: isSelected
+                                ? (isDark ? '#059669' : '#10B981')
+                                : (isDark ? '#2A303C' : '#E2E8F0'),
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.pillText,
+                              {
+                                color: isSelected
+                                  ? '#FFFFFF'
+                                  : (isDark ? '#CBD5E1' : '#475569'),
+                                fontWeight: isSelected ? '800' : '600',
+                              },
+                            ]}
+                          >
+                            {cat}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
                 </ScrollView>
 
-                <Text style={styles.formLabel}>Método de Pago</Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-                  {PAYMENT_METHODS.map((method) => (
-                    <TouchableOpacity
-                      key={method}
-                      onPress={() => setPaymentMethod(method)}
-                      style={[styles.pill, paymentMethod === method && styles.pillActiveGreen]}
-                    >
-                      <Text style={[styles.pillText, paymentMethod === method && styles.pillTextActive]}>
-                        {method}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                <Text style={[styles.formLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>Método de Pago</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+                  {PAYMENT_METHODS.map((method) => {
+                    const isSelected = paymentMethod === method;
+                    return (
+                      <TouchableOpacity
+                        key={method}
+                        onPress={() => setPaymentMethod(method)}
+                        style={[
+                          styles.pill,
+                          {
+                            backgroundColor: isSelected
+                              ? (isDark ? '#059669' : '#10B981')
+                              : (isDark ? '#242936' : '#F1F5F9'),
+                            borderColor: isSelected
+                              ? (isDark ? '#059669' : '#10B981')
+                              : (isDark ? '#2A303C' : '#E2E8F0'),
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.pillText,
+                            {
+                              color: isSelected
+                                ? '#FFFFFF'
+                                : (isDark ? '#CBD5E1' : '#475569'),
+                              fontWeight: isSelected ? '800' : '600',
+                            },
+                          ]}
+                        >
+                          {method}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
 
                 {/* Editable Articles / Items List */}
@@ -397,7 +458,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Ionicons name="receipt-outline" size={15} color={colors.brandLight} />
-                      <Text style={[styles.formLabel, { color: colors.textMuted, marginBottom: 0 }]}>
+                      <Text style={[styles.formLabel, { color: isDark ? '#94A3B8' : '#64748B', marginBottom: 0 }]}>
                         Artículos del Ticket ({editItems.length})
                       </Text>
                     </View>
@@ -405,7 +466,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                       {editItems.length > 0 && (
                         <TouchableOpacity
                           onPress={handleAutoCalculateTotal}
-                          style={[styles.smallActionBtn, { backgroundColor: colors.emeraldBg, borderColor: colors.emeraldBorder }]}
+                          style={[styles.smallActionBtn, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.18)' : '#D1FAE5', borderColor: isDark ? 'rgba(16, 185, 129, 0.35)' : '#A7F3D0' }]}
                         >
                           <Ionicons name="calculator-outline" size={12} color={colors.emeraldLight} />
                           <Text style={[styles.smallActionBtnText, { color: colors.emeraldLight }]}>Sumar al Total</Text>
@@ -413,7 +474,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                       )}
                       <TouchableOpacity
                         onPress={handleAddItem}
-                        style={[styles.smallActionBtn, { backgroundColor: colors.brandGlow, borderColor: colors.brandLight }]}
+                        style={[styles.smallActionBtn, { backgroundColor: isDark ? 'rgba(14, 165, 233, 0.18)' : '#E0F2FE', borderColor: isDark ? 'rgba(14, 165, 233, 0.35)' : '#BAE6FD' }]}
                       >
                         <Ionicons name="add" size={13} color={colors.brandLight} />
                         <Text style={[styles.smallActionBtnText, { color: colors.brandLight }]}>+ Artículo</Text>
@@ -424,10 +485,10 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                   {editItems.length === 0 ? (
                     <TouchableOpacity
                       onPress={handleAddItem}
-                      style={[styles.emptyItemsBox, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+                      style={[styles.emptyItemsBox, { backgroundColor: isDark ? '#1E2430' : '#F1F5F9', borderColor: isDark ? '#2A303C' : '#E2E8F0' }]}
                     >
                       <Ionicons name="add-circle-outline" size={18} color={colors.brandLight} />
-                      <Text style={[styles.emptyItemsText, { color: colors.textMuted }]}>
+                      <Text style={[styles.emptyItemsText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
                         Toca para agregar artículos desglosados del ticket
                       </Text>
                     </TouchableOpacity>
@@ -438,11 +499,11 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                           key={idx}
                           style={[
                             styles.editItemRow,
-                            { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }
+                            { backgroundColor: isDark ? '#242936' : '#F1F5F9', borderColor: isDark ? '#2A303C' : '#E2E8F0' }
                           ]}
                         >
                           <TextInput
-                            style={[styles.itemInputName, { color: colors.textMain }]}
+                            style={[styles.itemInputName, { color: isDark ? '#F1F3F7' : '#0F172A' }]}
                             placeholder="Nombre artículo"
                             placeholderTextColor={colors.textDim}
                             value={item.name}
@@ -453,7 +514,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                             <View style={styles.itemQtyWrapper}>
                               <Text style={[styles.itemSubLabel, { color: colors.textDim }]}>Cant:</Text>
                               <TextInput
-                                style={[styles.itemInputQty, { color: colors.textMain }]}
+                                style={[styles.itemInputQty, { color: isDark ? '#F1F3F7' : '#0F172A' }]}
                                 placeholder="1"
                                 placeholderTextColor={colors.textDim}
                                 keyboardType="numeric"
@@ -487,9 +548,18 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                   )}
                 </View>
 
-                <Text style={styles.formLabel}>Notas u Observaciones</Text>
+                <Text style={[styles.formLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>Notas u Observaciones</Text>
                 <TextInput
-                  style={[styles.input, { height: 60 }]}
+                  style={[
+                    styles.input,
+                    {
+                      height: 64,
+                      backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                      borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                      color: isDark ? '#F1F3F7' : '#0F172A',
+                      textAlignVertical: 'top',
+                    },
+                  ]}
                   value={notes}
                   onChangeText={setNotes}
                   multiline

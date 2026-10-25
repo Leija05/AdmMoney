@@ -334,11 +334,13 @@ class OrderService:
                 continue
 
             batch_yield = max(product.get("batch_yield", 16), 1)
+            is_unit_recipe = product.get("is_unit_recipe", True)
             ingredients = product.get("ingredients", [])
 
             for ing in ingredients:
                 ing_name = ing.get("name")
-                required_total = (float(ing.get("quantity", 0.0)) / batch_yield) * qty
+                raw_qty = float(ing.get("quantity", 0.0))
+                required_total = raw_qty * qty if is_unit_recipe else (raw_qty / batch_yield) * qty
 
                 # Descontar del ingrediente correspondiente
                 db.cookie_ingredients.update_one(
@@ -361,11 +363,13 @@ class OrderService:
                 continue
 
             batch_yield = max(product.get("batch_yield", 16), 1)
+            is_unit_recipe = product.get("is_unit_recipe", True)
             ingredients = product.get("ingredients", [])
 
             for ing in ingredients:
                 ing_name = ing.get("name")
-                required_total = (float(ing.get("quantity", 0.0)) / batch_yield) * qty
+                raw_qty = float(ing.get("quantity", 0.0))
+                required_total = raw_qty * qty if is_unit_recipe else (raw_qty / batch_yield) * qty
 
                 db.cookie_ingredients.update_one(
                     {"name": {"$regex": f"^{ing_name}", "$options": "i"}},

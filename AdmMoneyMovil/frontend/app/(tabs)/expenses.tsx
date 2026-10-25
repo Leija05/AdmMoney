@@ -23,6 +23,7 @@ import { Button } from '../../src/components/ui/Button';
 import { BackendHeartbeat } from '../../src/components/ui/BackendHeartbeat';
 import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
 import { ExpenseActionModal } from '../../src/components/expenses/ExpenseActionModal';
+import { DigitalReceiptModal } from '../../src/components/expenses/DigitalReceiptModal';
 import { useAppStore } from '../../src/stores/app.store';
 import { Expense } from '../../src/lib/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -64,6 +65,7 @@ export default function ExpensesScreen() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [longPressedExpense, setLongPressedExpense] = useState<Expense | null>(null);
+  const [digitalReceiptExpense, setDigitalReceiptExpense] = useState<Expense | null>(null);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -347,8 +349,8 @@ export default function ExpensesScreen() {
             style={[
               styles.modalDialog,
               {
-                backgroundColor: colors.bgCard,
-                borderColor: colors.borderSubtle,
+                backgroundColor: isDark ? '#1C202A' : '#FFFFFF',
+                borderColor: isDark ? '#2E384D' : '#E2E8F0',
                 transform: [{ translateY: modalTranslateY }],
               },
             ]}
@@ -363,10 +365,12 @@ export default function ExpensesScreen() {
                   ]}
                 />
               </View>
-              <View style={styles.modalHeader}>
+              <View style={[styles.modalHeader, { borderBottomColor: isDark ? '#2A303C' : '#E5E7EB' }]}>
                 <View>
-                  <Text style={styles.modalEyebrow}>Nuevo Registro</Text>
-                  <Text style={styles.modalTitle}>Registrar Gasto Manual</Text>
+                  <Text style={[styles.modalEyebrow, { color: colors.brandLight }]}>NUEVO REGISTRO</Text>
+                  <Text style={[styles.modalTitle, { color: isDark ? '#F1F3F7' : '#0F172A' }]}>
+                    Registrar Gasto Manual
+                  </Text>
                 </View>
                 <TouchableOpacity onPress={() => setIsModalOpen(false)}>
                   <Ionicons name="close" size={22} color={colors.textMuted} />
@@ -375,18 +379,36 @@ export default function ExpensesScreen() {
             </View>
 
             <ScrollView style={{ padding: 20 }}>
-              <Text style={styles.formLabel}>Concepto del Gasto</Text>
+              <Text style={[styles.formLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                Concepto del Gasto
+              </Text>
               <TextInput
-                style={styles.input}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                    borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                    color: isDark ? '#F1F3F7' : '#0F172A',
+                  },
+                ]}
                 placeholder="Ej. Harina, Mantequilla, CFE, Gasolina"
                 placeholderTextColor={colors.textDim}
                 value={title}
                 onChangeText={setTitle}
               />
 
-              <Text style={styles.formLabel}>Monto ($ MXN)</Text>
+              <Text style={[styles.formLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                Monto ($ MXN)
+              </Text>
               <TextInput
-                style={styles.input}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                    borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                    color: isDark ? '#F1F3F7' : '#0F172A',
+                  },
+                ]}
                 placeholder="0.00"
                 placeholderTextColor={colors.textDim}
                 keyboardType="numeric"
@@ -394,47 +416,102 @@ export default function ExpensesScreen() {
                 onChangeText={setAmount}
               />
 
-              <Text style={styles.formLabel}>Categoría</Text>
+              <Text style={[styles.formLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                Categoría
+              </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
-                <View style={{ flexDirection: 'row', gap: 6 }}>
-                  {CATEGORIES.filter((c) => c !== 'Todas').map((c) => (
-                    <TouchableOpacity
-                      key={c}
-                      onPress={() => setCategory(c)}
-                      style={[
-                        styles.catPill,
-                        category === c && styles.catPillActive
-                      ]}
-                    >
-                      <Text style={[styles.catPillText, category === c && styles.catPillTextActive]}>
-                        {c}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                <View style={{ flexDirection: 'row', gap: 8, paddingRight: 10 }}>
+                  {CATEGORIES.filter((c) => c !== 'Todas').map((c) => {
+                    const isSelected = category === c;
+                    return (
+                      <TouchableOpacity
+                        key={c}
+                        onPress={() => setCategory(c)}
+                        style={[
+                          styles.catPill,
+                          {
+                            backgroundColor: isSelected
+                              ? colors.brand
+                              : (isDark ? '#242936' : '#F1F5F9'),
+                            borderColor: isSelected
+                              ? colors.brand
+                              : (isDark ? '#2A303C' : '#E2E8F0'),
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.catPillText,
+                            {
+                              color: isSelected
+                                ? '#FFFFFF'
+                                : (isDark ? '#CBD5E1' : '#475569'),
+                              fontWeight: isSelected ? '800' : '600',
+                            },
+                          ]}
+                        >
+                          {c}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </ScrollView>
 
-              <Text style={styles.formLabel}>Método de Pago</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-                {PAYMENT_METHODS.map((method) => (
-                  <TouchableOpacity
-                    key={method}
-                    onPress={() => setPaymentMethod(method)}
-                    style={[
-                      styles.catPill,
-                      paymentMethod === method && styles.catPillActive
-                    ]}
-                  >
-                    <Text style={[styles.catPillText, paymentMethod === method && styles.catPillTextActive]}>
-                      {method}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+              <Text style={[styles.formLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                Método de Pago
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+                {PAYMENT_METHODS.map((method) => {
+                  const isSelected = paymentMethod === method;
+                  return (
+                    <TouchableOpacity
+                      key={method}
+                      onPress={() => setPaymentMethod(method)}
+                      style={[
+                        styles.catPill,
+                        {
+                          backgroundColor: isSelected
+                            ? (isDark ? '#059669' : '#10B981')
+                            : (isDark ? '#242936' : '#F1F5F9'),
+                          borderColor: isSelected
+                            ? (isDark ? '#059669' : '#10B981')
+                            : (isDark ? '#2A303C' : '#E2E8F0'),
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.catPillText,
+                          {
+                            color: isSelected
+                              ? '#FFFFFF'
+                              : (isDark ? '#CBD5E1' : '#475569'),
+                              fontWeight: isSelected ? '800' : '600',
+                          },
+                        ]}
+                      >
+                        {method}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
-              <Text style={styles.formLabel}>Notas u Observaciones (Opcional)</Text>
+              <Text style={[styles.formLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                Notas u Observaciones (Opcional)
+              </Text>
               <TextInput
-                style={[styles.input, { height: 60 }]}
+                style={[
+                  styles.input,
+                  {
+                    height: 64,
+                    backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                    borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                    color: isDark ? '#F1F3F7' : '#0F172A',
+                    textAlignVertical: 'top',
+                  },
+                ]}
                 placeholder="Proveedor, factura o número de ticket"
                 placeholderTextColor={colors.textDim}
                 multiline
@@ -459,6 +536,9 @@ export default function ExpensesScreen() {
         visible={!!longPressedExpense}
         expense={longPressedExpense}
         onClose={() => setLongPressedExpense(null)}
+        onViewDigitalReceipt={(exp) => {
+          setDigitalReceiptExpense(exp);
+        }}
         onEdit={(exp) => {
           setSelectedExpense(exp);
         }}
@@ -467,6 +547,17 @@ export default function ExpensesScreen() {
           setSelectedExpense(exp);
         }}
         onDelete={deleteExpense}
+      />
+
+      {/* Digital Thermal Receipt Modal */}
+      <DigitalReceiptModal
+        visible={!!digitalReceiptExpense}
+        expense={digitalReceiptExpense}
+        onClose={() => setDigitalReceiptExpense(null)}
+        onEdit={(exp) => {
+          setDigitalReceiptExpense(null);
+          setSelectedExpense(exp);
+        }}
       />
     </SafeAreaView>
   );

@@ -270,37 +270,50 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
             <View style={styles.formGroup}>
               <Text style={[styles.label, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>Tipo de Oferta</Text>
               <View style={styles.typeRow}>
-                <TouchableOpacity
-                  style={[styles.typeBtn, { backgroundColor: isDark ? '#242936' : '#F1F3F7', borderColor: colors.borderSubtle }, promoType === 'combo_fixed_price' && styles.typeBtnActive]}
-                  onPress={() => handleTypeSelect('combo_fixed_price')}
-                >
-                  <Ionicons name="gift-outline" size={18} color={promoType === 'combo_fixed_price' ? colors.brand : colors.textMuted} />
-                  <Text style={[styles.typeBtnText, promoType === 'combo_fixed_price' && styles.typeBtnTextActive]}>Combo $</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.typeBtn, { backgroundColor: isDark ? '#242936' : '#F1F3F7', borderColor: colors.borderSubtle }, promoType === 'percentage' && styles.typeBtnActive]}
-                  onPress={() => handleTypeSelect('percentage')}
-                >
-                  <Ionicons name="pricetag-outline" size={18} color={promoType === 'percentage' ? colors.brand : colors.textMuted} />
-                  <Text style={[styles.typeBtnText, promoType === 'percentage' && styles.typeBtnTextActive]}>Desc. %</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.typeBtn, { backgroundColor: isDark ? '#242936' : '#F1F3F7', borderColor: colors.borderSubtle }, promoType === 'fixed_amount' && styles.typeBtnActive]}
-                  onPress={() => handleTypeSelect('fixed_amount')}
-                >
-                  <Ionicons name="cash-outline" size={18} color={promoType === 'fixed_amount' ? colors.brand : colors.textMuted} />
-                  <Text style={[styles.typeBtnText, promoType === 'fixed_amount' && styles.typeBtnTextActive]}>Fijo $</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.typeBtn, { backgroundColor: isDark ? '#242936' : '#F1F3F7', borderColor: colors.borderSubtle }, promoType === 'two_for_one' && styles.typeBtnActive]}
-                  onPress={() => handleTypeSelect('two_for_one')}
-                >
-                  <Ionicons name="flame-outline" size={18} color={promoType === 'two_for_one' ? colors.brand : colors.textMuted} />
-                  <Text style={[styles.typeBtnText, promoType === 'two_for_one' && styles.typeBtnTextActive]}>2x1</Text>
-                </TouchableOpacity>
+                {[
+                  { key: 'combo_fixed_price' as PromoType, label: 'Combo $', icon: 'gift-outline' as const },
+                  { key: 'percentage' as PromoType, label: 'Desc. %', icon: 'pricetag-outline' as const },
+                  { key: 'fixed_amount' as PromoType, label: 'Fijo $', icon: 'cash-outline' as const },
+                  { key: 'two_for_one' as PromoType, label: '2x1', icon: 'flame-outline' as const },
+                ].map((item) => {
+                  const isActive = promoType === item.key;
+                  return (
+                    <TouchableOpacity
+                      key={item.key}
+                      style={[
+                        styles.typeBtn,
+                        {
+                          backgroundColor: isActive
+                            ? (isDark ? 'rgba(14, 165, 233, 0.18)' : '#E0F2FE')
+                            : (isDark ? '#242936' : '#F1F3F7'),
+                          borderColor: isActive
+                            ? colors.brand
+                            : (isDark ? '#2A303C' : '#E5E7EB'),
+                        },
+                      ]}
+                      onPress={() => handleTypeSelect(item.key)}
+                    >
+                      <Ionicons
+                        name={item.icon}
+                        size={18}
+                        color={isActive ? colors.brand : (isDark ? '#64748B' : '#94A3B8')}
+                      />
+                      <Text
+                        style={[
+                          styles.typeBtnText,
+                          {
+                            color: isActive
+                              ? (isDark ? '#38BDF8' : '#0284C7')
+                              : (isDark ? '#94A3B8' : '#64748B'),
+                            fontWeight: isActive ? '800' : '600',
+                          },
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
 
@@ -311,7 +324,14 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
                   {promoType === 'combo_fixed_price' ? 'Precio Combo ($)' : promoType === 'percentage' ? '% Descuento' : 'Monto ($)'}
                 </Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: isDark ? '#242936' : '#F8F9FA', borderColor: isDark ? '#2A303C' : '#E5E7EB', color: isDark ? '#F1F3F7' : '#181A1F' }]}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                      borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                      color: isDark ? '#F1F3F7' : '#181A1F',
+                    },
+                  ]}
                   keyboardType="numeric"
                   value={discountValue}
                   onChangeText={setDiscountValue}
@@ -320,9 +340,16 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
               </View>
 
               <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Piezas Mínimas</Text>
+                <Text style={[styles.label, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>Piezas Mínimas</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? '#242936' : '#F8F9FA',
+                      borderColor: isDark ? '#2A303C' : '#E5E7EB',
+                      color: isDark ? '#F1F3F7' : '#181A1F',
+                    },
+                  ]}
                   keyboardType="numeric"
                   value={minQuantity}
                   onChangeText={setMinQuantity}
@@ -330,54 +357,79 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
               </View>
             </View>
 
-            {/* Alcance: Todo el Menú vs Específicas */}
+            {/* Alcance: Todo el Menú vs Específicas vs Total */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>¿A qué productos aplica?</Text>
+              <Text style={[styles.label, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>¿A qué productos aplica?</Text>
               <View style={styles.typeRow}>
-                <TouchableOpacity
-                  style={[styles.typeBtn, targetType === 'all_products' && styles.typeBtnActive]}
-                  onPress={() => setTargetType('all_products')}
-                >
-                  <Text style={[styles.typeBtnText, targetType === 'all_products' && styles.typeBtnTextActive]}>
-                    Todo el Menú
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.typeBtn, targetType === 'specific_products' && styles.typeBtnActive]}
-                  onPress={() => setTargetType('specific_products')}
-                >
-                  <Text style={[styles.typeBtnText, targetType === 'specific_products' && styles.typeBtnTextActive]}>
-                    Galletas Específicas
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.typeBtn, targetType === 'order_total' && styles.typeBtnActive]}
-                  onPress={() => setTargetType('order_total')}
-                >
-                  <Text style={[styles.typeBtnText, targetType === 'order_total' && styles.typeBtnTextActive]}>
-                    Total del Pedido
-                  </Text>
-                </TouchableOpacity>
+                {[
+                  { key: 'all_products' as PromoScope, label: 'Todo el Menú' },
+                  { key: 'specific_products' as PromoScope, label: 'Galletas Específicas' },
+                  { key: 'order_total' as PromoScope, label: 'Total del Pedido' },
+                ].map((item) => {
+                  const isActive = targetType === item.key;
+                  return (
+                    <TouchableOpacity
+                      key={item.key}
+                      style={[
+                        styles.typeBtn,
+                        {
+                          backgroundColor: isActive
+                            ? (isDark ? 'rgba(14, 165, 233, 0.18)' : '#E0F2FE')
+                            : (isDark ? '#242936' : '#F1F3F7'),
+                          borderColor: isActive
+                            ? colors.brand
+                            : (isDark ? '#2A303C' : '#E5E7EB'),
+                        },
+                      ]}
+                      onPress={() => setTargetType(item.key)}
+                    >
+                      <Text
+                        style={[
+                          styles.typeBtnText,
+                          {
+                            color: isActive
+                              ? (isDark ? '#38BDF8' : '#0284C7')
+                              : (isDark ? '#94A3B8' : '#64748B'),
+                            fontWeight: isActive ? '800' : '600',
+                          },
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
               {targetType === 'specific_products' && (
-                <View style={styles.productListContainer}>
+                <View
+                  style={[
+                    styles.productListContainer,
+                    {
+                      backgroundColor: isDark ? '#1E2430' : '#F1F5F9',
+                      borderColor: isDark ? '#2A303C' : '#E2E8F0',
+                    },
+                  ]}
+                >
                   {cookies.map((c) => {
                     const isChecked = selectedProductIds.includes(c.id);
                     return (
                       <TouchableOpacity
                         key={c.id}
-                        style={[styles.productCheckRow, isChecked && styles.productCheckRowActive]}
+                        style={[
+                          styles.productCheckRow,
+                          isChecked && {
+                            backgroundColor: isDark ? '#272E3D' : '#FFFFFF',
+                          },
+                        ]}
                         onPress={() => handleToggleProduct(c.id)}
                       >
                         <Ionicons
                           name={isChecked ? 'checkbox' : 'square-outline'}
                           size={18}
-                          color={isChecked ? colors.brand : colors.textMuted}
+                          color={isChecked ? colors.brand : (isDark ? '#64748B' : '#94A3B8')}
                         />
-                        <Text style={{ fontSize: 13, color: colors.textMain, flex: 1, marginLeft: 6 }}>
+                        <Text style={{ fontSize: 13, color: isDark ? '#F1F3F7' : '#0F172A', flex: 1, marginLeft: 6 }}>
                           {c.name}
                         </Text>
                         <Text style={{ fontSize: 12, color: colors.textDim }}>${c.sale_price}</Text>
@@ -390,22 +442,37 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
 
             {/* Color Tag */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Color del Distintivo</Text>
-              <View style={{ flexDirection: 'row', gap: 12, marginTop: 4 }}>
-                {['#F59E0B', '#EC4899', '#10B981', '#8B5CF6', '#3B82F6'].map((hex) => (
-                  <TouchableOpacity
-                    key={hex}
-                    onPress={() => setColorTag(hex)}
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 16,
-                      backgroundColor: hex,
-                      borderWidth: colorTag === hex ? 3 : 0,
-                      borderColor: '#181A1F'
-                    }}
-                  />
-                ))}
+              <Text style={[styles.label, { color: isDark ? '#9BA3AF' : '#5E6472' }]}>Color del Distintivo</Text>
+              <View style={{ flexDirection: 'row', gap: 14, marginTop: 6, alignItems: 'center' }}>
+                {['#F59E0B', '#EC4899', '#10B981', '#8B5CF6', '#3B82F6'].map((hex) => {
+                  const isSelected = colorTag === hex;
+                  return (
+                    <TouchableOpacity
+                      key={hex}
+                      onPress={() => setColorTag(hex)}
+                      activeOpacity={0.8}
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: 17,
+                        backgroundColor: hex,
+                        borderWidth: isSelected ? 3 : 0,
+                        borderColor: isDark ? '#FFFFFF' : '#0F172A',
+                        shadowColor: hex,
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: isSelected ? 0.45 : 0,
+                        shadowRadius: 4,
+                        elevation: isSelected ? 4 : 0,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}
+                    >
+                      {isSelected && (
+                        <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
           </ScrollView>

@@ -61,6 +61,7 @@ export interface CookieProduct {
   ingredients: RecipeIngredientItem[];
   image_url: string;
   is_active: boolean;
+  is_unit_recipe?: boolean;
   created_at?: string;
 }
 
@@ -211,6 +212,7 @@ export interface ReceiptScanResult {
   tax: number;
   items: ReceiptItem[];
   suggested_category: string;
+  payment_method?: string;
   confidence: number;
   raw_text: string;
   image_url?: string;

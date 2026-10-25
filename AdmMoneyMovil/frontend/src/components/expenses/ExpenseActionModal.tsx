@@ -23,6 +23,7 @@ interface ExpenseActionModalProps {
   onEdit: (expense: Expense) => void;
   onDuplicate: (expense: Expense) => void;
   onViewDetails: (expense: Expense) => void;
+  onViewDigitalReceipt: (expense: Expense) => void;
   onDelete: (id: number) => void;
 }
 
@@ -33,9 +34,11 @@ export const ExpenseActionModal: React.FC<ExpenseActionModalProps> = ({
   onEdit,
   onDuplicate,
   onViewDetails,
+  onViewDigitalReceipt,
   onDelete,
 }) => {
   const colors = useThemeColors();
+  const isDark = colors.isDark;
   const translateY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -129,7 +132,28 @@ export const ExpenseActionModal: React.FC<ExpenseActionModalProps> = ({
 
               {/* Action Buttons */}
               <View style={styles.actionsList}>
-                {/* 1. Edit */}
+                {/* 1. Ver Ticket Digitalizado */}
+                <TouchableOpacity
+                  style={[styles.actionRow, { borderBottomColor: colors.borderSubtle }]}
+                  onPress={() => {
+                    onClose();
+                    onViewDigitalReceipt(expense);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.iconBox, { backgroundColor: colors.brandBg }]}>
+                    <Ionicons name="receipt-outline" size={20} color={colors.brandText} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.actionTitle, { color: colors.textMain }]}>Ver Ticket Digitalizado</Text>
+                    <Text style={[styles.actionSub, { color: colors.textDim }]}>
+                      Comprobante fiscal con desglose de productos y total
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
+                </TouchableOpacity>
+
+                {/* 2. Edit */}
                 <TouchableOpacity
                   style={[styles.actionRow, { borderBottomColor: colors.borderSubtle }]}
                   onPress={() => {
@@ -138,12 +162,12 @@ export const ExpenseActionModal: React.FC<ExpenseActionModalProps> = ({
                   }}
                   activeOpacity={0.7}
                 >
-                  <View style={[styles.iconBox, { backgroundColor: colors.brandBg }]}>
-                    <Ionicons name="create-outline" size={20} color={colors.brandText} />
+                  <View style={[styles.iconBox, { backgroundColor: isDark ? 'rgba(56, 189, 248, 0.16)' : '#E0F2FE' }]}>
+                    <Ionicons name="create-outline" size={20} color={colors.brandLight} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.actionTitle, { color: colors.textMain }]}>Editar Registro</Text>
-                    <Text style={[styles.actionSub, { color: colors.textDim }]}>Modificar monto, concepto o método de pago</Text>
+                    <Text style={[styles.actionTitle, { color: colors.textMain }]}>Editar Ticket / Registro</Text>
+                    <Text style={[styles.actionSub, { color: colors.textDim }]}>Modificar monto, concepto o artículos</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
                 </TouchableOpacity>

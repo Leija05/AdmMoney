@@ -133,6 +133,7 @@ interface AppState {
     sale_date?: string;
   }) => Promise<CookieSale>;
   deleteCookieSale: (id: number) => Promise<void>;
+  updateCookieSale: (id: number, data: Partial<CookieSale>) => Promise<CookieSale>;
   addCookieProduct: (data: Partial<CookieProduct>) => Promise<CookieProduct>;
   updateCookieProduct: (id: number, data: Partial<CookieProduct>) => Promise<CookieProduct>;
   deleteCookieProduct: (id: number) => Promise<void>;
@@ -304,6 +305,15 @@ export const useAppStore = create<AppState>()(
     await MobileApiService.deleteSale(id);
     set((state) => ({ sales: state.sales.filter((s) => s.id !== id) }));
     get().loadAllData();
+  },
+
+  updateCookieSale: async (id: number, data: Partial<CookieSale>) => {
+    const updated = await MobileApiService.updateSale(id, data);
+    set((state) => ({
+      sales: state.sales.map((s) => (s.id === id ? updated : s)),
+    }));
+    get().loadAllData();
+    return updated;
   },
 
   addCookieProduct: async (data: Partial<CookieProduct>) => {

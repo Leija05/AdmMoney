@@ -99,6 +99,7 @@ class CookieProductBase(BaseModel):
     recipe_cost: Optional[float] = None
     profit_per_unit: Optional[float] = None
     profit_margin_pct: Optional[float] = None
+    is_unit_recipe: Optional[bool] = True
 
 class CookieProductCreate(CookieProductBase):
     pass
@@ -119,6 +120,7 @@ class CookieProductUpdate(BaseModel):
     recipe_cost: Optional[float] = None
     profit_per_unit: Optional[float] = None
     profit_margin_pct: Optional[float] = None
+    is_unit_recipe: Optional[bool] = None
 
 class CookieProductResponse(BaseModel):
     id: int
@@ -138,6 +140,7 @@ class CookieProductResponse(BaseModel):
     created_at: str
     packaging_cost: Optional[float] = 0.0
     cost_per_cookie: Optional[float] = None
+    is_unit_recipe: Optional[bool] = True
 
     class Config:
         from_attributes = True
@@ -285,6 +288,14 @@ class CookieSaleCreate(BaseModel):
     discount_amount: Optional[float] = 0.0
     order_id: Optional[int] = None
 
+class CookieSaleUpdate(BaseModel):
+    quantity: Optional[int] = Field(None, gt=0)
+    unit_price: Optional[float] = None
+    sale_date: Optional[str] = None
+    customer_name: Optional[str] = None
+    payment_method: Optional[str] = None
+    notes: Optional[str] = None
+
 class CookieSaleResponse(BaseModel):
     id: int
     cookie_id: int
@@ -407,6 +418,7 @@ class ReceiptScanResponse(BaseModel):
     tax: Optional[float] = 0.0
     items: List[ReceiptItem] = []
     suggested_category: str
+    payment_method: Optional[str] = "Efectivo"
     confidence: float
     raw_text: str
     image_url: Optional[str] = None

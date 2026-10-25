@@ -27,7 +27,10 @@ interface CookieRecipeDetailModalProps {
   onClose: () => void;
   onSell: (cookie: CookieProduct) => void;
   onDeleteCookie?: (id: number) => Promise<void>;
+  onEditCookie?: (cookie: CookieProduct) => void;
 }
+
+const TANDA_PRESETS = [1, 6, 12, 16, 20, 24, 30, 48];
 
 type SectionView = 'all' | 'ingredients' | 'economics';
 
@@ -37,6 +40,7 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
   onClose,
   onSell,
   onDeleteCookie,
+  onEditCookie,
 }) => {
   const colors = useThemeColors();
   const isDark = colors.isDark;
@@ -45,6 +49,7 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
   const [activeSection, setActiveSection] = useState<SectionView>('all');
   const [isPhotoPickerOpen, setIsPhotoPickerOpen] = useState(false);
   const [currentImage, setCurrentImage] = useState<string | null>(cookie?.image_url || null);
+  const [scaledTanda, setScaledTanda] = useState<number>(12);
 
   const screenHeight = Dimensions.get('window').height;
   const modalHeight = Math.round(screenHeight * 0.93);
@@ -55,6 +60,7 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
       translateY.setValue(0);
       setActiveSection('all');
       setCurrentImage(cookie.image_url || null);
+      setScaledTanda(cookie.batch_yield || 12);
     }
   }, [visible, cookie]);
 
@@ -159,11 +165,29 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
   if (!cookie) return null;
 
   const batchYield = cookie.batch_yield || 16;
-  const unitCost = cookie.recipe_cost || 0;
+  const isUnitRecipe = cookie.is_unit_recipe ?? true;
+
+  // Insumos normalizados para 1 SOLA GALLETA
+  const unitIngredients = (cookie.ingredients || []).map((ing) => {
+    const rawQty = typeof ing.quantity === 'number' ? ing.quantity : parseFloat(String(ing.quantity || 0));
+    const rawCost = typeof ing.cost === 'number' ? ing.cost : parseFloat(String(ing.cost || 0));
+    const unitQty = isUnitRecipe ? rawQty : (batchYield > 0 ? rawQty / batchYield : rawQty);
+    const unitCost = isUnitRecipe ? rawCost : (batchYield > 0 ? rawCost / batchYield : rawCost);
+    return {
+      ...ing,
+      unitQty: Math.max(0, unitQty),
+      unitCost: Math.max(0, unitCost),
+    };
+  });
+
+  const totalUnitIngredientsCost = unitIngredients.reduce((acc, i) => acc + i.unitCost, 0);
+
   const packCost = typeof cookie.packaging_cost === 'number' ? cookie.packaging_cost : 2.0;
   const ingCost = typeof cookie.cost_per_cookie === 'number'
     ? cookie.cost_per_cookie
-    : Math.max(0, unitCost - packCost);
+    : (totalUnitIngredientsCost > 0 ? totalUnitIngredientsCost : Math.max(0, (cookie.recipe_cost || 6.50) - packCost));
+
+  const unitCost = ingCost + packCost;
   const salePrice = cookie.sale_price || 0;
   const netProfit = cookie.profit_per_unit ?? (salePrice - unitCost);
   const marginPct = cookie.profit_margin_pct ?? (salePrice > 0 ? (netProfit / salePrice) * 100 : 0);
@@ -171,6 +195,14 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
   const batchCost = unitCost * batchYield;
   const batchRevenue = salePrice * batchYield;
   const batchProfit = netProfit * batchYield;
+
+  // Números escalados para la tanda activa interactiva
+  const activeTanda = Math.max(1, scaledTanda || 12);
+  const scaledIngCost = ingCost * activeTanda;
+  const scaledPackCost = packCost * activeTanda;
+  const scaledTotalCost = unitCost * activeTanda;
+  const scaledRevenue = salePrice * activeTanda;
+  const scaledProfit = netProfit * activeTanda;
 
   // Filtrar promociones activas que apliquen a este producto (todo el menú o galleta específica)
   const applicablePromotions = promotions.filter((p) => {
@@ -247,9 +279,7 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
     };
   });
 
-  const totalIngredientsCost = cookie.ingredients
-    ? cookie.ingredients.reduce((acc, i) => acc + (typeof i.cost === 'number' ? i.cost : 0), 0)
-    : 0;
+  const totalIngredientsCost = unitIngredients.reduce((acc, i) => acc + i.unitCost, 0) * (isUnitRecipe ? batchYield : 1);
 
   const handleDeleteRecipe = () => {
     if (!onDeleteCookie) return;
@@ -300,7 +330,7 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
             <View style={[styles.header, { borderBottomColor: isDark ? '#2A303C' : '#E5E7EB' }]}>
               <View style={{ flex: 1, paddingRight: 8 }}>
                 <Text style={[styles.headerEyebrow, { color: colors.amberLight }]}>
-                  Estructura de Costos & Receta
+                  Estructura & Receta (1 Galleta)
                 </Text>
                 <Text
                   style={[styles.headerTitle, { color: isDark ? '#F1F3F7' : '#181A1F' }]}
@@ -309,9 +339,21 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
                   {cookie.name}
                 </Text>
               </View>
-              <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {onEditCookie && (
+                  <TouchableOpacity
+                    onPress={() => onEditCookie(cookie)}
+                    style={[styles.editHeaderBtn, { backgroundColor: isDark ? '#222C3E' : '#E2E8F0' }]}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="pencil" size={13} color={colors.amberLight} />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: colors.amberLight }}>Editar</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                  <Ionicons name="close" size={22} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Quick Section View Selector */}
@@ -594,8 +636,8 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
               </View>
             )}
 
-            {/* INGREDIENTS BREAKDOWN LIST (shown in all and ingredients modes) */}
-            {(activeSection === 'all' || activeSection === 'ingredients') && cookie.ingredients && cookie.ingredients.length > 0 && (
+            {/* INGREDIENTS BREAKDOWN LIST CON ESCALADOR DE TANDAS */}
+            {(activeSection === 'all' || activeSection === 'ingredients') && unitIngredients.length > 0 && (
               <View
                 style={[
                   styles.ingredientsCard,
@@ -606,35 +648,85 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
                 ]}
               >
                 <View style={styles.ingHeaderRow}>
-                  <View>
-                    <Text style={[styles.sectionTitle, { color: isDark ? '#F1F3F7' : '#0F172A', marginBottom: 0 }]}>
-                      INSUMOS DE LA RECETA ({cookie.ingredients.length})
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.sectionTitle, { color: isDark ? '#F1F3F7' : '#0F172A', marginBottom: 2 }]}>
+                      INSUMOS DE LA RECETA ({unitIngredients.length})
                     </Text>
                     <Text style={[styles.ingSubTitle, { color: isDark ? '#94A3B8' : '#64748B' }]}>
-                      Rendimiento: {batchYield} galletas por lote
+                      {activeTanda === 1 ? 'Pesos base para 1 sola galleta' : `Cantidades pesadas para tanda de ${activeTanda} galletas`}
                     </Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     <Text style={[styles.ingTotalText, { color: colors.amberLight }]}>
-                      Total Lote: ${totalIngredientsCost.toFixed(2)}
+                      Total Insumos: ${scaledIngCost.toFixed(2)}
                     </Text>
                     <Text style={[styles.ingUnitText, { color: colors.textDim }]}>
-                      ~${(totalIngredientsCost / batchYield).toFixed(2)} / pza
+                      ${ingCost.toFixed(2)} x galleta
                     </Text>
                   </View>
                 </View>
 
+                {/* ESCALADOR DE TANDA INTERACTIVO EN TIEMPO REAL */}
+                <View style={[styles.tandaSelectorCard, { backgroundColor: isDark ? '#1A2130' : '#FFFFFF', borderColor: isDark ? '#2A364E' : '#E2E8F0' }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="calculator-outline" size={15} color={colors.amberLight} />
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#F1F3F7' : '#0F172A' }}>
+                        Escalar tanda simultáneamente:
+                      </Text>
+                    </View>
+                    <Badge
+                      label={`${activeTanda} ${activeTanda === 1 ? 'galleta' : 'piezas'}`}
+                      variant={activeTanda === 1 ? 'gray' : 'amber'}
+                    />
+                  </View>
+
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
+                    {TANDA_PRESETS.map((pza) => {
+                      const isSelected = activeTanda === pza;
+                      return (
+                        <TouchableOpacity
+                          key={pza}
+                          onPress={() => setScaledTanda(pza)}
+                          style={[
+                            styles.tandaChip,
+                            {
+                              backgroundColor: isSelected ? colors.brand : (isDark ? '#242C3D' : '#F1F5F9'),
+                              borderColor: isSelected ? colors.brand : (isDark ? '#35415B' : '#CBD5E1'),
+                            },
+                          ]}
+                          activeOpacity={0.7}
+                        >
+                          <Text
+                            style={[
+                              styles.tandaChipText,
+                              {
+                                color: isSelected ? '#FFFFFF' : (isDark ? '#94A3B8' : '#475569'),
+                                fontWeight: isSelected ? '800' : '600',
+                              },
+                            ]}
+                          >
+                            {pza === 1 ? '1 Galleta' : `${pza} pzas`}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+
+                {/* LISTA DE INGREDIENTES ESCALADOS */}
                 <View style={styles.ingList}>
-                  {cookie.ingredients.map((ing, idx) => {
-                    const ingCostNum = typeof ing.cost === 'number' ? ing.cost : parseFloat(String(ing.cost || 0));
-                    const costSharePct = totalIngredientsCost > 0 ? (ingCostNum / totalIngredientsCost) * 100 : 0;
+                  {unitIngredients.map((ing, idx) => {
+                    const scaledQty = Number((ing.unitQty * activeTanda).toFixed(2));
+                    const scaledCost = Number((ing.unitCost * activeTanda).toFixed(2));
+                    const costSharePct = scaledIngCost > 0 ? (scaledCost / scaledIngCost) * 100 : 0;
 
                     return (
                       <View
                         key={idx}
                         style={[
                           styles.ingRow,
-                          idx === cookie.ingredients.length - 1 && { borderBottomWidth: 0 },
+                          idx === unitIngredients.length - 1 && { borderBottomWidth: 0 },
                         ]}
                       >
                         <View
@@ -652,22 +744,67 @@ export const CookieRecipeDetailModal: React.FC<CookieRecipeDetailModalProps> = (
                             {ing.name}
                           </Text>
                           <Text style={[styles.ingSub, { color: isDark ? '#94A3B8' : '#64748B' }]}>
-                            {ing.quantity} {ing.unit} por tanda ({costSharePct.toFixed(2)}% del costo)
+                            {scaledQty} {ing.unit} {activeTanda > 1 ? `(${ing.unitQty} ${ing.unit} x pza)` : 'para 1 galleta'} • {costSharePct.toFixed(1)}% costo
                           </Text>
                         </View>
-                        <Text style={[styles.ingCost, { color: isDark ? '#F1F3F7' : '#0F172A' }]}>
-                          ${ingCostNum.toFixed(2)}
-                        </Text>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={[styles.ingCost, { color: isDark ? '#F1F3F7' : '#0F172A' }]}>
+                            ${scaledCost.toFixed(2)}
+                          </Text>
+                          {activeTanda > 1 && (
+                            <Text style={{ fontSize: 10, color: colors.textDim }}>
+                              ~${ing.unitCost.toFixed(2)}/pza
+                            </Text>
+                          )}
+                        </View>
                       </View>
                     );
                   })}
                 </View>
 
-                {/* Insumos summary footer box */}
+                {/* RESUMEN FINANCIERO DE LA TANDA ESCALADA */}
                 <View style={[styles.ingFooterBox, { backgroundColor: isDark ? '#1C2230' : '#FFFFFF', borderColor: isDark ? '#2E3A52' : '#E2E8F0' }]}>
-                  <Text style={[styles.ingFooterText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
-                    ✓ Los {cookie.ingredients.length} insumos suman un costo total de ${totalIngredientsCost.toFixed(2)} MXN para {batchYield} galletas.
-                  </Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Text style={{ fontSize: 11, color: isDark ? '#94A3B8' : '#64748B' }}>
+                      Insumos ({activeTanda} {activeTanda === 1 ? 'galleta' : 'galletas'}):
+                    </Text>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: isDark ? '#F1F3F7' : '#0F172A' }}>
+                      ${scaledIngCost.toFixed(2)} MXN
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Text style={{ fontSize: 11, color: isDark ? '#94A3B8' : '#64748B' }}>
+                      Empaque ({activeTanda} piezas a ${packCost.toFixed(2)} c/u):
+                    </Text>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: isDark ? '#F1F3F7' : '#0F172A' }}>
+                      ${scaledPackCost.toFixed(2)} MXN
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Text style={{ fontSize: 11, color: isDark ? '#94A3B8' : '#64748B' }}>
+                      Inversión Total de Tanda:
+                    </Text>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: colors.roseLight }}>
+                      ${scaledTotalCost.toFixed(2)} MXN
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Text style={{ fontSize: 11, color: isDark ? '#94A3B8' : '#64748B' }}>
+                      Venta Total Proyectada:
+                    </Text>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: colors.amberLight }}>
+                      ${scaledRevenue.toFixed(2)} MXN
+                    </Text>
+                  </View>
+                  <View style={{ height: 1, backgroundColor: isDark ? '#283144' : '#E2E8F0', marginVertical: 4 }} />
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: colors.emeraldLight }}>
+                      Ganancia Neta Libre de Tanda:
+                    </Text>
+                    <Text style={{ fontSize: 13, fontWeight: '900', color: colors.emeraldLight }}>
+                      +${scaledProfit.toFixed(2)} MXN ({marginPct.toFixed(1)}%)
+                    </Text>
+                  </View>
                 </View>
               </View>
             )}
@@ -873,6 +1010,14 @@ const styles = StyleSheet.create({
   closeBtn: {
     padding: 6,
   },
+  editHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radii.sm,
+  },
   sectionTabRow: {
     flexDirection: 'row',
     padding: 3,
@@ -1041,6 +1186,21 @@ const styles = StyleSheet.create({
   ingUnitText: {
     fontSize: 10,
     marginTop: 1,
+  },
+  tandaSelectorCard: {
+    marginVertical: 10,
+    padding: 10,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+  },
+  tandaChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+  },
+  tandaChipText: {
+    fontSize: 11,
   },
   ingList: {
     gap: 8,

@@ -189,7 +189,7 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
       setMerchant(scanResult.merchant || 'Comercio');
       setAmount(scanResult.total_amount ? String(scanResult.total_amount) : '0.00');
       setCategory(scanResult.suggested_category || CATEGORIES[0]);
-      setPaymentMethod('Efectivo');
+      setPaymentMethod(scanResult.payment_method || 'Efectivo');
       const parsedItems = scanResult.items ? [...scanResult.items] : [];
       setItems(parsedItems);
       classifyReceiptItems(parsedItems, registeredIngredients);
@@ -208,12 +208,70 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
     }
   }, [scanResult, registeredIngredients]);
 
+  const screenHeight = Dimensions.get('window').height;
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
+        return gestureState.dy > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.3;
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        if (gestureState.dy > 0) {
+          translateY.setValue(gestureState.dy);
+        } else {
+          translateY.setValue(gestureState.dy * 0.15);
+        }
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (gestureState.dy > 110 || (gestureState.dy > 30 && gestureState.vy > 0.35)) {
+          Animated.timing(translateY, {
+            toValue: screenHeight,
+            duration: 180,
+            useNativeDriver: true,
+          }).start(() => {
+            onClose();
+            translateY.setValue(0);
+          });
+        } else {
+          Animated.spring(translateY, {
+            toValue: 0,
+            friction: 8,
+            tension: 80,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  useEffect(() => {
+    if (visible) {
+      translateY.setValue(0);
+    }
+  }, [visible]);
+
   if (!visible) return null;
 
   const handleToggleMatchedItem = (id: string) => {
     setMatchedExisting((prev) =>
       prev.map((m) => (m.id === id ? { ...m, selectedToUpdateStock: !m.selectedToUpdateStock } : m))
     );
+  };
+
+  const handleToggleAllMatched = (select: boolean) => {
+    setMatchedExisting((prev) => prev.map((m) => ({ ...m, selectedToUpdateStock: select })));
+  };
+
+  const handleUpdateMatchedItem = (id: string, field: 'name' | 'quantity' | 'price', value: any) => {
+    setMatchedExisting((prev) => {
+      const next = prev.map((m) => (m.id === id ? { ...m, [field]: value } : m));
+      const sumMatched = next.reduce((acc, m) => acc + (Number(m.price) || 0), 0);
+      const sumNew = newDetected.reduce((acc, n) => acc + (Number(n.price) || 0), 0);
+      setAmount((sumMatched + sumNew).toFixed(2));
+      return next;
+    });
   };
 
   const handleToggleNewItem = (id: string) => {
@@ -227,49 +285,33 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
   };
 
   const handleUpdateNewItem = (id: string, field: keyof NewDetectedItem, value: any) => {
-    setNewDetected((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, [field]: value } : n))
-    );
+    setNewDetected((prev) => {
+      const next = prev.map((n) => (n.id === id ? { ...n, [field]: value } : n));
+      if (field === 'price') {
+        const sumMatched = matchedExisting.reduce((acc, m) => acc + (Number(m.price) || 0), 0);
+        const sumNew = next.reduce((acc, n) => acc + (Number(n.price) || 0), 0);
+        setAmount((sumMatched + sumNew).toFixed(2));
+      }
+      return next;
+    });
   };
 
   const handleRemoveMatchedItem = (id: string) => {
     setMatchedExisting((prev) => {
-      const target = prev.find((m) => m.id === id);
       const next = prev.filter((m) => m.id !== id);
-      if (target) {
-        setItems((prevItems) => {
-          const itemIdx = prevItems.findIndex((it) => it.name === target.name);
-          if (itemIdx >= 0) {
-            const nextItems = [...prevItems];
-            nextItems.splice(itemIdx, 1);
-            const sum = nextItems.reduce((acc, it) => acc + it.price, 0);
-            setAmount(sum.toFixed(2));
-            return nextItems;
-          }
-          return prevItems;
-        });
-      }
+      const sumMatched = next.reduce((acc, m) => acc + (Number(m.price) || 0), 0);
+      const sumNew = newDetected.reduce((acc, n) => acc + (Number(n.price) || 0), 0);
+      setAmount((sumMatched + sumNew).toFixed(2));
       return next;
     });
   };
 
   const handleRemoveNewItem = (id: string) => {
     setNewDetected((prev) => {
-      const target = prev.find((n) => n.id === id);
       const next = prev.filter((n) => n.id !== id);
-      if (target) {
-        setItems((prevItems) => {
-          const itemIdx = prevItems.findIndex((it) => it.name === target.name);
-          if (itemIdx >= 0) {
-            const nextItems = [...prevItems];
-            nextItems.splice(itemIdx, 1);
-            const sum = nextItems.reduce((acc, it) => acc + it.price, 0);
-            setAmount(sum.toFixed(2));
-            return nextItems;
-          }
-          return prevItems;
-        });
-      }
+      const sumMatched = matchedExisting.reduce((acc, m) => acc + (Number(m.price) || 0), 0);
+      const sumNew = next.reduce((acc, n) => acc + (Number(n.price) || 0), 0);
+      setAmount((sumMatched + sumNew).toFixed(2));
       return next;
     });
   };
@@ -338,6 +380,19 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
         }
       }
 
+      const finalItems: ReceiptItem[] = [
+        ...matchedExisting.map((m) => ({
+          name: m.name.trim(),
+          quantity: Number(m.quantity) || 1,
+          price: Number(m.price) || 0,
+        })),
+        ...newDetected.map((n) => ({
+          name: n.name.trim(),
+          quantity: Number(n.quantity) || 1,
+          price: Number(n.price) || 0,
+        })),
+      ];
+
       // 3. Save Expense record
       await onConfirm({
         title: `Compra ${merchant.trim() || 'Comercio'}`,
@@ -346,12 +401,13 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
         date: scanResult?.date || new Date().toISOString().split('T')[0],
         payment_method: paymentMethod,
         notes: notes.trim(),
-        receipt_url: imageUri || '',
+        receipt_url: scanResult?.image_url || imageUri || '',
         receipt_data: {
           merchant: merchant.trim(),
           total_amount: val,
           date: scanResult?.date || new Date().toISOString().split('T')[0],
-          items,
+          payment_method: paymentMethod,
+          items: finalItems,
           matched_stock_updated: updatedStockCount,
           new_ingredients_added: newRegisteredCount,
           raw_text: scanResult?.raw_text || '',
@@ -373,49 +429,6 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
   };
 
   const displayTotal = parseFloat(amount || '0') || 0;
-  const screenHeight = Dimensions.get('window').height;
-  const translateY = useRef(new Animated.Value(0)).current;
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_evt, gestureState) => {
-        return gestureState.dy > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.3;
-      },
-      onPanResponderMove: (_evt, gestureState) => {
-        if (gestureState.dy > 0) {
-          translateY.setValue(gestureState.dy);
-        } else {
-          translateY.setValue(gestureState.dy * 0.15);
-        }
-      },
-      onPanResponderRelease: (_evt, gestureState) => {
-        if (gestureState.dy > 110 || (gestureState.dy > 30 && gestureState.vy > 0.35)) {
-          Animated.timing(translateY, {
-            toValue: screenHeight,
-            duration: 180,
-            useNativeDriver: true,
-          }).start(() => {
-            onClose();
-            translateY.setValue(0);
-          });
-        } else {
-          Animated.spring(translateY, {
-            toValue: 0,
-            friction: 8,
-            tension: 80,
-            useNativeDriver: true,
-          }).start();
-        }
-      },
-    })
-  ).current;
-
-  useEffect(() => {
-    if (visible) {
-      translateY.setValue(0);
-    }
-  }, [visible]);
 
   return (
     <Modal
@@ -560,16 +573,53 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
 
             {/* SECCIÓN 1: INSUMOS YA REGISTRADOS EN ALMACÉN (SE SUMARÁN AL STOCK) */}
             <View style={[styles.sectionContainer, { backgroundColor: isDark ? '#14201E' : '#F0FDF4', borderColor: isDark ? 'rgba(16, 185, 129, 0.35)' : '#BBF7D0' }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 8 }}>
                   <Ionicons name="cube" size={16} color={colors.emeraldLight} />
-                  <Text style={[styles.sectionTitle, { color: colors.emeraldLight }]}>
-                    INSUMOS YA REGISTRADOS ({matchedExisting.length})
+                  <Text style={[styles.sectionTitle, { color: colors.emeraldLight }]} numberOfLines={1}>
+                    INSUMOS REGISTRADOS ({matchedExisting.length})
                   </Text>
                 </View>
-                <View style={[styles.miniBadge, { backgroundColor: colors.emeraldBg, borderColor: colors.emeraldBorder }]}>
-                  <Text style={{ fontSize: 10, fontWeight: '800', color: colors.emeraldLight }}>Se sumará a Stock</Text>
-                </View>
+                {matchedExisting.length > 0 && (
+                  <View style={{ flexDirection: 'row', gap: 6, flexShrink: 0 }}>
+                    <TouchableOpacity
+                      onPress={() => handleToggleAllMatched(true)}
+                      style={[
+                        styles.miniHeaderBtn,
+                        {
+                          backgroundColor: isDark ? 'rgba(16, 185, 129, 0.22)' : '#DCFCE7',
+                          borderColor: colors.emeraldBorder,
+                          paddingVertical: 5,
+                          paddingHorizontal: 8,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 3,
+                        },
+                      ]}
+                    >
+                      <Ionicons name="checkmark-done" size={13} color={colors.emeraldLight} />
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: colors.emeraldLight }}>Todos</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleToggleAllMatched(false)}
+                      style={[
+                        styles.miniHeaderBtn,
+                        {
+                          backgroundColor: isDark ? '#1B2624' : '#F1F5F9',
+                          borderColor: isDark ? '#2C3E3A' : '#E2E8F0',
+                          paddingVertical: 5,
+                          paddingHorizontal: 8,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 3,
+                        },
+                      ]}
+                    >
+                      <Ionicons name="close-circle-outline" size={13} color={colors.textDim} />
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: isDark ? '#D1D5DB' : colors.textDim }}>Ninguno</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
 
               <Text style={{ fontSize: 11, color: isDark ? '#A7F3D0' : '#166534', marginTop: 4, marginBottom: 8, lineHeight: 15 }}>
@@ -610,16 +660,44 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
 
                         <View style={{ flex: 1, paddingHorizontal: 6 }}>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Text style={[styles.ticketItemName, { color: colors.textMain }]} numberOfLines={1}>
-                              {match.quantity}x {match.name}
-                            </Text>
-                            <Text style={[styles.ticketItemPrice, { color: colors.emeraldLight }]}>
-                              ${match.price.toFixed(2)} MXN
-                            </Text>
+                            <TextInput
+                              style={[
+                                styles.newItemNameInput,
+                                {
+                                  flex: 1,
+                                  color: isDark ? '#F1F3F7' : '#181A1F',
+                                  backgroundColor: isDark ? '#162724' : '#F8FAFC',
+                                  borderColor: colors.borderSubtle,
+                                  marginRight: 8,
+                                },
+                              ]}
+                              value={match.name}
+                              onChangeText={(v) => handleUpdateMatchedItem(match.id, 'name', v)}
+                              placeholder="Nombre"
+                              placeholderTextColor={colors.textDim}
+                            />
+                            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#162724' : '#F8FAFC', borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radii.sm, paddingHorizontal: 6, paddingVertical: 2 }}>
+                              <Text style={{ fontSize: 11, color: colors.emeraldLight, fontWeight: '800' }}>$</Text>
+                              <TextInput
+                                style={{ color: colors.emeraldLight, fontSize: 13, fontWeight: '800', minWidth: 44, textAlign: 'right', padding: 2 }}
+                                value={String(match.price || '')}
+                                keyboardType="numeric"
+                                onChangeText={(v) => handleUpdateMatchedItem(match.id, 'price', parseFloat(v) || 0)}
+                              />
+                            </View>
                           </View>
 
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                            <View style={[styles.detectedMatchPill, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7' }]}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#162724' : '#F8FAFC', borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radii.sm, paddingHorizontal: 6, paddingVertical: 2 }}>
+                              <Text style={{ fontSize: 10, color: colors.textDim, marginRight: 2, fontWeight: '700' }}>CANT:</Text>
+                              <TextInput
+                                style={{ color: colors.textMain, fontSize: 12, fontWeight: '800', minWidth: 26, textAlign: 'center', padding: 0 }}
+                                value={String(match.quantity || '')}
+                                keyboardType="numeric"
+                                onChangeText={(v) => handleUpdateMatchedItem(match.id, 'quantity', parseFloat(v) || 0)}
+                              />
+                            </View>
+                            <View style={[styles.detectedMatchPill, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7', flex: 1 }]}>
                               <Ionicons name="checkmark-circle" size={11} color={colors.emeraldLight} />
                               <Text style={{ fontSize: 10, fontWeight: '800', color: colors.emeraldLight }} numberOfLines={1}>
                                 Insumo: {match.matchedIngredient.name}
@@ -627,7 +705,7 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
                             </View>
                           </View>
 
-                          <View style={[styles.stockTransformRow, { backgroundColor: isDark ? '#11221F' : '#F0FDF4', borderColor: isDark ? 'rgba(16, 185, 129, 0.25)' : '#DCFCE7' }]}>
+                          <View style={[styles.stockTransformRow, { backgroundColor: isDark ? '#11221F' : '#F0FDF4', borderColor: isDark ? 'rgba(16, 185, 129, 0.25)' : '#DCFCE7', marginTop: 6 }]}>
                             <Text style={{ fontSize: 11, color: isDark ? '#D1FAE5' : '#065F46' }}>
                               Stock: <Text style={{ fontWeight: '700' }}>{match.matchedIngredient.stock_quantity} {match.matchedIngredient.unit}</Text> ➔ Nuevo: <Text style={{ fontWeight: '900', color: colors.emeraldLight }}>{newStock} {match.matchedIngredient.unit}</Text> (+{match.quantity})
                             </Text>
@@ -650,25 +728,49 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
 
             {/* SECCIÓN 2: INSUMOS NUEVOS DETECTADOS EN EL TICKET */}
             <View style={[styles.sectionContainer, { backgroundColor: isDark ? '#231B15' : '#FFFBEB', borderColor: isDark ? 'rgba(245, 158, 11, 0.4)' : '#FDE68A', marginTop: 12 }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 8 }}>
                   <Ionicons name="sparkles" size={16} color={colors.amberLight} />
-                  <Text style={[styles.sectionTitle, { color: colors.amberLight }]}>
-                    INSUMOS NUEVOS DETECTADOS ({newDetected.length})
+                  <Text style={[styles.sectionTitle, { color: colors.amberLight }]} numberOfLines={1}>
+                    INSUMOS NUEVOS ({newDetected.length})
                   </Text>
                 </View>
-                <View style={{ flexDirection: 'row', gap: 6 }}>
+                <View style={{ flexDirection: 'row', gap: 6, flexShrink: 0 }}>
                   <TouchableOpacity
                     onPress={() => handleToggleAllNew(true)}
-                    style={[styles.miniHeaderBtn, { backgroundColor: colors.amberBg, borderColor: colors.amberBorder }]}
+                    style={[
+                      styles.miniHeaderBtn,
+                      {
+                        backgroundColor: isDark ? 'rgba(245, 158, 11, 0.22)' : '#FEF3C7',
+                        borderColor: colors.amberBorder,
+                        paddingVertical: 5,
+                        paddingHorizontal: 8,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 3,
+                      },
+                    ]}
                   >
-                    <Text style={{ fontSize: 9.5, fontWeight: '800', color: colors.amberLight }}>Marcar Todos</Text>
+                    <Ionicons name="checkmark-done" size={13} color={colors.amberLight} />
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: colors.amberLight }}>Marcar Todos</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => handleToggleAllNew(false)}
-                    style={[styles.miniHeaderBtn, { backgroundColor: isDark ? '#2E2219' : '#FEF3C7', borderColor: colors.borderSubtle }]}
+                    style={[
+                      styles.miniHeaderBtn,
+                      {
+                        backgroundColor: isDark ? '#2D231C' : '#F1F5F9',
+                        borderColor: isDark ? '#3D2F24' : '#E2E8F0',
+                        paddingVertical: 5,
+                        paddingHorizontal: 8,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 3,
+                      },
+                    ]}
                   >
-                    <Text style={{ fontSize: 9.5, fontWeight: '700', color: colors.textDim }}>Desmarcar</Text>
+                    <Ionicons name="close-circle-outline" size={13} color={colors.textDim} />
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: isDark ? '#D1D5DB' : colors.textDim }}>Desmarcar</Text>
                   </TouchableOpacity>
                 </View>
               </View>

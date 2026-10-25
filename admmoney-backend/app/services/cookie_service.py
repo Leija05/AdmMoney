@@ -181,11 +181,12 @@ class CookieService:
     def calculate_recipe_metrics(
         ingredients: List[Any],
         sale_price: float,
-        batch_yield: int,
+        batch_yield: int = 16,
         waste_pct: float = 2.0,
         packaging_cost: float = 0.0,
         direct_ingredient_cost: Optional[float] = None,
-        direct_recipe_cost: Optional[float] = None
+        direct_recipe_cost: Optional[float] = None,
+        is_unit_recipe: bool = True
     ) -> Dict[str, float]:
         yield_count = max(batch_yield, 1)
         packaging_cost = float(packaging_cost or 0.0)
@@ -197,13 +198,15 @@ class CookieService:
             cost_per_unit_raw = round(float(direct_ingredient_cost), 2)
             total_unit_cost = round(cost_per_unit_raw + packaging_cost, 2)
         elif ingredients and len(ingredients) > 0:
-            total_batch_cost = sum(
+            total_ingredients_sum = sum(
                 float(item.cost if hasattr(item, "cost") else item.get("cost", 0.0))
                 for item in ingredients
             )
             waste_factor = 1.0 + (waste_pct / 100.0) if waste_pct > 0 else 1.0
-            adjusted_batch_cost = total_batch_cost * waste_factor
-            cost_per_unit_raw = round(adjusted_batch_cost / yield_count, 2)
+            if is_unit_recipe:
+                cost_per_unit_raw = round(total_ingredients_sum * waste_factor, 2)
+            else:
+                cost_per_unit_raw = round((total_ingredients_sum * waste_factor) / yield_count, 2)
             total_unit_cost = round(cost_per_unit_raw + packaging_cost, 2)
         else:
             cost_per_unit_raw = 0.0
@@ -293,6 +296,7 @@ class CookieService:
             "ingredients": ingredients_dicts,
             "image_url": data.image_url or "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=500&q=80",
             "is_active": True if data.is_active is None or data.is_active else False,
+            "is_unit_recipe": True if data.is_unit_recipe is None or data.is_unit_recipe else False,
             "created_at": now_str
         }
 
@@ -355,6 +359,8 @@ class CookieService:
             update_fields["image_url"] = data.image_url
         if data.is_active is not None:
             update_fields["is_active"] = bool(data.is_active)
+        if data.is_unit_recipe is not None:
+            update_fields["is_unit_recipe"] = bool(data.is_unit_recipe)
 
         db.cookie_products.update_one({"id": cookie_id}, {"$set": update_fields})
         return CookieService.get_cookie_by_id(cookie_id)
@@ -387,14 +393,20 @@ class CookieService:
         can_fulfill_all = True
         total_raw_weight = target_units * float(cookie.get("base_recipe_weight_g", 75.0)) * waste_multiplier
 
+        is_unit_recipe = cookie.get("is_unit_recipe", True)
         for ing in cookie.get("ingredients", []):
             ing_name = ing.get("name")
             unit_in_recipe = ing.get("unit", "g")
             cost_per_item = float(ing.get("cost", 0.0))
+            raw_qty = float(ing.get("quantity", 0.0))
 
             # Cantidad escalada requerida para target_units con factor de merma
-            scaled_qty = round(((float(ing.get("quantity", 0.0)) / batch_yield) * target_units) * waste_multiplier, 2)
-            scaled_cost = round(((cost_per_item / batch_yield) * target_units) * waste_multiplier, 2)
+            if is_unit_recipe:
+                scaled_qty = round((raw_qty * target_units) * waste_multiplier, 2)
+                scaled_cost = round((cost_per_item * target_units) * waste_multiplier, 2)
+            else:
+                scaled_qty = round(((raw_qty / batch_yield) * target_units) * waste_multiplier, 2)
+                scaled_cost = round(((cost_per_item / batch_yield) * target_units) * waste_multiplier, 2)
             total_projected_cost += scaled_cost
 
             # Buscar stock actual
@@ -567,6 +579,42 @@ class CookieService:
         db = get_db()
         res = db.cookie_sales.delete_one({"id": sale_id})
         return res.deleted_count > 0
+
+    @staticmethod
+    def update_sale(sale_id: int, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        db = get_db()
+        sale = db.cookie_sales.find_one({"id": sale_id}, {"_id": 0})
+        if not sale:
+            return None
+
+        update_fields: Dict[str, Any] = {}
+        for key in ["customer_name", "payment_method", "notes", "sale_date"]:
+            if key in data and data[key] is not None:
+                update_fields[key] = data[key]
+
+        if "quantity" in data or "unit_price" in data:
+            qty = data.get("quantity", sale["quantity"]) if data.get("quantity") is not None else sale["quantity"]
+            unit_price = data.get("unit_price", sale["unit_price"]) if data.get("unit_price") is not None else sale["unit_price"]
+
+            unit_cost = sale.get("unit_cost", 0.0)
+            if unit_cost == 0.0 and sale.get("quantity", 0) > 0:
+                unit_cost = sale.get("total_cost", 0.0) / sale["quantity"]
+
+            discount = sale.get("discount_amount", 0.0) or 0.0
+            total_rev = max(0.0, (qty * unit_price) - discount)
+            total_cost = qty * unit_cost
+            net_profit = total_rev - total_cost
+
+            update_fields["quantity"] = qty
+            update_fields["unit_price"] = unit_price
+            update_fields["total_revenue"] = round(total_rev, 2)
+            update_fields["total_cost"] = round(total_cost, 2)
+            update_fields["net_profit"] = round(net_profit, 2)
+
+        if update_fields:
+            db.cookie_sales.update_one({"id": sale_id}, {"$set": update_fields})
+
+        return db.cookie_sales.find_one({"id": sale_id}, {"_id": 0})
 
     # ------------------ ANALÍTICAS DE GALLETAS ------------------ #
     @staticmethod

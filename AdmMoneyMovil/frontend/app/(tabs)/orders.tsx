@@ -129,24 +129,26 @@ export default function OrdersScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]} edges={['top']}>
       <SwipeTabWrapper currentRoute="/orders">
-        {/* Top Header */}
+      {/* Top Header */}
       <View style={[styles.header, { borderBottomColor: colors.borderSubtle }]}>
-        <View>
+        <View style={{ flex: 1, marginRight: 10 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Text style={{ fontSize: 11, fontWeight: '800', color: colors.amberLight, letterSpacing: 0.8 }}>
               LUCKY COOKIES
             </Text>
             <BackendHeartbeat />
           </View>
-          <Text style={[styles.headerTitle, { color: colors.textMain }]}>Gestión de Pedidos</Text>
+          <Text style={[styles.headerTitle, { color: colors.textMain }]} numberOfLines={1}>
+            Gestión de Pedidos
+          </Text>
         </View>
 
         <Button
-          title="+ Nuevo Pedido"
+          title="Nuevo Pedido"
           variant="amber"
           icon={<Ionicons name="add" size={17} color="#fff" />}
           onPress={handleOpenAddOrder}
-          style={{ paddingVertical: 8, paddingHorizontal: 14 }}
+          style={{ paddingVertical: 8, paddingHorizontal: 12, flexShrink: 0 }}
         />
       </View>
 

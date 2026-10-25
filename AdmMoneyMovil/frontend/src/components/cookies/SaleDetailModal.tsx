@@ -38,29 +38,6 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
   const isDark = colors.isDark;
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
 
-  if (!sale) return null;
-
-  const marginPct = sale.total_revenue > 0 ? (sale.net_profit / sale.total_revenue) * 100 : 0;
-  const roiPct = sale.total_cost > 0 ? (sale.net_profit / sale.total_cost) * 100 : 0;
-
-  const handleDelete = () => {
-    confirmAction({
-      title: '¿Eliminar Venta?',
-      message: `¿Deseas cancelar y eliminar la venta de ${sale.quantity}x "${sale.cookie_name}" ($${sale.total_revenue.toFixed(2)} MXN)?`,
-      confirmText: 'Sí, Eliminar Venta',
-      cancelText: 'Conservar Venta',
-      type: 'danger',
-      onConfirm: async () => {
-        try {
-          await onDeleteSale(sale.id);
-          onClose();
-        } catch (err: any) {
-          Alert.alert('Error', err?.message || 'No se pudo eliminar la venta.');
-        }
-      },
-    });
-  };
-
   const screenHeight = Dimensions.get('window').height;
   const translateY = useRef(new Animated.Value(0)).current;
 
@@ -104,6 +81,29 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
       translateY.setValue(0);
     }
   }, [visible]);
+
+  if (!sale) return null;
+
+  const marginPct = sale.total_revenue > 0 ? (sale.net_profit / sale.total_revenue) * 100 : 0;
+  const roiPct = sale.total_cost > 0 ? (sale.net_profit / sale.total_cost) * 100 : 0;
+
+  const handleDelete = () => {
+    confirmAction({
+      title: '¿Eliminar Venta?',
+      message: `¿Deseas cancelar y eliminar la venta de ${sale.quantity}x "${sale.cookie_name}" ($${sale.total_revenue.toFixed(2)} MXN)?`,
+      confirmText: 'Sí, Eliminar Venta',
+      cancelText: 'Conservar Venta',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await onDeleteSale(sale.id);
+          onClose();
+        } catch (err: any) {
+          Alert.alert('Error', err?.message || 'No se pudo eliminar la venta.');
+        }
+      },
+    });
+  };
 
   return (
     <>

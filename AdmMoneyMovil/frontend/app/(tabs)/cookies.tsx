@@ -20,6 +20,9 @@ import { colors, useThemeColors, radii, spacing, gradients } from '../../src/the
 import { CookieCard } from '../../src/components/cookies/CookieCard';
 import { CookieRecipeDetailModal } from '../../src/components/cookies/CookieRecipeDetailModal';
 import { SaleDetailModal } from '../../src/components/cookies/SaleDetailModal';
+import { SaleQuickActionsSheet } from '../../src/components/cookies/SaleQuickActionsSheet';
+import { EditSaleModal } from '../../src/components/cookies/EditSaleModal';
+import { WhatsAppTicketModal } from '../../src/components/ui/WhatsAppTicketModal';
 import { CookieModal } from '../../src/components/cookies/CookieModal';
 import { AddIngredientModal } from '../../src/components/cookies/AddIngredientModal';
 import { AddPromotionModal } from '../../src/components/cookies/AddPromotionModal';
@@ -49,6 +52,7 @@ export default function CookiesScreen() {
     addPromotion,
     updatePromotion,
     addCookieSale,
+    updateCookieSale,
     deleteCookieSale,
     addCookieProduct,
     updateCookieProduct,
@@ -114,6 +118,9 @@ export default function CookiesScreen() {
   ).current;
   const [editingCookieProduct, setEditingCookieProduct] = useState<CookieProduct | null>(null);
   const [selectedSale, setSelectedSale] = useState<CookieSale | null>(null);
+  const [actionSheetSale, setActionSheetSale] = useState<CookieSale | null>(null);
+  const [editingSale, setEditingSale] = useState<CookieSale | null>(null);
+  const [whatsAppSale, setWhatsAppSale] = useState<CookieSale | null>(null);
   const [isAddCookieOpen, setIsAddCookieOpen] = useState(false);
   const [isAddIngredientOpen, setIsAddIngredientOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
@@ -590,6 +597,8 @@ export default function CookiesScreen() {
                 <TouchableOpacity
                   activeOpacity={0.75}
                   onPress={() => setSelectedSale(item)}
+                  onLongPress={() => setActionSheetSale(item)}
+                  delayLongPress={280}
                 >
                   <DoubleBezelCard style={{ marginBottom: 10 }}>
                     <View
@@ -773,6 +782,10 @@ export default function CookiesScreen() {
         onClose={() => setInspectedCookie(null)}
         onSell={handleOpenSale}
         onDeleteCookie={deleteCookieProduct}
+        onEditCookie={(c) => {
+          setInspectedCookie(null);
+          setEditingCookieProduct(c);
+        }}
       />
 
       {/* Add / Edit Cookie Recipe Modal */}
@@ -966,6 +979,43 @@ export default function CookiesScreen() {
         sale={selectedSale}
         onClose={() => setSelectedSale(null)}
         onDeleteSale={deleteCookieSale}
+      />
+
+      {/* Sale Quick Actions Sheet (Long-Press Menu) */}
+      <SaleQuickActionsSheet
+        visible={!!actionSheetSale}
+        sale={actionSheetSale}
+        onClose={() => setActionSheetSale(null)}
+        onSendWhatsApp={(s) => setWhatsAppSale(s)}
+        onViewDetails={(s) => setSelectedSale(s)}
+        onEditSale={(s) => setEditingSale(s)}
+        onDeleteSale={(s) => {
+          confirmAction({
+            title: '¿Eliminar Venta?',
+            message: `¿Deseas cancelar y eliminar la venta de ${s.quantity}x "${s.cookie_name}" ($${s.total_revenue.toFixed(2)} MXN)?`,
+            confirmText: 'Sí, Eliminar Venta',
+            cancelText: 'Conservar Venta',
+            type: 'danger',
+            onConfirm: async () => {
+              await deleteCookieSale(s.id);
+            },
+          });
+        }}
+      />
+
+      {/* Edit Sale Modal */}
+      <EditSaleModal
+        visible={!!editingSale}
+        sale={editingSale}
+        onClose={() => setEditingSale(null)}
+        onSave={updateCookieSale}
+      />
+
+      {/* WhatsApp Ticket Modal */}
+      <WhatsAppTicketModal
+        visible={!!whatsAppSale}
+        sale={whatsAppSale}
+        onClose={() => setWhatsAppSale(null)}
       />
 
       {/* Add / Edit Ingredient Modal */}
