@@ -14,6 +14,7 @@ import { DoubleBezelCard } from '../../src/components/ui/DoubleBezelCard';
 import { Badge } from '../../src/components/ui/Badge';
 import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
 import { FadeSlideIn } from '../../src/components/ui/FadeSlideIn';
+import { AmbientBackdrop } from '../../src/components/ui/AmbientBackdrop';
 import { useAppStore } from '../../src/stores/app.store';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -134,6 +135,7 @@ export default function AnalyticsScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]} edges={['top']}>
+      <AmbientBackdrop variant="emerald" />
       <SwipeTabWrapper currentRoute="/analytics">
         <ScrollView
           contentContainerStyle={styles.container}

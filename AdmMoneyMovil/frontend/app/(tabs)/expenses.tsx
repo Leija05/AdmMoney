@@ -22,6 +22,7 @@ import { DoubleBezelCard } from '../../src/components/ui/DoubleBezelCard';
 import { Button } from '../../src/components/ui/Button';
 import { BackendHeartbeat } from '../../src/components/ui/BackendHeartbeat';
 import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
+import { AmbientBackdrop } from '../../src/components/ui/AmbientBackdrop';
 import { ExpenseActionModal } from '../../src/components/expenses/ExpenseActionModal';
 import { DigitalReceiptModal } from '../../src/components/expenses/DigitalReceiptModal';
 import { useAppStore } from '../../src/stores/app.store';
@@ -173,6 +174,7 @@ export default function ExpensesScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]}>
+      <AmbientBackdrop variant="emerald" />
       <SwipeTabWrapper currentRoute="/expenses">
         <View style={styles.container}>
           {/* Header Hero Card */}

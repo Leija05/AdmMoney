@@ -17,6 +17,7 @@ import { Button } from '../../src/components/ui/Button';
 import { BackendHeartbeat } from '../../src/components/ui/BackendHeartbeat';
 import { RomanticDedicationCard } from '../../src/components/ui/RomanticDedicationCard';
 import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
+import { AmbientBackdrop } from '../../src/components/ui/AmbientBackdrop';
 import { useAppStore } from '../../src/stores/app.store';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -116,6 +117,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]}>
+      <AmbientBackdrop variant="brand" />
       <SwipeTabWrapper currentRoute="/settings" enabled={swipeEnabled}>
         <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
           {/* Header */}

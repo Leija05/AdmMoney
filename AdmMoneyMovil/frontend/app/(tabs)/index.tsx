@@ -12,6 +12,7 @@ import {
   Animated,
   PanResponder,
   Dimensions,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -23,6 +24,8 @@ import { ExpenseDetailModal } from '../../src/components/expenses/ExpenseDetailM
 import { BackendHeartbeat } from '../../src/components/ui/BackendHeartbeat';
 import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
 import { FadeSlideIn } from '../../src/components/ui/FadeSlideIn';
+import { AmbientBackdrop } from '../../src/components/ui/AmbientBackdrop';
+import { StatSparkline } from '../../src/components/ui/StatSparkline';
 import { OrderDeliveryReminderBanner } from '../../src/components/orders/OrderDeliveryReminderBanner';
 import { useAppStore } from '../../src/stores/app.store';
 import { Expense, CookieProduct } from '../../src/lib/types';
@@ -47,6 +50,7 @@ export default function DashboardScreen() {
     theme,
     toggleTheme,
     privacyMode,
+    setPrivacyMode,
     currency,
     businessName,
     dailyClosingReminder,
@@ -284,6 +288,7 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]}>
+      <AmbientBackdrop variant="amber" />
       <SwipeTabWrapper currentRoute="/">
         <ScrollView
           contentContainerStyle={styles.container}
@@ -295,26 +300,36 @@ export default function DashboardScreen() {
           />
         }
       >
-        {/* Header bar */}
+        {/* Header bar with contextual greeting and date */}
         <View style={styles.header}>
           <View>
-            <View style={styles.brandRow}>
-              <View style={styles.brandDot} />
-              <Text style={styles.brandText}>{businessName || 'Adm Money Mobile'}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              <Text style={{ fontSize: 13 }}>🍪</Text>
+              <Text style={{ fontSize: 10.5, fontWeight: '900', color: colors.amberLight, letterSpacing: 0.8, textTransform: 'uppercase' }}>
+                {businessName || 'LUCKY COOKIES'}
+              </Text>
+              <View style={{ backgroundColor: isDark ? 'rgba(16, 185, 129, 0.16)' : '#D1FAE5', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: radii.pill, borderWidth: 1, borderColor: isDark ? 'rgba(16, 185, 129, 0.3)' : '#A7F3D0' }}>
+                <Text style={{ fontSize: 9, fontWeight: '800', color: colors.emeraldLight }}>EN VIVO</Text>
+              </View>
             </View>
-            <Text style={[styles.greeting, { color: colors.textMain }]}>Resumen Financiero</Text>
+            <Text style={[styles.greeting, { color: colors.textMain }]}>
+              {new Date().getHours() < 12 ? 'Buenos días' : new Date().getHours() < 19 ? 'Buenas tardes' : 'Buenas noches'}
+            </Text>
+            <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: '600' }}>
+              Control Financiero & Repostería de Alta Gama
+            </Text>
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <TouchableOpacity
               onPress={toggleTheme}
               style={{
-                width: 32,
-                height: 32,
+                width: 36,
+                height: 36,
                 borderRadius: radii.pill,
                 borderWidth: 1,
                 borderColor: colors.borderSubtle,
-                backgroundColor: colors.bgCard,
+                backgroundColor: isDark ? '#141A28' : '#FFFFFF',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
@@ -333,17 +348,25 @@ export default function DashboardScreen() {
         {/* Order Delivery Reminder Banner */}
         <OrderDeliveryReminderBanner />
 
-        {/* Global Net Balance Luxury Gradient Card */}
+        {/* Global Net Balance Vault Holographic Card */}
         <FadeSlideIn delay={40}>
           <DoubleBezelCard
             gradient={
               theme === 'dark'
-                ? ['#192338', '#111724']
-                : ['#0284C7', '#0369A1']
+                ? ['#172033', '#0F1624', '#090D15']
+                : ['#0284C7', '#0369A1', '#075985']
             }
-            style={styles.balanceCard}
+            style={[
+              styles.balanceCard,
+              !isDark && {
+                shadowColor: '#0284C7',
+                shadowOpacity: 0.28,
+                shadowRadius: 18,
+                elevation: 6,
+              },
+            ]}
           >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Animated.View
                   style={{
@@ -354,31 +377,51 @@ export default function DashboardScreen() {
                     transform: [{ scale: pulseAnim }],
                   }}
                 />
-                <Text style={{ fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: 0.6 }}>
-                  Liquidez Neta en Caja
+                <Text style={{ fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                  Bóveda de Liquidez Neta
                 </Text>
               </View>
-              <View
-                style={{
-                  backgroundColor: 'rgba(255,255,255,0.18)',
-                  paddingHorizontal: 8,
-                  paddingVertical: 3,
-                  borderRadius: radii.pill,
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.25)',
-                }}
-              >
-                <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
-                  {netBalance >= 0 ? '✓ Superávit' : '⚠ Déficit'}
-                </Text>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {/* Privacy toggle quick button */}
+                <TouchableOpacity
+                  onPress={() => setPrivacyMode(!privacyMode)}
+                  style={{
+                    backgroundColor: 'rgba(255,255,255,0.18)',
+                    padding: 5,
+                    borderRadius: radii.pill,
+                  }}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <Ionicons
+                    name={privacyMode ? 'eye-off-outline' : 'eye-outline'}
+                    size={14}
+                    color="#FFFFFF"
+                  />
+                </TouchableOpacity>
+
+                <View
+                  style={{
+                    backgroundColor: 'rgba(255,255,255,0.22)',
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    borderRadius: radii.pill,
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.30)',
+                  }}
+                >
+                  <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
+                    {netBalance >= 0 ? '✓ Superávit Operativo' : '⚠ Déficit Operativo'}
+                  </Text>
+                </View>
               </View>
             </View>
 
-            <Text style={{ fontSize: 32, fontWeight: '900', color: '#FFFFFF', letterSpacing: -0.5 }}>
+            <Text style={{ fontSize: 34, fontWeight: '900', color: '#FFFFFF', letterSpacing: -0.6 }}>
               {privacyMode
                 ? '••••••••'
                 : `$${netBalance.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              <Text style={{ fontSize: 15, fontWeight: '600', color: 'rgba(255,255,255,0.65)' }}> {currency}</Text>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: 'rgba(255,255,255,0.75)' }}> {currency}</Text>
             </Text>
 
             {/* Micro Dual Ledger Indicators with Frosted Glass */}
@@ -386,22 +429,22 @@ export default function DashboardScreen() {
               style={{
                 flexDirection: 'row',
                 marginTop: 14,
-                backgroundColor: 'rgba(0, 0, 0, 0.22)',
+                backgroundColor: 'rgba(255, 255, 255, 0.16)',
                 borderRadius: radii.md,
                 padding: 12,
                 borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.12)',
+                borderColor: 'rgba(255, 255, 255, 0.25)',
               }}
             >
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' }}>
                   Ingresos Galletas
                 </Text>
-                <Text style={{ fontSize: 15, fontWeight: '900', color: '#6EE7B7', marginTop: 2 }}>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: '#6EE7B7', marginTop: 2 }}>
                   {privacyMode ? '••••••' : `+$${cookieRevenue.toFixed(2)}`}
                 </Text>
-                <Text style={{ fontSize: 10, fontWeight: '700', color: '#A7F3D0', marginTop: 1 }}>
-                  {privacyMode ? '••••••' : `+$${cookieProfit.toFixed(2)} libres (${marginPct.toFixed(2)}%)`}
+                <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#A7F3D0', marginTop: 1 }}>
+                  {privacyMode ? '••••••' : `+$${cookieProfit.toFixed(2)} libres (${marginPct.toFixed(1)}%)`}
                 </Text>
               </View>
 
@@ -409,12 +452,12 @@ export default function DashboardScreen() {
 
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' }}>
-                  Egresos Totales
+                  Egresos Operativos
                 </Text>
-                <Text style={{ fontSize: 15, fontWeight: '900', color: '#FDA4AF', marginTop: 2 }}>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: '#FDA4AF', marginTop: 2 }}>
                   {privacyMode ? '••••••' : `-$${totalExpenses.toFixed(2)}`}
                 </Text>
-                <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)', marginTop: 1 }}>
+                <Text style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.65)', marginTop: 1 }}>
                   {expenses.length} movimientos
                 </Text>
               </View>
@@ -422,7 +465,7 @@ export default function DashboardScreen() {
           </DoubleBezelCard>
         </FadeSlideIn>
 
-        {/* Quick Bento Stats (2 Clickable Columns) */}
+        {/* Quick Bento Stats with Sparklines (2 Clickable Columns) */}
         <FadeSlideIn delay={90}>
           <View style={styles.bentoRow}>
             {/* Cookie Business Profit */}
@@ -436,12 +479,15 @@ export default function DashboardScreen() {
                   <Text style={[styles.statMiniTitle, { color: colors.textMuted }]}>Ganancia Galletas</Text>
                   <Ionicons name="cafe" size={16} color={colors.amberLight} />
                 </View>
-                <Text style={[styles.statValue, { color: colors.emeraldLight }]}>
-                  {privacyMode ? '••••••' : `+$${cookieProfit.toFixed(2)}`}
-                </Text>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 2 }}>
+                  <Text style={[styles.statValue, { color: colors.emeraldLight }]}>
+                    {privacyMode ? '••••••' : `+$${cookieProfit.toFixed(2)}`}
+                  </Text>
+                  <StatSparkline width={64} height={24} color={colors.emeraldLight} gradientId="profitSpark" />
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
                   <Text style={[styles.statSub, { color: colors.textDim }]}>
-                    {privacyMode ? '•••% margen' : `${marginPct.toFixed(2)}% margen neto`}
+                    {privacyMode ? '•••% margen' : `${marginPct.toFixed(1)}% margen neto`}
                   </Text>
                   <Ionicons name="chevron-forward" size={13} color={colors.textDim} />
                 </View>
@@ -457,12 +503,15 @@ export default function DashboardScreen() {
               <DoubleBezelCard>
                 <View style={styles.statHeader}>
                   <Text style={[styles.statMiniTitle, { color: colors.textMuted }]}>Gastos Totales</Text>
-                  <Ionicons name="receipt" size={16} color={colors.rose} />
+                  <Ionicons name="receipt" size={16} color={colors.roseLight} />
                 </View>
-                <Text style={[styles.statValue, { color: colors.rose }]}>
-                  {privacyMode ? '••••••' : `-$${totalExpenses.toFixed(2)}`}
-                </Text>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 2 }}>
+                  <Text style={[styles.statValue, { color: colors.roseLight }]}>
+                    {privacyMode ? '••••••' : `-$${totalExpenses.toFixed(2)}`}
+                  </Text>
+                  <StatSparkline width={64} height={24} color={colors.roseLight} data={[42, 35, 29, 38, 20, 24, 12]} gradientId="expenseSpark" />
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
                   <Text style={[styles.statSub, { color: colors.textDim }]}>{expenses.length} movimientos</Text>
                   <Ionicons name="chevron-forward" size={13} color={colors.textDim} />
                 </View>
@@ -574,20 +623,38 @@ export default function DashboardScreen() {
         <FadeSlideIn delay={190}>
           <DoubleBezelCard style={styles.starCookieCard}>
             <View style={styles.starCookieRow}>
-              <View
-                style={{
-                  width: 46,
-                  height: 46,
-                  borderRadius: 23,
-                  backgroundColor: colors.amberBg,
-                  borderWidth: 1.5,
-                  borderColor: colors.amberBorder,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Ionicons name="sparkles" size={20} color={colors.amberLight} />
-              </View>
+              {(starCookie as any).image_url ? (
+                <View
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 24,
+                    overflow: 'hidden',
+                    borderWidth: 1.5,
+                    borderColor: colors.amber,
+                  }}
+                >
+                  <Image
+                    source={{ uri: (starCookie as any).image_url }}
+                    style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
+                  />
+                </View>
+              ) : (
+                <View
+                  style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: 23,
+                    backgroundColor: colors.amberBg,
+                    borderWidth: 1.5,
+                    borderColor: colors.amberBorder,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="sparkles" size={20} color={colors.amberLight} />
+                </View>
+              )}
 
               <View style={{ flex: 1, marginHorizontal: 10 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
@@ -650,7 +717,7 @@ export default function DashboardScreen() {
               />
             </View>
           ) : (
-            expenses.slice(0, 4).map((exp) => (
+            expenses.slice(0, 5).map((exp) => (
               <TouchableOpacity
                 key={exp.id}
                 activeOpacity={0.75}
@@ -658,17 +725,45 @@ export default function DashboardScreen() {
               >
                 <DoubleBezelCard style={{ marginBottom: 10 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <View style={{ flex: 1, paddingRight: 8 }}>
-                      <Text style={{ color: colors.textMain, fontWeight: '700', fontSize: 14 }}>{exp.title}</Text>
-                      <Text style={{ color: colors.textDim, fontSize: 11, marginTop: 2 }}>
-                        {exp.date} • {exp.category} • {exp.payment_method}
-                      </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, paddingRight: 8 }}>
+                      <View
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 19,
+                          backgroundColor: isDark ? 'rgba(244, 63, 94, 0.16)' : '#FFE4E6',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderWidth: 1,
+                          borderColor: isDark ? 'rgba(244, 63, 94, 0.3)' : '#FECDD3',
+                        }}
+                      >
+                        <Ionicons
+                          name={
+                            exp.category?.toLowerCase().includes('insumo') || exp.category?.toLowerCase().includes('materia')
+                              ? 'cart'
+                              : exp.category?.toLowerCase().includes('servicio') || exp.category?.toLowerCase().includes('luz') || exp.category?.toLowerCase().includes('gas')
+                              ? 'flash'
+                              : exp.category?.toLowerCase().includes('empaque')
+                              ? 'cube'
+                              : 'receipt'
+                          }
+                          size={18}
+                          color={colors.roseLight}
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: colors.textMain, fontWeight: '800', fontSize: 13.5 }}>{exp.title}</Text>
+                        <Text style={{ color: colors.textDim, fontSize: 11, marginTop: 2 }}>
+                          {exp.date} • {exp.category} • {exp.payment_method}
+                        </Text>
+                      </View>
                     </View>
                     <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-                      <Text style={{ color: colors.rose, fontWeight: '800', fontSize: 15 }}>
+                      <Text style={{ color: colors.roseLight, fontWeight: '900', fontSize: 15 }}>
                         {privacyMode ? '••••••' : `-$${exp.amount.toFixed(2)}`}
                       </Text>
-                      <Ionicons name="chevron-forward" size={14} color={colors.textDim} />
+                      <Ionicons name="chevron-forward" size={13} color={colors.textDim} />
                     </View>
                   </View>
                 </DoubleBezelCard>

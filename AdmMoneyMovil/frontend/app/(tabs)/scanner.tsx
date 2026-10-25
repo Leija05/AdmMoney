@@ -21,6 +21,7 @@ import { ReceiptPreviewModal } from '../../src/components/scanner/ReceiptPreview
 import { TicketActionModal } from '../../src/components/scanner/TicketActionModal';
 import { DigitalReceiptModal } from '../../src/components/expenses/DigitalReceiptModal';
 import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
+import { AmbientBackdrop } from '../../src/components/ui/AmbientBackdrop';
 import { MobileApiService } from '../../src/services/api';
 import { useAppStore } from '../../src/stores/app.store';
 import { ReceiptScanResult, Expense, ScannedTicket } from '../../src/lib/types';
@@ -486,6 +487,7 @@ export default function ScannerScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]} edges={['top']}>
+      <AmbientBackdrop variant="brand" />
       <SwipeTabWrapper currentRoute="/scanner">
         <ScrollView
           showsVerticalScrollIndicator={false}

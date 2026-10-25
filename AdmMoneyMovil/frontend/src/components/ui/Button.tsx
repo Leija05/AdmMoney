@@ -31,6 +31,7 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
 }) => {
   const colors = useThemeColors();
+  const isDark = colors.isDark;
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -38,7 +39,7 @@ export const Button: React.FC<ButtonProps> = ({
       toValue: 0.96,
       useNativeDriver: true,
       friction: 8,
-      tension: 100,
+      tension: 140,
     }).start();
   };
 
@@ -47,23 +48,38 @@ export const Button: React.FC<ButtonProps> = ({
       toValue: 1,
       useNativeDriver: true,
       friction: 8,
-      tension: 100,
+      tension: 140,
     }).start();
   };
 
   const getGradientColors = (): readonly [string, string, ...string[]] | null => {
     switch (variant) {
       case 'primary':
-        return gradients.brand;
+        return gradients.skyGlow;
       case 'amber':
-        return gradients.amber;
+        return gradients.amberGlow;
       case 'emerald':
-        return gradients.emerald;
+        return gradients.emeraldGlow;
       case 'danger':
-        return gradients.rose;
+        return gradients.roseGlow;
       case 'secondary':
       default:
         return null;
+    }
+  };
+
+  const getShadowColor = () => {
+    switch (variant) {
+      case 'amber':
+        return '#F59E0B';
+      case 'emerald':
+        return '#10B981';
+      case 'danger':
+        return '#F43F5E';
+      case 'primary':
+        return '#0EA5E9';
+      default:
+        return '#000000';
     }
   };
 
@@ -90,9 +106,19 @@ export const Button: React.FC<ButtonProps> = ({
             colors={gradientColors}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.gradientContainer}
+            style={[
+              styles.gradientContainer,
+              {
+                shadowColor: getShadowColor(),
+                borderTopColor: 'rgba(255, 255, 255, 0.35)',
+              },
+            ]}
           >
-            {icon && <View style={styles.iconOrb}>{icon}</View>}
+            {icon && (
+              <View style={styles.iconOrb}>
+                {icon}
+              </View>
+            )}
             <Text style={[styles.text, { color: getTextColor() }, textStyle]}>
               {title}
             </Text>
@@ -102,13 +128,13 @@ export const Button: React.FC<ButtonProps> = ({
             style={[
               styles.secondaryContainer,
               {
-                backgroundColor: colors.bgSecondary,
+                backgroundColor: isDark ? '#141A28' : colors.bgSecondary,
                 borderColor: colors.borderSubtle,
               },
             ]}
           >
             {icon && (
-              <View style={[styles.iconOrb, { backgroundColor: colors.bgTertiary }]}>
+              <View style={[styles.iconOrb, { backgroundColor: isDark ? '#1F293D' : colors.bgTertiary }]}>
                 {icon}
               </View>
             )}
@@ -134,11 +160,11 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     paddingHorizontal: 16,
     borderRadius: radii.pill,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
+    borderTopWidth: 1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
   },
   secondaryContainer: {
     flexDirection: 'row',
@@ -150,13 +176,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   iconOrb: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: 'rgba(255, 255, 255, 0.22)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
   },
   text: {
     fontSize: 13,

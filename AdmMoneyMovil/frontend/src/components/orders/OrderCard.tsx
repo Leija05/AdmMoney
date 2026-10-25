@@ -64,18 +64,31 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
   return (
     <DoubleBezelCard style={styles.card}>
-      {/* Header: Customer & Status */}
+      {/* Header: Customer Avatar & Status */}
       <View style={styles.headerRow}>
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Ionicons name="person" size={15} color={colors.textMain} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+          <View
+            style={[
+              styles.customerAvatar,
+              {
+                backgroundColor: colors.isDark ? 'rgba(245, 158, 11, 0.16)' : colors.amberBg,
+                borderColor: colors.isDark ? 'rgba(245, 158, 11, 0.35)' : colors.amberBorder,
+              },
+            ]}
+          >
+            <Text style={[styles.avatarInitial, { color: colors.amberLight }]}>
+              {order.customer_name ? order.customer_name.trim().charAt(0).toUpperCase() : 'C'}
+            </Text>
+          </View>
+
+          <View style={{ flex: 1, paddingRight: 6 }}>
             <Text style={[styles.customerName, { color: colors.textMain }]} numberOfLines={1}>
               {order.customer_name}
             </Text>
+            {order.customer_phone ? (
+              <Text style={[styles.customerPhone, { color: colors.textMuted }]}>📞 {order.customer_phone}</Text>
+            ) : null}
           </View>
-          {order.customer_phone ? (
-            <Text style={[styles.customerPhone, { color: colors.textMuted }]}>📞 {order.customer_phone}</Text>
-          ) : null}
         </View>
 
         {/* Status Pill with Tap to Advance */}
@@ -378,8 +391,20 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  customerAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitial: {
+    fontSize: 16,
+    fontWeight: '900',
   },
   customerName: {
     fontSize: 16,
@@ -388,9 +413,9 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   customerPhone: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: colors.textMuted,
-    marginTop: 2,
+    marginTop: 1,
   },
   statusPill: {
     paddingHorizontal: 10,

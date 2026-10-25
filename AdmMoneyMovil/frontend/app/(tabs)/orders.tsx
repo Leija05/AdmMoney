@@ -17,6 +17,7 @@ import { OrderDeliveryReminderBanner } from '../../src/components/orders/OrderDe
 import { Button } from '../../src/components/ui/Button';
 import { BackendHeartbeat } from '../../src/components/ui/BackendHeartbeat';
 import { DoubleBezelCard } from '../../src/components/ui/DoubleBezelCard';
+import { AmbientBackdrop } from '../../src/components/ui/AmbientBackdrop';
 import { useAppStore } from '../../src/stores/app.store';
 import { Order } from '../../src/lib/types';
 import { confirmAction } from '../../src/stores/confirmation.store';
@@ -128,6 +129,7 @@ export default function OrdersScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]} edges={['top']}>
+      <AmbientBackdrop variant="amber" />
       <SwipeTabWrapper currentRoute="/orders">
       {/* Top Header */}
       <View style={[styles.header, { borderBottomColor: colors.borderSubtle, backgroundColor: colors.bgPrimary }]}>

@@ -31,6 +31,7 @@ import { Badge } from '../../src/components/ui/Badge';
 import { Button } from '../../src/components/ui/Button';
 import { BackendHeartbeat } from '../../src/components/ui/BackendHeartbeat';
 import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
+import { AmbientBackdrop } from '../../src/components/ui/AmbientBackdrop';
 import { useAppStore } from '../../src/stores/app.store';
 import { CookieProduct, CookieSale, Ingredient, Promotion } from '../../src/lib/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -321,6 +322,7 @@ export default function CookiesScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]}>
+      <AmbientBackdrop variant="amber" />
       <SwipeTabWrapper currentRoute="/cookies">
         <View style={styles.container}>
         {/* Header */}

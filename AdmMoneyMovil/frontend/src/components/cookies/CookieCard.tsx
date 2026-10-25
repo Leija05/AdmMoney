@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { DoubleBezelCard } from '../ui/DoubleBezelCard';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import { colors, useThemeColors, radii } from '../../theme';
+import { useThemeColors, radii } from '../../theme';
 import { CookieProduct } from '../../lib/types';
 import { useAppStore } from '../../stores/app.store';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +24,7 @@ export const CookieCard: React.FC<CookieCardProps> = ({
   privacyMode = false,
 }) => {
   const colors = useThemeColors();
+  const isDark = colors.isDark;
   const promotions = useAppStore((state) => state.promotions);
 
   const batchYield = cookie.batch_yield || 16;
@@ -98,14 +99,20 @@ export const CookieCard: React.FC<CookieCardProps> = ({
   return (
     <DoubleBezelCard style={styles.cardWrapper}>
       <TouchableOpacity
-        activeOpacity={0.75}
+        activeOpacity={0.78}
         onPress={handleCardPress}
         onLongPress={handleCardLongPress}
         delayLongPress={300}
         style={styles.headerRow}
       >
-        <View style={[styles.imageWrapper, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
+        {/* Cookie Image with Floating Glass Price Badge */}
+        <View style={[styles.imageWrapper, { backgroundColor: isDark ? '#141A28' : '#F1F5F9', borderColor: colors.borderSubtle }]}>
           <Image source={{ uri: cookie.image_url }} style={styles.image} />
+          <View style={[styles.floatingPricePill, { backgroundColor: isDark ? 'rgba(10, 13, 21, 0.85)' : 'rgba(255, 255, 255, 0.92)' }]}>
+            <Text style={[styles.floatingPriceText, { color: colors.amberLight }]}>
+              ${salePrice.toFixed(0)}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.headerInfo}>
@@ -124,10 +131,12 @@ export const CookieCard: React.FC<CookieCardProps> = ({
             {cookie.description || 'Receta artesanal optimizada para alto rendimiento.'}
           </Text>
           <View style={styles.badgeRow}>
-            <Badge
-              label={privacyMode ? '•••% Margen' : `${marginPct.toFixed(1)}% Margen`}
-              variant={marginPct >= 60 ? 'emerald' : 'amber'}
-            />
+            <View style={[styles.marginBadge, { backgroundColor: marginPct >= 60 ? (isDark ? 'rgba(16, 185, 129, 0.16)' : '#D1FAE5') : (isDark ? 'rgba(245, 158, 11, 0.16)' : '#FEF3C7') }]}>
+              <Ionicons name="sparkles" size={10} color={marginPct >= 60 ? colors.emeraldLight : colors.amberLight} />
+              <Text style={[styles.marginBadgeText, { color: marginPct >= 60 ? colors.emeraldLight : colors.amberLight }]}>
+                {privacyMode ? '•••% Margen' : `${marginPct.toFixed(1)}% Margen`}
+              </Text>
+            </View>
             <Text style={[styles.batchText, { color: colors.textDim }]}>
               Tanda: {batchYield} pzas
             </Text>
@@ -135,53 +144,53 @@ export const CookieCard: React.FC<CookieCardProps> = ({
         </View>
       </TouchableOpacity>
 
-      {/* UNIT ECONOMICS: LO QUE GASTO vs PRECIO vs LO QUE GANO */}
+      {/* UNIT ECONOMICS: 3-Pill Bento */}
       <TouchableOpacity
-        activeOpacity={0.75}
+        activeOpacity={0.78}
         onPress={handleCardPress}
         onLongPress={handleCardLongPress}
         delayLongPress={300}
-        style={[styles.econContainer, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+        style={[styles.econContainer, { backgroundColor: isDark ? '#141A28' : '#F8FAFC', borderColor: colors.borderSubtle }]}
       >
         <View style={styles.econBox}>
-          <Text style={[styles.econLabel, { color: colors.textDim }]}>Lo que gasto</Text>
+          <Text style={[styles.econLabel, { color: colors.textDim }]}>Costo Pieza</Text>
           <Text style={[styles.econValue, { color: colors.roseLight }]}>
             {privacyMode ? '••••••' : `$${unitCost.toFixed(2)}`}
           </Text>
           <Text style={[styles.econSub, { color: colors.textDim }]} numberOfLines={1}>
-            ${ingCost.toFixed(1)} + emp ${packCost.toFixed(1)}
+            ${ingCost.toFixed(1)} + emp
           </Text>
         </View>
 
         <View style={[styles.econBox, styles.econBorderLeft, { borderLeftColor: colors.borderSubtle }]}>
-          <Text style={[styles.econLabel, { color: colors.textDim }]}>Precio venta</Text>
+          <Text style={[styles.econLabel, { color: colors.textDim }]}>Precio Venta</Text>
           <Text style={[styles.econValue, { color: colors.amberLight }]}>
             ${salePrice.toFixed(2)}
           </Text>
           <Text style={[styles.econSub, { color: colors.textDim }]}>individual</Text>
         </View>
 
-        <View style={[styles.econBox, styles.econBorderLeft, { borderLeftColor: colors.borderSubtle }]}>
-          <Text style={[styles.econLabel, { color: colors.textDim }]}>Lo que gano</Text>
+        <View style={[styles.econBox, styles.econBorderLeft, { borderLeftColor: colors.borderSubtle, backgroundColor: isDark ? 'rgba(16, 185, 129, 0.08)' : '#ECFDF5', borderRadius: radii.sm }]}>
+          <Text style={[styles.econLabel, { color: colors.emeraldLight }]}>Ganancia Neta</Text>
           <Text style={[styles.econValue, { color: colors.emeraldLight }]}>
             {privacyMode ? '••••••' : `+$${profitPerUnit.toFixed(2)}`}
           </Text>
-          <Text style={[styles.econSub, { color: colors.emeraldLight, fontWeight: '700' }]}>
-            neta libre
+          <Text style={[styles.econSub, { color: colors.emeraldLight, fontWeight: '800' }]}>
+            libre / pza
           </Text>
         </View>
       </TouchableOpacity>
 
-      {/* META GANANCIA LOTE (TANDA COMPLETA) */}
-      <View style={[styles.batchGoalBanner, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
+      {/* META GANANCIA LOTE */}
+      <View style={[styles.batchGoalBanner, { backgroundColor: isDark ? '#111724' : '#F1F5F9', borderColor: colors.borderSubtle }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, paddingRight: 6 }}>
           <Ionicons name="flag" size={13} color={colors.amberLight} />
           <View>
             <Text style={[styles.batchGoalLabel, { color: colors.textDim }]}>
-              Meta Ganancia Lote ({batchYield} pzas)
+              Meta Lote ({batchYield} pzas horneadas)
             </Text>
             <Text style={{ fontSize: 9.5, color: colors.textMuted }}>
-              Gasto total ${batchCost.toFixed(1)} • Cobras ${batchRevenue.toFixed(1)}
+              Gasto ${batchCost.toFixed(1)} • Cobras ${batchRevenue.toFixed(1)}
             </Text>
           </View>
         </View>
@@ -190,9 +199,9 @@ export const CookieCard: React.FC<CookieCardProps> = ({
         </Text>
       </View>
 
-      {/* PROMO BANNER DINÁMICO (REAL O ESTADO ESTÁNDAR) */}
+      {/* PROMO BANNER DINÁMICO */}
       {promoDetails ? (
-        <View style={[styles.promoBanner, { backgroundColor: colors.purpleBg, borderColor: colors.purpleBorder }]}>
+        <View style={[styles.promoBanner, { backgroundColor: isDark ? 'rgba(168, 85, 247, 0.15)' : '#F3E8FF', borderColor: isDark ? 'rgba(168, 85, 247, 0.35)' : '#E9D5FF' }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1, paddingRight: 6 }}>
             <Ionicons name="pricetag" size={12} color={colors.purpleLight} />
             <Text style={[styles.promoTitle, { color: colors.purpleLight }]} numberOfLines={1}>
@@ -204,10 +213,10 @@ export const CookieCard: React.FC<CookieCardProps> = ({
           </Text>
         </View>
       ) : (
-        <View style={[styles.noPromoBanner, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
+        <View style={[styles.noPromoBanner, { backgroundColor: isDark ? '#111724' : '#F8FAFC', borderColor: colors.borderSubtle }]}>
           <Ionicons name="pricetag-outline" size={11} color={colors.textDim} />
           <Text style={[styles.noPromoText, { color: colors.textDim }]}>
-            Sin promociones activas • Venta regular
+            Sin promociones activas • Venta individual regular
           </Text>
         </View>
       )}
@@ -220,15 +229,15 @@ export const CookieCard: React.FC<CookieCardProps> = ({
             variant="secondary"
             onPress={() => onInspect(cookie)}
             icon={<Ionicons name="book-outline" size={15} color={colors.textMain} />}
-            style={{ flex: 1, paddingVertical: 10 }}
+            style={{ flex: 1 }}
           />
         )}
         <Button
           title={`Vender ($${cookie.sale_price.toFixed(2)})`}
           variant="amber"
           onPress={() => onSell(cookie)}
-          icon={<Ionicons name="cart" size={17} color="#ffffff" />}
-          style={{ flex: 2, paddingVertical: 10 }}
+          icon={<Ionicons name="cart" size={16} color="#ffffff" />}
+          style={{ flex: 2 }}
         />
       </View>
     </DoubleBezelCard>
@@ -246,16 +255,31 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   imageWrapper: {
-    width: 74,
-    height: 74,
+    width: 78,
+    height: 78,
     borderRadius: radii.md,
     overflow: 'hidden',
     borderWidth: 1,
+    position: 'relative',
   },
   image: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  floatingPricePill: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: radii.pill,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  floatingPriceText: {
+    fontSize: 10,
+    fontWeight: '900',
   },
   headerInfo: {
     flex: 1,
@@ -281,6 +305,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  marginBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: radii.pill,
+  },
+  marginBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
   batchText: {
     fontSize: 11,
     fontWeight: '600',
@@ -289,7 +325,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderRadius: radii.md,
-    paddingVertical: 10,
+    paddingVertical: 9,
     paddingHorizontal: 8,
     marginTop: 10,
     marginBottom: 6,
@@ -298,6 +334,7 @@ const styles = StyleSheet.create({
   econBox: {
     alignItems: 'center',
     flex: 1,
+    paddingVertical: 2,
   },
   econBorderLeft: {
     borderLeftWidth: 1,
@@ -310,7 +347,7 @@ const styles = StyleSheet.create({
   },
   econValue: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '900',
     marginVertical: 2,
     letterSpacing: -0.3,
   },
@@ -335,7 +372,7 @@ const styles = StyleSheet.create({
   },
   batchGoalValue: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '900',
     letterSpacing: -0.2,
   },
   promoBanner: {
@@ -354,7 +391,7 @@ const styles = StyleSheet.create({
   },
   promoValue: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   noPromoBanner: {
     flexDirection: 'row',
