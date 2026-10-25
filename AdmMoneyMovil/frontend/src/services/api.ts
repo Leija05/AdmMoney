@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import * as ImageManipulator from 'expo-image-manipulator';
 import {
   Expense,
   CookieProduct,
@@ -241,8 +242,23 @@ export class MobileApiService {
       items: [],
       suggested_category: 'Insumos Galletas',
       confidence: 0.50,
-      raw_text: 'Ticket capturado listo para ingresar monto'
+      raw_text: 'Ticket capturado. Puedes ingresar o ajustar el monto directamente.'
     };
+
+    // 1. Optimización y compresión previa en el dispositivo (reduce MB a ~250KB al instante)
+    let optimizedUri = imageUri;
+    try {
+      const manipResult = await ImageManipulator.manipulateAsync(
+        imageUri,
+        [{ resize: { width: 1400 } }],
+        { compress: 0.82, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      if (manipResult && manipResult.uri) {
+        optimizedUri = manipResult.uri;
+      }
+    } catch (manipErr) {
+      console.warn('ImageManipulator error, using original uri:', manipErr);
+    }
 
     // Helper con timeout forzado para evitar bloqueos
     const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs: number) => {
@@ -258,36 +274,34 @@ export class MobileApiService {
       }
     };
 
-    // 1. Intentar enviar a backend principal con timeout de 5 segundos
+    // 2. Intentar enviar a backend principal (IA Gemini + Compresión Server) con timeout de 25 segundos
     try {
       const formData = new FormData();
-      const filename = imageUri.split('/').pop() || 'ticket.jpg';
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : 'image/jpeg';
-      const cleanUri = Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri;
+      const filename = optimizedUri.split('/').pop() || 'ticket.jpg';
+      const cleanUri = Platform.OS === 'ios' ? optimizedUri.replace('file://', '') : optimizedUri;
 
       formData.append('file', {
         uri: cleanUri,
         name: filename,
-        type
+        type: 'image/jpeg'
       } as any);
 
       const res = await fetchWithTimeout(`${API_HOST}/scanner/upload`, {
         method: 'POST',
         body: formData,
-      }, 5000);
+      }, 25000);
 
       if (res && res.ok) {
         const json = await res.json();
-        if (json && (json.total_amount > 0 || (json.items && json.items.length > 0))) {
+        if (json && (json.total_amount > 0 || (json.items && json.items.length > 0) || json.merchant !== 'Ticket de Compra')) {
           return json;
         }
       }
     } catch (backendErr) {
-      console.warn('Backend OCR call timeout or error, trying direct OCR:', backendErr);
+      console.warn('Backend OCR call timeout or error, trying direct cloud OCR fallback:', backendErr);
     }
 
-    // 2. Fallback de OCR directo vía OCR.space con timeout de 6 segundos
+    // 3. Fallback de OCR directo vía OCR.space usando la imagen ya comprimida (< 300KB)
     try {
       const ocrFormData = new FormData();
       ocrFormData.append('apikey', 'K88346086088957');
@@ -295,7 +309,7 @@ export class MobileApiService {
       ocrFormData.append('isOverlayRequired', 'false');
       ocrFormData.append('isTable', 'true');
       ocrFormData.append('file', {
-        uri: imageUri,
+        uri: optimizedUri,
         name: 'ticket.jpg',
         type: 'image/jpeg',
       } as any);
@@ -303,7 +317,7 @@ export class MobileApiService {
       const ocrRes = await fetchWithTimeout('https://api.ocr.space/parse/image', {
         method: 'POST',
         body: ocrFormData,
-      }, 6000);
+      }, 15000);
 
       if (ocrRes && ocrRes.ok) {
         const data = await ocrRes.json();
@@ -319,7 +333,7 @@ export class MobileApiService {
       console.warn('Direct OCR fallback error:', ocrErr);
     }
 
-    // 3. Si no hay OCR disponible o falló la conexión, retornar ticket limpio listo para ingresar monto
+    // 4. Si no hubo internet o no se extrajo texto legible, retornar estructura base lista
     return fallbackResult;
   }
 

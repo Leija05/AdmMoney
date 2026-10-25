@@ -32,6 +32,7 @@ export default function ScannerScreen() {
 
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [scanStepText, setScanStepText] = useState('Analizando ticket con IA...');
   const [scanResult, setScanResult] = useState<ReceiptScanResult | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
@@ -272,11 +273,25 @@ export default function ScannerScreen() {
     }
   };
 
-  // Process ticket with real OCR & guaranteed modal popup
+  // Process ticket with real AI Vision, OCR & guaranteed modal popup
   const processTicket = async (uri: string) => {
     setIsScanning(true);
+    setScanStepText('Optimizando fotografía del ticket...');
+
+    const timer1 = setTimeout(() => {
+      setScanStepText('Analizando productos con Inteligencia Artificial...');
+    }, 900);
+
+    const timer2 = setTimeout(() => {
+      setScanStepText('Verificando precios y calculando total...');
+    }, 4500);
+
     try {
-      const fallbackData: ReceiptScanResult = {
+      const parsed = await MobileApiService.scanReceipt(uri);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+
+      const safeResult: ReceiptScanResult = parsed || {
         merchant: 'Ticket de Compra',
         date: new Date().toISOString().split('T')[0],
         total_amount: 0,
@@ -288,18 +303,11 @@ export default function ScannerScreen() {
         raw_text: 'Ticket capturado listo para confirmar',
       };
 
-      const timeoutPromise = new Promise<ReceiptScanResult>((resolve) => {
-        setTimeout(() => resolve(fallbackData), 8500);
-      });
-
-      const parsed = await Promise.race([
-        MobileApiService.scanReceipt(uri),
-        timeoutPromise,
-      ]);
-
-      setScanResult(parsed || fallbackData);
+      setScanResult(safeResult);
       setIsModalVisible(true);
     } catch (err) {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
       console.warn('Scan processing error:', err);
       setScanResult({
         merchant: 'Ticket de Compra',
@@ -315,6 +323,7 @@ export default function ScannerScreen() {
       setIsModalVisible(true);
     } finally {
       setIsScanning(false);
+      setScanStepText('Analizando ticket con IA...');
     }
   };
 
@@ -421,7 +430,7 @@ export default function ScannerScreen() {
                     />
                     <View style={styles.scanningBadge}>
                       <ActivityIndicator size="small" color="#fff" />
-                      <Text style={styles.scanningText}>Analizando ticket con OCR...</Text>
+                      <Text style={styles.scanningText}>{scanStepText}</Text>
                     </View>
                   </View>
                 ) : (

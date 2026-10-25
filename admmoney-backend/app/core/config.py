@@ -22,6 +22,9 @@ MONGO_DB_NAME = os.getenv("MONGO_DB", "AdMoney")
 # Security & CORS
 JWT_SECRET = os.getenv("JWT_SECRET", "admmoney-super-secret-key-2026")
 JWT_ALGORITHM = "HS256"
+
+# AI Vision Configuration (Google Gemini)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 CORS_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
