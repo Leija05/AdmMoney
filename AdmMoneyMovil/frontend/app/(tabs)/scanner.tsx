@@ -18,6 +18,8 @@ import { colors, useThemeColors, radii, spacing } from '../../src/theme';
 import { Button } from '../../src/components/ui/Button';
 import { DoubleBezelCard } from '../../src/components/ui/DoubleBezelCard';
 import { ReceiptPreviewModal } from '../../src/components/scanner/ReceiptPreviewModal';
+import { TicketActionModal } from '../../src/components/scanner/TicketActionModal';
+import { DigitalReceiptModal } from '../../src/components/expenses/DigitalReceiptModal';
 import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
 import { MobileApiService } from '../../src/services/api';
 import { useAppStore } from '../../src/stores/app.store';
@@ -28,13 +30,25 @@ import { useRouter } from 'expo-router';
 export default function ScannerScreen() {
   const router = useRouter();
   const colors = useThemeColors();
-  const { addExpense, expenses, scannedTickets, addScannedTicket, highPrecisionOcr } = useAppStore();
+  const {
+    addExpense,
+    expenses,
+    scannedTickets,
+    addScannedTicket,
+    deleteScannedTicket,
+    updateScannedTicket,
+    deleteExpense,
+    highPrecisionOcr,
+    hapticsEnabled,
+  } = useAppStore();
 
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scanStepText, setScanStepText] = useState('Analizando ticket con IA...');
   const [scanResult, setScanResult] = useState<ReceiptScanResult | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedActionTicket, setSelectedActionTicket] = useState<ScannedTicket | null>(null);
+  const [digitalReceiptExpense, setDigitalReceiptExpense] = useState<Expense | null>(null);
 
   // Animated laser scan bar
   const scanLineAnim = useRef(new Animated.Value(0)).current;
@@ -345,6 +359,112 @@ export default function ScannerScreen() {
     setScanResult(null);
   };
 
+  // Convert ScannedTicket to Expense for DigitalReceiptModal
+  const ticketToExpense = (ticket: ScannedTicket): Expense => {
+    const idStr = String(ticket.id || '');
+    if (idStr.startsWith('exp-')) {
+      const numId = parseInt(idStr.replace('exp-', ''), 10);
+      const found = expenses.find((e) => e.id === numId);
+      if (found) return found;
+    }
+    return {
+      id: 0,
+      title: ticket.merchant ? `Compra ${ticket.merchant.replace(/^Compra\s+/i, '')}` : 'Ticket Capturado',
+      amount: ticket.amount || 0,
+      category: ticket.category || 'Insumos Galletas',
+      date: ticket.date || new Date().toISOString().split('T')[0],
+      payment_method: ticket.scanResult?.payment_method || 'Efectivo',
+      notes: 'Ticket escaneado y digitalizado',
+      receipt_url: ticket.uri,
+      receipt_data: ticket.scanResult
+        ? (ticket.scanResult as any)
+        : {
+            merchant: ticket.merchant || 'Ticket de Compra',
+            total_amount: ticket.amount || 0,
+            date: ticket.date || new Date().toISOString().split('T')[0],
+            payment_method: 'Efectivo',
+            items:
+              ticket.amount > 0
+                ? [
+                    {
+                      name: ticket.merchant || 'Insumos Comprados',
+                      quantity: 1,
+                      price: ticket.amount,
+                    },
+                  ]
+                : [],
+          },
+      created_at: new Date().toISOString(),
+    };
+  };
+
+  const handleLongPressTicket = (ticket: ScannedTicket) => {
+    setSelectedActionTicket(ticket);
+  };
+
+  const handleViewDigitalReceipt = (ticket: ScannedTicket) => {
+    const exp = ticketToExpense(ticket);
+    setDigitalReceiptExpense(exp);
+  };
+
+  const handleViewPhoto = (ticket: ScannedTicket) => {
+    if (ticket.uri) {
+      setImageUri(ticket.uri);
+    }
+  };
+
+  const handleEditTicket = (ticket: ScannedTicket) => {
+    if (ticket.uri) {
+      setImageUri(ticket.uri);
+    }
+    if (ticket.scanResult) {
+      setScanResult(ticket.scanResult);
+    } else {
+      setScanResult({
+        merchant: ticket.merchant || 'Ticket de Compra',
+        total_amount: ticket.amount || 0,
+        subtotal: ticket.amount ? Number((ticket.amount / 1.16).toFixed(2)) : 0,
+        tax: ticket.amount ? Number((ticket.amount - ticket.amount / 1.16).toFixed(2)) : 0,
+        date: ticket.date || new Date().toISOString().split('T')[0],
+        suggested_category: ticket.category || 'Insumos Galletas',
+        confidence: 0.95,
+        raw_text: `${ticket.merchant} - Total: $${ticket.amount}`,
+        items:
+          ticket.amount > 0
+            ? [
+                {
+                  name: ticket.merchant || 'Insumos',
+                  quantity: 1,
+                  price: ticket.amount,
+                },
+              ]
+            : [],
+      });
+    }
+    setIsModalVisible(true);
+  };
+
+  const handleRescanTicket = (ticket: ScannedTicket) => {
+    if (ticket.uri) {
+      setImageUri(ticket.uri);
+      processTicket(ticket.uri);
+    }
+  };
+
+  const handleDeleteTicket = async (ticket: ScannedTicket) => {
+    const idStr = String(ticket.id || '');
+    if (idStr.startsWith('exp-')) {
+      const numId = parseInt(idStr.replace('exp-', ''), 10);
+      await deleteExpense(numId);
+    }
+    deleteScannedTicket(idStr);
+    if (imageUri && imageUri === ticket.uri) {
+      setImageUri(null);
+      setScanResult(null);
+    }
+    Alert.alert('Ticket Eliminado', `El ticket "${ticket.merchant || 'seleccionado'}" fue eliminado.`);
+  };
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]} edges={['top']}>
       <SwipeTabWrapper currentRoute="/scanner">
@@ -528,9 +648,14 @@ export default function ScannerScreen() {
             {/* Real Uploaded / Captured Tickets Bar */}
             <View style={[styles.demoTicketsBox, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
               <View style={styles.ticketsBoxHeader}>
-                <Ionicons name="receipt-outline" size={14} color={colors.textDim} />
-                <Text style={[styles.demoTicketsTitle, { color: colors.textDim }]}>
-                  Tickets Capturados ({userTickets.length})
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="receipt-outline" size={15} color={colors.textDim} />
+                  <Text style={[styles.demoTicketsTitle, { color: colors.textDim }]}>
+                    Tickets Capturados ({userTickets.length})
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 10, color: colors.textDim, fontStyle: 'italic' }}>
+                  Mantén pulsado para opciones
                 </Text>
               </View>
 
@@ -546,6 +671,8 @@ export default function ScannerScreen() {
                     <TouchableOpacity
                       key={ticket.id || idx}
                       onPress={() => handleSelectUploadedTicket(ticket)}
+                      onLongPress={() => handleLongPressTicket(ticket)}
+                      delayLongPress={260}
                       style={[
                         styles.ticketListItem,
                         {
@@ -578,11 +705,23 @@ export default function ScannerScreen() {
                         >
                           {ticket.amount > 0 ? `-$${ticket.amount.toFixed(2)}` : 'Sin total'}
                         </Text>
-                        <View style={styles.ticketListActionBadge}>
-                          <Text style={[styles.ticketListActionText, { color: colors.brandLight }]}>
-                            Ver
-                          </Text>
-                          <Ionicons name="chevron-forward" size={12} color={colors.brandLight} />
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <View style={styles.ticketListActionBadge}>
+                            <Text style={[styles.ticketListActionText, { color: colors.brandLight }]}>
+                              Ver
+                            </Text>
+                            <Ionicons name="chevron-forward" size={12} color={colors.brandLight} />
+                          </View>
+                          <TouchableOpacity
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              handleLongPressTicket(ticket);
+                            }}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            style={[styles.ticketDotsBtn, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}
+                          >
+                            <Ionicons name="ellipsis-vertical" size={12} color={colors.textDim} />
+                          </TouchableOpacity>
                         </View>
                       </View>
                     </TouchableOpacity>
@@ -601,6 +740,45 @@ export default function ScannerScreen() {
         scanResult={scanResult}
         imageUri={imageUri}
         onConfirm={handleConfirmExpense}
+      />
+
+      {/* Quick Action Modal on Long-Press of Captured Ticket */}
+      <TicketActionModal
+        visible={!!selectedActionTicket}
+        ticket={selectedActionTicket}
+        onClose={() => setSelectedActionTicket(null)}
+        onViewDigitalReceipt={handleViewDigitalReceipt}
+        onViewPhoto={handleViewPhoto}
+        onEdit={handleEditTicket}
+        onRescan={handleRescanTicket}
+        onDelete={handleDeleteTicket}
+      />
+
+      {/* Digital Thermal Receipt Modal */}
+      <DigitalReceiptModal
+        visible={!!digitalReceiptExpense}
+        expense={digitalReceiptExpense}
+        onClose={() => setDigitalReceiptExpense(null)}
+        onEdit={(exp) => {
+          setDigitalReceiptExpense(null);
+          if (exp.receipt_url) setImageUri(exp.receipt_url);
+          if (exp.receipt_data) {
+            setScanResult(exp.receipt_data as any);
+          } else {
+            setScanResult({
+              merchant: exp.title.replace(/^Compra\s+/i, ''),
+              total_amount: exp.amount,
+              subtotal: Number((exp.amount / 1.16).toFixed(2)),
+              tax: Number((exp.amount - exp.amount / 1.16).toFixed(2)),
+              date: exp.date,
+              suggested_category: exp.category,
+              confidence: 0.95,
+              raw_text: exp.notes || '',
+              items: [],
+            });
+          }
+          setIsModalVisible(true);
+        }}
       />
     </SafeAreaView>
   );
@@ -885,6 +1063,15 @@ const styles = StyleSheet.create({
   ticketListActionText: {
     fontSize: 10,
     fontWeight: '700',
+  },
+  ticketDotsBtn: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 2,
   },
   emptyTicketsContainer: {
     paddingVertical: 4,

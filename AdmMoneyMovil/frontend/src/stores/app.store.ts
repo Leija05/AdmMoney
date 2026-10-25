@@ -150,6 +150,8 @@ interface AppState {
   addCustomer: (data: Partial<Customer>) => Promise<Customer>;
   deleteCustomer: (id: number) => Promise<void>;
   addScannedTicket: (ticket: ScannedTicket) => void;
+  deleteScannedTicket: (id: string | number) => void;
+  updateScannedTicket: (id: string | number, data: Partial<ScannedTicket>) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -456,6 +458,22 @@ export const useAppStore = create<AppState>()(
       if (exists) return state;
       return { scannedTickets: [ticket, ...state.scannedTickets] };
     });
+  },
+
+  deleteScannedTicket: (id: string | number) => {
+    const sId = String(id);
+    set((state) => ({
+      scannedTickets: state.scannedTickets.filter((t) => String(t.id) !== sId && `exp-${t.id}` !== sId),
+    }));
+  },
+
+  updateScannedTicket: (id: string | number, data: Partial<ScannedTicket>) => {
+    const sId = String(id);
+    set((state) => ({
+      scannedTickets: state.scannedTickets.map((t) =>
+        String(t.id) === sId || `exp-${t.id}` === sId ? { ...t, ...data } : t
+      ),
+    }));
   },
     }),
     {

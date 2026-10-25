@@ -187,12 +187,19 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
   useEffect(() => {
     if (scanResult) {
       setMerchant(scanResult.merchant || 'Comercio');
-      setAmount(scanResult.total_amount ? String(scanResult.total_amount) : '0.00');
-      setCategory(scanResult.suggested_category || CATEGORIES[0]);
-      setPaymentMethod(scanResult.payment_method || 'Efectivo');
       const parsedItems = scanResult.items ? [...scanResult.items] : [];
       setItems(parsedItems);
       classifyReceiptItems(parsedItems, registeredIngredients);
+
+      const itemsSum = parsedItems.reduce((acc, it) => acc + (Number(it.price) || 0), 0);
+      let initialAmount = scanResult.total_amount ? String(scanResult.total_amount) : '0.00';
+      if (itemsSum > 0 && scanResult.total_amount && (scanResult.total_amount > itemsSum * 1.7 && scanResult.total_amount > 400)) {
+        initialAmount = itemsSum.toFixed(2);
+      } else if (itemsSum > 0 && (!scanResult.total_amount || scanResult.total_amount <= 0)) {
+        initialAmount = itemsSum.toFixed(2);
+      }
+      setAmount(initialAmount);
+
       setNotes(`Ticket escaneado (${parsedItems.length} artículos)`);
       setShowRawText(false);
       setShowAddProduct(false);
@@ -213,9 +220,9 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_evt, gestureState) => {
-        return gestureState.dy > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.3;
+        return gestureState.dy > 8 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.4;
       },
       onPanResponderMove: (_evt, gestureState) => {
         if (gestureState.dy > 0) {
@@ -477,7 +484,11 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
           <ScrollView
             style={styles.content}
             contentContainerStyle={styles.scrollContainer}
-            showsVerticalScrollIndicator={false}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+            keyboardShouldPersistTaps="handled"
+            bounces={true}
+            overScrollMode="always"
           >
             {/* Real Captured Ticket Photo Preview */}
             {imageUri && (
@@ -1074,12 +1085,12 @@ const styles = StyleSheet.create({
   dialog: {
     borderTopLeftRadius: radii.outer,
     borderTopRightRadius: radii.outer,
-    height: '88%',
+    height: Dimensions.get('window').height * 0.88,
+    maxHeight: Dimensions.get('window').height * 0.92,
     borderWidth: 1,
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'space-between',
   },
   dragHandleContainer: {
     width: '100%',
@@ -1121,7 +1132,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     padding: 16,
-    paddingBottom: 20,
+    paddingBottom: 50,
   },
   imageContainer: {
     height: 160,
@@ -1303,9 +1314,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     padding: 14,
-    paddingBottom: Platform.OS === 'ios' ? 26 : 16,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 22,
     borderTopWidth: 1,
-    elevation: 8,
+    elevation: 10,
   },
   statusSummaryPill: {
     flex: 1,

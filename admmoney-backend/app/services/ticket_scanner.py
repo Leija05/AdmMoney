@@ -275,7 +275,7 @@ def scan_with_gemini(image_bytes: bytes, api_key: str) -> Optional[ReceiptScanRe
         "}\n\n"
         "Reglas obligatorias:\n"
         "1. 'items': solo incluye productos o artículos reales comprados. NO agregues subtotales, iva, cambio, propina ni descuentos como si fueran productos.\n"
-        "2. 'total_amount': debe ser el monto total final cobrado o pagado en el ticket.\n"
+        "2. 'total_amount': debe ser el monto numérico final exacto a pagar en el ticket (ej: 214.90). NUNCA uses códigos postales (ej: 88120, 88277), folios, teléfonos ni números de tarjeta como total_amount. Si tienes dudas, debe ser igual a la suma de los precios en 'items'.\n"
         "3. 'payment_method': especifica si el ticket fue pagado con 'Efectivo', 'Tarjeta' (débito/crédito/visa/mastercard) o 'Transferencia'. Si no se menciona, usa 'Efectivo'.\n"
         "4. 'suggested_category': clasifica según los productos en: 'Insumos Galletas', 'Empaques y Envíos', 'Servicios y Luz', 'Transporte', 'Supermercado', 'Hogar y Personales' u 'Otros Gastos'.\n"
         "5. Devuelve ÚNICAMENTE el bloque JSON sin etiquetas markdown extras."
@@ -351,8 +351,13 @@ def scan_with_gemini(image_bytes: bytes, api_key: str) -> Optional[ReceiptScanRe
                         continue
 
                 total_amt = float(parsed_data.get("total_amount", 0.0))
-                if total_amt == 0.0 and extracted_items:
-                    total_amt = sum(i.price for i in extracted_items)
+                if extracted_items:
+                    items_sum = round(sum(i.price for i in extracted_items), 2)
+                    if total_amt == 0.0 or (items_sum > 0 and (total_amt > items_sum * 1.7 and total_amt > 400)):
+                        # Si capturó un folio o código postal (ej. 88277 vs items 214.90), corregir a la suma
+                        total_amt = items_sum
+                elif total_amt == 0.0 and extracted_items:
+                    total_amt = round(sum(i.price for i in extracted_items), 2)
 
                 subtotal = float(parsed_data.get("subtotal", 0.0))
                 if subtotal == 0.0 and total_amt > 0:
@@ -502,10 +507,15 @@ def corroborate_ai_and_algorithm(
     # D. Corroboración de Total
     items_sum = round(sum(i.price for i in corroborated_items), 2)
     final_total = ai_res.total_amount
-    if final_total == 0.0 or (algo_res.total_amount > 0 and abs(final_total - algo_res.total_amount) > 1.0 and abs(algo_res.total_amount - items_sum) < 0.05):
+    if items_sum > 0:
+        # Detectar si final_total es un código postal o folio (ej. 88277 vs items sum 214.90)
+        if final_total == 0.0 or abs(final_total - items_sum) > 5.0 or (final_total > items_sum * 1.6 and final_total > 400):
+            if algo_res.total_amount > 0 and abs(algo_res.total_amount - items_sum) <= 2.0:
+                final_total = algo_res.total_amount
+            else:
+                final_total = items_sum
+    elif final_total == 0.0 and algo_res.total_amount > 0:
         final_total = algo_res.total_amount
-    elif final_total == 0.0 and items_sum > 0:
-        final_total = items_sum
 
     subtotal = ai_res.subtotal if ai_res.subtotal and ai_res.subtotal > 0 else round(final_total / 1.16, 2)
     tax = ai_res.tax if ai_res.tax and ai_res.tax > 0 else round(final_total - subtotal, 2)
