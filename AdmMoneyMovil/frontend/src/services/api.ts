@@ -294,6 +294,10 @@ export class MobileApiService {
       if (res && res.ok) {
         const json = await res.json();
         if (json && (json.total_amount > 0 || (json.items && json.items.length > 0) || json.merchant !== 'Ticket de Compra')) {
+          if (json.image_url && typeof json.image_url === 'string' && json.image_url.startsWith('/')) {
+            const baseHost = API_HOST.replace(/\/api\/?$/, '');
+            json.image_url = `${baseHost}${json.image_url}`;
+          }
           return json;
         }
       }

@@ -26,6 +26,7 @@ import { useAppStore } from '../../src/stores/app.store';
 import { ReceiptScanResult, Expense, ScannedTicket } from '../../src/lib/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { resolveReceiptImageUrl } from '../../src/lib/imageUrl';
 
 export default function ScannerScreen() {
   const router = useRouter();
@@ -40,6 +41,7 @@ export default function ScannerScreen() {
     deleteExpense,
     highPrecisionOcr,
     hapticsEnabled,
+    backendUrl,
   } = useAppStore();
 
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -83,11 +85,23 @@ export default function ScannerScreen() {
   const userTickets = React.useMemo(() => {
     const list: ScannedTicket[] = [...scannedTickets];
     expenses.forEach((e) => {
-      const hasReceipt = Boolean(e.receipt_url || e.receipt_data || (e.notes && e.notes.toLowerCase().includes('ticket')));
-      if (hasReceipt && !list.some((t) => t.id === `exp-${e.id}` || (t.uri && t.uri === e.receipt_url))) {
+      const localMatch = scannedTickets.find(
+        (t) =>
+          (t.id && t.id === `exp-${e.id}`) ||
+          (t.uri &&
+            (t.uri.startsWith('file://') || t.uri.startsWith('content://')) &&
+            ((t.scanResult && (t.scanResult as any)?.merchant === e.title) ||
+              (t.merchant === e.title && Math.abs(t.amount - e.amount) < 0.01)))
+      );
+
+      const resolvedUri = localMatch?.uri || e.receipt_url || '';
+      const hasReceipt = Boolean(
+        resolvedUri || e.receipt_data || (e.notes && e.notes.toLowerCase().includes('ticket'))
+      );
+      if (hasReceipt && !list.some((t) => t.id === `exp-${e.id}` || (t.uri && t.uri === resolvedUri))) {
         list.push({
           id: `exp-${e.id}`,
-          uri: e.receipt_url || '',
+          uri: resolvedUri,
           merchant: e.title || (e.receipt_data as any)?.merchant || 'Ticket Registrado',
           amount: e.amount,
           date: e.date,
@@ -365,7 +379,12 @@ export default function ScannerScreen() {
     if (idStr.startsWith('exp-')) {
       const numId = parseInt(idStr.replace('exp-', ''), 10);
       const found = expenses.find((e) => e.id === numId);
-      if (found) return found;
+      if (found) {
+        return {
+          ...found,
+          receipt_url: ticket.uri || found.receipt_url,
+        };
+      }
     }
     return {
       id: 0,
@@ -534,7 +553,11 @@ export default function ScannerScreen() {
                 }}
                 style={styles.previewContainer}
               >
-                <Image source={{ uri: imageUri }} style={styles.previewImage} resizeMode="contain" />
+                <Image
+                  source={{ uri: resolveReceiptImageUrl(imageUri, backendUrl) || imageUri }}
+                  style={styles.previewImage}
+                  resizeMode="contain"
+                />
                 {isScanning ? (
                   <View style={styles.scanningOverlay}>
                     {/* Animated laser line */}

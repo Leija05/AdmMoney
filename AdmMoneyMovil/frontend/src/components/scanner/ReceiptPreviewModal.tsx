@@ -20,6 +20,7 @@ import { colors, useThemeColors, radii } from '../../theme';
 import { ReceiptScanResult, Expense, ReceiptItem, Ingredient } from '../../lib/types';
 import { useAppStore } from '../../stores/app.store';
 import { Ionicons } from '@expo/vector-icons';
+import { resolveReceiptImageUrl } from '../../lib/imageUrl';
 
 interface ReceiptPreviewModalProps {
   visible: boolean;
@@ -123,6 +124,7 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
   const registeredIngredients = useAppStore((state) => state.ingredients);
   const updateIngredient = useAppStore((state) => state.updateIngredient);
   const addIngredient = useAppStore((state) => state.addIngredient);
+  const backendUrl = useAppStore((state) => state.backendUrl);
 
   const [isSaving, setIsSaving] = useState(false);
   const [merchant, setMerchant] = useState('');
@@ -400,6 +402,12 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
         })),
       ];
 
+      // Prefer local file on device if available, otherwise server image_url
+      const photoToSave =
+        imageUri && (imageUri.startsWith('file://') || imageUri.startsWith('content://'))
+          ? imageUri
+          : scanResult?.image_url || imageUri || '';
+
       // 3. Save Expense record
       await onConfirm({
         title: `Compra ${merchant.trim() || 'Comercio'}`,
@@ -408,7 +416,7 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
         date: scanResult?.date || new Date().toISOString().split('T')[0],
         payment_method: paymentMethod,
         notes: notes.trim(),
-        receipt_url: scanResult?.image_url || imageUri || '',
+        receipt_url: photoToSave,
         receipt_data: {
           merchant: merchant.trim(),
           total_amount: val,
@@ -418,6 +426,8 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
           matched_stock_updated: updatedStockCount,
           new_ingredients_added: newRegisteredCount,
           raw_text: scanResult?.raw_text || '',
+          image_url: photoToSave,
+          local_uri: imageUri || '',
         } as any,
       });
 
@@ -493,7 +503,11 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
             {/* Real Captured Ticket Photo Preview */}
             {imageUri && (
               <View style={[styles.imageContainer, { borderColor: colors.borderSubtle, backgroundColor: '#000' }]}>
-                <Image source={{ uri: imageUri }} style={styles.receiptThumb} resizeMode="contain" />
+                <Image
+                  source={{ uri: resolveReceiptImageUrl(imageUri, backendUrl) || imageUri }}
+                  style={styles.receiptThumb}
+                  resizeMode="contain"
+                />
                 <View style={styles.photoLabelBadge}>
                   <Ionicons name="camera" size={11} color="#fff" />
                   <Text style={styles.photoLabelText}>Foto Capturada Real</Text>

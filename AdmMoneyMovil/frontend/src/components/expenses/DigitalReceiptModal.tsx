@@ -12,11 +12,14 @@ import {
   PanResponder,
   Dimensions,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Expense } from '../../lib/types';
 import { useThemeColors, radii, spacing } from '../../theme';
 import { Button } from '../ui/Button';
+import { useAppStore } from '../../stores/app.store';
+import { resolveReceiptImageUrl } from '../../lib/imageUrl';
 
 interface DigitalReceiptModalProps {
   visible: boolean;
@@ -33,7 +36,10 @@ export const DigitalReceiptModal: React.FC<DigitalReceiptModalProps> = ({
 }) => {
   const colors = useThemeColors();
   const isDark = colors.isDark;
+  const { backendUrl } = useAppStore();
   const [viewMode, setViewMode] = useState<'digital' | 'photo'>('digital');
+  const [isImgLoading, setIsImgLoading] = useState(false);
+  const [imageLoadFailed, setImageLoadFailed] = useState(false);
 
   const screenHeight = Dimensions.get('window').height;
   const translateY = useRef(new Animated.Value(0)).current;
@@ -42,6 +48,8 @@ export const DigitalReceiptModal: React.FC<DigitalReceiptModalProps> = ({
     if (visible) {
       translateY.setValue(0);
       setViewMode('digital');
+      setImageLoadFailed(false);
+      setIsImgLoading(false);
     }
   }, [visible]);
 
@@ -109,7 +117,12 @@ export const DigitalReceiptModal: React.FC<DigitalReceiptModalProps> = ({
   const tax = expense.amount > 0 ? (expense.amount - expense.amount / 1.16).toFixed(2) : '0.00';
   const total = expense.amount.toFixed(2);
   const paymentMethod = expense.payment_method || receiptData.payment_method || 'Efectivo';
-  const physicalPhotoUrl = expense.receipt_url || receiptData.image_url;
+  const rawPhotoUrl =
+    (expense.receipt_data as any)?.local_uri ||
+    expense.receipt_url ||
+    receiptData.image_url ||
+    (receiptData as any)?.uri;
+  const physicalPhotoUrl = resolveReceiptImageUrl(rawPhotoUrl, backendUrl);
 
   const handleShareReceipt = async () => {
     try {
@@ -242,18 +255,68 @@ export const DigitalReceiptModal: React.FC<DigitalReceiptModalProps> = ({
           )}
 
           <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
-            {viewMode === 'photo' && physicalPhotoUrl ? (
-              /* ORIGINAL PHOTO VIEW */
-              <View style={styles.photoContainer}>
-                <Image
-                  source={{ uri: physicalPhotoUrl }}
-                  style={styles.receiptImage}
-                  resizeMode="contain"
-                />
-                <Text style={[styles.photoCaption, { color: colors.textDim }]}>
-                  Foto del ticket físico capturado con la cámara
-                </Text>
-              </View>
+            {viewMode === 'photo' ? (
+              physicalPhotoUrl && !imageLoadFailed ? (
+                /* ORIGINAL PHOTO VIEW */
+                <View style={styles.photoContainer}>
+                  {isImgLoading && (
+                    <View style={styles.photoLoadingBox}>
+                      <ActivityIndicator size="large" color={colors.brandLight} />
+                      <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 8, fontWeight: '700' }}>
+                        Cargando fotografía original...
+                      </Text>
+                    </View>
+                  )}
+                  <Image
+                    source={{ uri: physicalPhotoUrl }}
+                    style={[styles.receiptImage, isImgLoading && { height: 0, opacity: 0 }]}
+                    resizeMode="contain"
+                    onLoadStart={() => setIsImgLoading(true)}
+                    onLoadEnd={() => setIsImgLoading(false)}
+                    onError={() => {
+                      setImageLoadFailed(true);
+                      setIsImgLoading(false);
+                    }}
+                  />
+                  {!isImgLoading && (
+                    <Text style={[styles.photoCaption, { color: colors.textDim }]}>
+                      Foto del ticket físico capturado con la cámara
+                    </Text>
+                  )}
+                </View>
+              ) : (
+                /* FALLBACK WHEN PHOTO CANNOT BE ACCESSED */
+                <View
+                  style={[
+                    styles.photoEmptyCard,
+                    {
+                      backgroundColor: isDark ? '#181E29' : '#FFFFFF',
+                      borderColor: isDark ? '#2E394E' : '#E2E8F0',
+                    },
+                  ]}
+                >
+                  <View style={[styles.photoEmptyIconCircle, { backgroundColor: isDark ? 'rgba(56, 189, 248, 0.12)' : '#E0F2FE' }]}>
+                    <Ionicons name="camera-outline" size={38} color={colors.brandLight} />
+                  </View>
+                  <Text style={[styles.photoEmptyTitle, { color: colors.textMain }]}>
+                    Fotografía Física No Disponible
+                  </Text>
+                  <Text style={[styles.photoEmptyDesc, { color: colors.textDim }]}>
+                    {imageLoadFailed
+                      ? 'La imagen en el servidor ya no está disponible, pero todos los datos de tu ticket están 100% digitalizados en la pestaña "Ticket Digital".'
+                      : 'Este comprobante fue registrado sin adjuntar imagen física. Puedes consultar todos los productos en la pestaña "Ticket Digital".'}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setViewMode('digital')}
+                    style={[styles.backToDigitalBtn, { backgroundColor: colors.brandBg, borderColor: colors.brandBorder }]}
+                  >
+                    <Ionicons name="receipt-outline" size={16} color={colors.brand} />
+                    <Text style={[styles.backToDigitalText, { color: colors.brand }]}>
+                      Ver Ticket Digitalizado
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )
             ) : (
               /* AUTHENTIC DIGITAL THERMAL RECEIPT VIEW */
               <View
@@ -557,16 +620,65 @@ const styles = StyleSheet.create({
   photoContainer: {
     alignItems: 'center',
     paddingVertical: 10,
+    minHeight: 280,
+    justifyContent: 'center',
+  },
+  photoLoadingBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
   },
   receiptImage: {
     width: '100%',
-    height: 420,
+    height: 440,
     borderRadius: radii.md,
   },
   photoCaption: {
     fontSize: 11,
     marginTop: 8,
     fontStyle: 'italic',
+  },
+  photoEmptyCard: {
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 16,
+  },
+  photoEmptyIconCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  photoEmptyTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  photoEmptyDesc: {
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  backToDigitalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: radii.md,
+    borderWidth: 1,
+  },
+  backToDigitalText: {
+    fontSize: 12,
+    fontWeight: '800',
   },
   paperReceipt: {
     borderRadius: 16,
