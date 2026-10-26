@@ -8,12 +8,14 @@ import { CookieProduct } from '../../lib/types';
 import { useAppStore } from '../../stores/app.store';
 import { Ionicons } from '@expo/vector-icons';
 import { StickerGeneratorModal } from './StickerGeneratorModal';
+import { AdjustVitrinaModal } from './AdjustVitrinaModal';
 
 interface CookieCardProps {
   cookie: CookieProduct;
   onSell: (cookie: CookieProduct) => void;
   onInspect?: (cookie: CookieProduct) => void;
   onLongPress?: (cookie: CookieProduct) => void;
+  onEditVitrina?: (cookie: CookieProduct) => void;
   privacyMode?: boolean;
 }
 
@@ -22,13 +24,16 @@ export const CookieCard: React.FC<CookieCardProps> = ({
   onSell,
   onInspect,
   onLongPress,
+  onEditVitrina,
   privacyMode = false,
 }) => {
   const colors = useThemeColors();
   const isDark = colors.isDark;
   const promotions = useAppStore((state) => state.promotions);
   const bakeCookieBatch = useAppStore((state) => state.bakeCookieBatch);
+  const adjustCookieStock = useAppStore((state) => state.adjustCookieStock);
   const [isBaking, setIsBaking] = useState(false);
+  const [isAdjustVitrinaOpen, setIsAdjustVitrinaOpen] = useState(false);
 
   const batchYield = cookie.batch_yield || 16;
   const unitCost = cookie.recipe_cost || 0;
@@ -473,17 +478,24 @@ export const CookieCard: React.FC<CookieCardProps> = ({
               },
             ]}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1, paddingRight: 6 }}>
+            <TouchableOpacity
+              onPress={() => (onEditVitrina ? onEditVitrina(cookie) : setIsAdjustVitrinaOpen(true))}
+              activeOpacity={0.7}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1, paddingRight: 6 }}
+            >
               <Ionicons name="storefront-outline" size={15} color={colors.amberLight} />
-              <View>
-                <Text style={{ fontSize: 11.5, fontWeight: '800', color: colors.textMain }}>
-                  Vitrina: {cookie.stock_vitrina ?? 0} pzas listas
-                </Text>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={{ fontSize: 11.5, fontWeight: '800', color: colors.textMain }}>
+                    Vitrina: {cookie.stock_vitrina ?? 0} pzas listas
+                  </Text>
+                  <Ionicons name="pencil" size={11} color={colors.amberLight} />
+                </View>
                 <Text style={{ fontSize: 9.5, color: colors.textMuted }}>
-                  {(cookie.stock_vitrina ?? 0) > 0 ? 'Disponible para entrega inmediata' : 'Agotada en mostrador'}
+                  {(cookie.stock_vitrina ?? 0) > 0 ? 'Toca para editar piezas' : 'Toca para ingresar stock'}
                 </Text>
               </View>
-            </View>
+            </TouchableOpacity>
 
             <TouchableOpacity
               onPress={handleBakeBatch}
@@ -538,6 +550,14 @@ export const CookieCard: React.FC<CookieCardProps> = ({
         visible={isStickerModalOpen}
         onClose={() => setIsStickerModalOpen(false)}
         cookie={cookie}
+      />
+
+      {/* Adjust Vitrina Stock Modal */}
+      <AdjustVitrinaModal
+        visible={isAdjustVitrinaOpen}
+        cookie={cookie}
+        onClose={() => setIsAdjustVitrinaOpen(false)}
+        onSaveStock={adjustCookieStock}
       />
     </>
   );

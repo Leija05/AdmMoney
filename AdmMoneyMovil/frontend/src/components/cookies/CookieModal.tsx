@@ -355,7 +355,13 @@ export const CookieModal: React.FC<CookieModalProps> = ({
         profit_margin_pct: marginPct,
         is_unit_recipe: true,
         image_url: imageUri || (cookie?.image_url || PRESET_IMAGE_URL),
-        ingredients: ingredients.filter((i) => i.name.trim().length > 0),
+        ingredients: ingredients
+          .filter((i) => i.name.trim().length > 0)
+          .map((i) => ({
+            ...i,
+            quantity: parseFloat(String(i.quantity).replace(',', '.')) || 0,
+            cost: parseFloat(String(i.cost).replace(',', '.')) || 0,
+          })),
       };
 
       if (cookie && (onUpdate || onUpdateCookie)) {
@@ -604,9 +610,9 @@ export const CookieModal: React.FC<CookieModalProps> = ({
                         <Text style={[styles.ingMiniLabel, { color: colors.textDim }]}>Cant x 1 Galleta</Text>
                         <TextInput
                           style={[styles.ingMiniInput, { color: colors.textMain, backgroundColor: isDark ? '#1C2230' : '#FFFFFF', borderColor: colors.borderSubtle }]}
-                          value={String(item.quantity)}
-                          onChangeText={(t) => handleUpdateIngredient(idx, 'quantity', parseFloat(t) || 0)}
-                          keyboardType="numeric"
+                          value={String(item.quantity ?? '')}
+                          onChangeText={(t) => handleUpdateIngredient(idx, 'quantity', t.replace(',', '.'))}
+                          keyboardType="decimal-pad"
                           placeholder="15"
                           placeholderTextColor={colors.textDim}
                         />
@@ -627,9 +633,9 @@ export const CookieModal: React.FC<CookieModalProps> = ({
                         <Text style={[styles.ingMiniLabel, { color: colors.textDim }]}>Costo x 1 Galleta</Text>
                         <TextInput
                           style={[styles.ingMiniInput, { color: colors.roseLight, backgroundColor: isDark ? '#1C2230' : '#FFFFFF', borderColor: colors.borderSubtle, fontWeight: '800' }]}
-                          value={String(item.cost)}
-                          onChangeText={(t) => handleUpdateIngredient(idx, 'cost', parseFloat(t) || 0)}
-                          keyboardType="numeric"
+                          value={String(item.cost ?? '')}
+                          onChangeText={(t) => handleUpdateIngredient(idx, 'cost', t.replace(',', '.'))}
+                          keyboardType="decimal-pad"
                           placeholder="$0.00"
                           placeholderTextColor={colors.textDim}
                         />
@@ -656,8 +662,8 @@ export const CookieModal: React.FC<CookieModalProps> = ({
                     <TextInput
                       style={[styles.inputField, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
                       value={ingredientCost}
-                      onChangeText={setIngredientCost}
-                      keyboardType="numeric"
+                      onChangeText={(t) => setIngredientCost(t.replace(',', '.'))}
+                      keyboardType="decimal-pad"
                       placeholder="4.50"
                       placeholderTextColor={colors.textDim}
                     />
@@ -669,8 +675,8 @@ export const CookieModal: React.FC<CookieModalProps> = ({
                     <TextInput
                       style={[styles.inputField, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
                       value={packagingCost}
-                      onChangeText={setPackagingCost}
-                      keyboardType="numeric"
+                      onChangeText={(t) => setPackagingCost(t.replace(',', '.'))}
+                      keyboardType="decimal-pad"
                       placeholder="2.00"
                       placeholderTextColor={colors.textDim}
                     />
@@ -684,8 +690,8 @@ export const CookieModal: React.FC<CookieModalProps> = ({
                   <TextInput
                     style={[styles.inputField, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.amberLight, fontWeight: '900', fontSize: 16 }]}
                     value={salePrice}
-                    onChangeText={setSalePrice}
-                    keyboardType="numeric"
+                    onChangeText={(t) => setSalePrice(t.replace(',', '.'))}
+                    keyboardType="decimal-pad"
                     placeholder="35.00"
                     placeholderTextColor={colors.textDim}
                   />
@@ -707,8 +713,8 @@ export const CookieModal: React.FC<CookieModalProps> = ({
                   <TextInput
                     style={[styles.inputField, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain, marginTop: 5 }]}
                     value={standardBatchYield}
-                    onChangeText={setStandardBatchYield}
-                    keyboardType="numeric"
+                    onChangeText={(t) => setStandardBatchYield(t.replace(/\D/g, ''))}
+                    keyboardType="number-pad"
                     placeholder="16"
                     placeholderTextColor={colors.textDim}
                   />
@@ -740,8 +746,8 @@ export const CookieModal: React.FC<CookieModalProps> = ({
                     <TextInput
                       style={[styles.scalerNumInput, { color: colors.amberLight, borderColor: colors.amberBorder, backgroundColor: isDark ? '#1C2230' : '#FFFFFF' }]}
                       value={simTandaQty}
-                      onChangeText={setSimTandaQty}
-                      keyboardType="numeric"
+                      onChangeText={(t) => setSimTandaQty(t.replace(/\D/g, ''))}
+                      keyboardType="number-pad"
                       placeholder="12"
                       placeholderTextColor={colors.textDim}
                     />
@@ -811,8 +817,8 @@ export const CookieModal: React.FC<CookieModalProps> = ({
                   </Text>
 
                   {ingredients.map((ing, idx) => {
-                    const totalGrams = (ing.quantity * tandaNum).toFixed(1);
-                    const totalCostIng = (ing.cost * tandaNum).toFixed(2);
+                    const totalGrams = ((Number(ing.quantity) || 0) * tandaNum).toFixed(1);
+                    const totalCostIng = ((Number(ing.cost) || 0) * tandaNum).toFixed(2);
                     return (
                       <View
                         key={idx}

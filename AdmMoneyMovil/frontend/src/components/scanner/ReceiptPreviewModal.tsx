@@ -33,8 +33,8 @@ interface ReceiptPreviewModalProps {
 export interface MatchedExistingItem {
   id: string;
   name: string;
-  quantity: number;
-  price: number;
+  quantity: number | string;
+  price: number | string;
   matchedIngredient: Ingredient;
   selectedToUpdateStock: boolean;
 }
@@ -42,9 +42,9 @@ export interface MatchedExistingItem {
 export interface NewDetectedItem {
   id: string;
   name: string;
-  quantity: number;
+  quantity: number | string;
   unit: string;
-  price: number;
+  price: number | string;
   type: 'edible' | 'packaging';
   selectedToRegister: boolean;
 }
@@ -651,8 +651,8 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
               <TextInput
                 style={[styles.input, styles.amountInput, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.emeraldLight }]}
                 value={amount}
-                onChangeText={setAmount}
-                keyboardType="numeric"
+                onChangeText={(t) => setAmount(t.replace(',', '.'))}
+                keyboardType="decimal-pad"
                 placeholder="0.00"
                 placeholderTextColor={colors.textDim}
               />
@@ -829,7 +829,7 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
               ) : (
                 <View style={{ gap: 8 }}>
                   {matchedExisting.map((match) => {
-                    const newStock = Number((match.matchedIngredient.stock_quantity + match.quantity).toFixed(2));
+                    const newStock = Number((match.matchedIngredient.stock_quantity + (Number(match.quantity) || 0)).toFixed(2));
                     return (
                       <View
                         key={match.id}
@@ -874,9 +874,9 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
                               <Text style={{ fontSize: 11, color: colors.emeraldLight, fontWeight: '800' }}>$</Text>
                               <TextInput
                                 style={{ color: colors.emeraldLight, fontSize: 13, fontWeight: '800', minWidth: 44, textAlign: 'right', padding: 2 }}
-                                value={String(match.price || '')}
-                                keyboardType="numeric"
-                                onChangeText={(v) => handleUpdateMatchedItem(match.id, 'price', parseFloat(v) || 0)}
+                                value={String(match.price ?? '')}
+                                keyboardType="decimal-pad"
+                                onChangeText={(v) => handleUpdateMatchedItem(match.id, 'price', v.replace(',', '.'))}
                               />
                             </View>
                           </View>
@@ -886,9 +886,9 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
                               <Text style={{ fontSize: 10, color: colors.textDim, marginRight: 2, fontWeight: '700' }}>CANT:</Text>
                               <TextInput
                                 style={{ color: colors.textMain, fontSize: 12, fontWeight: '800', minWidth: 26, textAlign: 'center', padding: 0 }}
-                                value={String(match.quantity || '')}
-                                keyboardType="numeric"
-                                onChangeText={(v) => handleUpdateMatchedItem(match.id, 'quantity', parseFloat(v) || 0)}
+                                value={String(match.quantity ?? '')}
+                                keyboardType="decimal-pad"
+                                onChangeText={(v) => handleUpdateMatchedItem(match.id, 'quantity', v.replace(',', '.'))}
                               />
                             </View>
                             <View style={[styles.detectedMatchPill, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7', flex: 1 }]}>
@@ -985,7 +985,9 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
               ) : (
                 <View style={{ gap: 10, marginTop: 8 }}>
                   {newDetected.map((item) => {
-                    const unitRate = item.quantity > 0 ? (item.price / item.quantity).toFixed(2) : '0.00';
+                    const itemQty = Number(item.quantity) || 0;
+                    const itemPrice = Number(item.price) || 0;
+                    const unitRate = itemQty > 0 ? (itemPrice / itemQty).toFixed(2) : '0.00';
                     return (
                       <View
                         key={item.id}
@@ -1034,9 +1036,9 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
                             <Text style={{ fontSize: 10, color: colors.textDim, marginRight: 4, fontWeight: '700' }}>CANT:</Text>
                             <TextInput
                               style={{ color: colors.textMain, fontSize: 13, fontWeight: '800', minWidth: 32, textAlign: 'center', padding: 0 }}
-                              value={String(item.quantity || '')}
-                              keyboardType="numeric"
-                              onChangeText={(v) => handleUpdateNewItem(item.id, 'quantity', parseFloat(v) || 0)}
+                              value={String(item.quantity ?? '')}
+                              keyboardType="decimal-pad"
+                              onChangeText={(v) => handleUpdateNewItem(item.id, 'quantity', v.replace(',', '.'))}
                             />
                           </View>
 
@@ -1069,9 +1071,9 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
                             <Text style={{ fontSize: 11, color: colors.textDim, fontWeight: '700' }}>$</Text>
                             <TextInput
                               style={{ color: colors.emeraldLight, fontSize: 13, fontWeight: '900', minWidth: 46, textAlign: 'right', padding: 0 }}
-                              value={String(item.price || '')}
-                              keyboardType="numeric"
-                              onChangeText={(v) => handleUpdateNewItem(item.id, 'price', parseFloat(v) || 0)}
+                              value={String(item.price ?? '')}
+                              keyboardType="decimal-pad"
+                              onChangeText={(v) => handleUpdateNewItem(item.id, 'price', v.replace(',', '.'))}
                             />
                           </View>
                         </View>
@@ -1164,17 +1166,17 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
                       style={[styles.inputSm, { flex: 1, backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
                       placeholder="Cantidad (1)"
                       placeholderTextColor={colors.textDim}
-                      keyboardType="numeric"
+                      keyboardType="decimal-pad"
                       value={newProdQty}
-                      onChangeText={setNewProdQty}
+                      onChangeText={(t) => setNewProdQty(t.replace(',', '.'))}
                     />
                     <TextInput
                       style={[styles.inputSm, { flex: 2, backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
                       placeholder="Precio ($)"
                       placeholderTextColor={colors.textDim}
-                      keyboardType="numeric"
+                      keyboardType="decimal-pad"
                       value={newProdPrice}
-                      onChangeText={setNewProdPrice}
+                      onChangeText={(t) => setNewProdPrice(t.replace(',', '.'))}
                     />
                     <TouchableOpacity onPress={handleAddProduct} style={styles.addBtnSmall}>
                       <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>Añadir</Text>

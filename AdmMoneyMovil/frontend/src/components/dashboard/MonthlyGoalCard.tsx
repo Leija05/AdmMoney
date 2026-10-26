@@ -134,9 +134,9 @@ export const MonthlyGoalCard: React.FC<MonthlyGoalCardProps> = ({ currentProfit 
               <Text style={{ fontSize: 18, fontWeight: '800', color: colors.textDim }}>$</Text>
               <TextInput
                 style={[styles.input, { color: colors.textMain, backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
                 value={tempGoal}
-                onChangeText={setTempGoal}
+                onChangeText={(t) => setTempGoal(t.replace(',', '.'))}
                 placeholder="15000"
                 placeholderTextColor={colors.textDim}
                 autoFocus

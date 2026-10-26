@@ -442,9 +442,9 @@ export default function ExpensesScreen() {
                 ]}
                 placeholder="0.00"
                 placeholderTextColor={colors.textDim}
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
                 value={amount}
-                onChangeText={setAmount}
+                onChangeText={(t) => setAmount(t.replace(',', '.'))}
               />
 
               <Text style={[styles.formLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>

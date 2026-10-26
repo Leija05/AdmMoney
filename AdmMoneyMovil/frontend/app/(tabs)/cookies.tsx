@@ -26,6 +26,8 @@ import { WhatsAppTicketModal } from '../../src/components/ui/WhatsAppTicketModal
 import { CookieModal } from '../../src/components/cookies/CookieModal';
 import { AddIngredientModal } from '../../src/components/cookies/AddIngredientModal';
 import { AddPromotionModal } from '../../src/components/cookies/AddPromotionModal';
+import { QuickCounterSaleModal, CounterSaleSubmission } from '../../src/components/cookies/QuickCounterSaleModal';
+import { AdjustVitrinaModal } from '../../src/components/cookies/AdjustVitrinaModal';
 import { DoubleBezelCard } from '../../src/components/ui/DoubleBezelCard';
 import { Badge } from '../../src/components/ui/Badge';
 import { Button } from '../../src/components/ui/Button';
@@ -61,6 +63,7 @@ export default function CookiesScreen() {
     addIngredient,
     updateIngredient,
     deleteIngredient,
+    adjustCookieStock,
     loadAllData,
     isLoading,
     isOnline,
@@ -128,7 +131,12 @@ export default function CookiesScreen() {
   const [isAddPromoOpen, setIsAddPromoOpen] = useState(false);
   const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(null);
 
-  // Quick sale modal state
+  // Quick counter sale modal state
+  const [isCounterSaleOpen, setIsCounterSaleOpen] = useState(false);
+  const [counterSaleInitialCookie, setCounterSaleInitialCookie] = useState<CookieProduct | null>(null);
+  const [adjustVitrinaCookie, setAdjustVitrinaCookie] = useState<CookieProduct | null>(null);
+
+  // Legacy single cookie sale modal state
   const [selectedCookie, setSelectedCookie] = useState<CookieProduct | null>(null);
   const [saleQty, setSaleQty] = useState<number>(1);
   const [selectedPromoId, setSelectedPromoId] = useState<number | null>(null);
@@ -199,12 +207,47 @@ export default function CookiesScreen() {
   const avgBatchProfit = avgProfitPerUnit * avgYield;
 
   const handleOpenSale = (cookie: CookieProduct) => {
-    setSelectedCookie(cookie);
-    setSaleQty(1);
-    setSelectedPromoId(null);
-    setCustomerName('Cliente Mostrador');
-    setPaymentMethod(PAYMENT_METHODS[0]);
-    setIsSaleModalOpen(true);
+    setCounterSaleInitialCookie(cookie);
+    setIsCounterSaleOpen(true);
+  };
+
+  const handleConfirmCounterSale = async (data: CounterSaleSubmission) => {
+    try {
+      for (const item of data.items) {
+        const itemDiscount = data.discountAmount > 0 && data.totalQuantity > 0
+          ? Number(((data.discountAmount * item.quantity) / data.totalQuantity).toFixed(2))
+          : 0;
+        const netItemRevenue = Math.max(0, item.subtotal - itemDiscount);
+        const effectiveUnit = Number((netItemRevenue / item.quantity).toFixed(2));
+
+        await addCookieSale({
+          cookie_id: item.cookie.id,
+          quantity: item.quantity,
+          unit_price: effectiveUnit,
+          customer_name: data.customerName,
+          payment_method: data.paymentMethod,
+          notes: data.promotionName
+            ? `Mostrador • ${data.promotionName} (${data.paymentMethod})`
+            : `Venta Mostrador (${data.paymentMethod})`,
+          promotion_id: data.promotionId,
+          promotion_name: data.promotionName,
+          discount_amount: itemDiscount,
+        });
+
+        // Descontar piezas vendidas de la vitrina en tiempo real
+        const currentVitrina = item.cookie.stock_vitrina ?? 0;
+        const newVitrina = Math.max(0, currentVitrina - item.quantity);
+        await adjustCookieStock(item.cookie.id, newVitrina);
+      }
+
+      await loadAllData();
+      Alert.alert(
+        '¡Venta Cobrada con Éxito! 🍪',
+        `Cobraste $${data.totalRevenue.toFixed(2)} MXN (${data.paymentMethod})\nGanancia neta: +$${data.netProfit.toFixed(2)} MXN (${(data.marginPct ?? 0).toFixed(1)}% margen)\nPiezas descontadas de vitrina: ${data.totalQuantity}`
+      );
+    } catch {
+      Alert.alert('Error', 'Hubo un detalle al registrar la venta. Inténtalo de nuevo.');
+    }
   };
 
   // Pricing calculations for current sale modal with dynamic promotions
@@ -450,14 +493,30 @@ export default function CookiesScreen() {
         {subTab === 'catalog' && (
           <View style={{ flex: 1 }}>
             <View style={styles.subtabActionBar}>
-              <Text style={[styles.subtabTitle, { color: colors.textMain }]}>Catálogo & Precios de Venta</Text>
-              <Button
-                title="+ Receta"
-                variant="amber"
-                icon={<Ionicons name="add" size={16} color="#fff" />}
-                onPress={() => setIsAddCookieOpen(true)}
-                style={{ paddingVertical: 6, paddingHorizontal: 12 }}
-              />
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={[styles.subtabTitle, { color: colors.textMain }]} numberOfLines={1}>
+                  Catálogo & Vitrina
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                <Button
+                  title="⚡ Venta Rápida"
+                  variant="emerald"
+                  icon={<Ionicons name="flash" size={14} color="#fff" />}
+                  onPress={() => {
+                    setCounterSaleInitialCookie(null);
+                    setIsCounterSaleOpen(true);
+                  }}
+                  style={{ paddingVertical: 6, paddingHorizontal: 10 }}
+                />
+                <Button
+                  title="+ Receta"
+                  variant="amber"
+                  icon={<Ionicons name="add" size={14} color="#fff" />}
+                  onPress={() => setIsAddCookieOpen(true)}
+                  style={{ paddingVertical: 6, paddingHorizontal: 10 }}
+                />
+              </View>
             </View>
 
             <FlatList
@@ -470,6 +529,7 @@ export default function CookiesScreen() {
                   onSell={handleOpenSale}
                   onInspect={(c) => setInspectedCookie(c)}
                   onLongPress={(c) => setActionSheetCookie(c)}
+                  onEditVitrina={(c) => setAdjustVitrinaCookie(c)}
                 />
               )}
               contentContainerStyle={{ paddingBottom: 110 }}
@@ -1220,6 +1280,29 @@ export default function CookiesScreen() {
           </Animated.View>
         </View>
       </Modal>
+
+      {/* Venta Rápida / Mostrador Multi-Producto Modal */}
+      <QuickCounterSaleModal
+        visible={isCounterSaleOpen}
+        cookies={cookies}
+        promotions={promotions}
+        initialCookie={counterSaleInitialCookie}
+        onClose={() => {
+          setIsCounterSaleOpen(false);
+          setCounterSaleInitialCookie(null);
+        }}
+        onConfirmSale={handleConfirmCounterSale}
+      />
+
+      {/* Ajustar Stock en Vitrina Modal */}
+      <AdjustVitrinaModal
+        visible={!!adjustVitrinaCookie}
+        cookie={adjustVitrinaCookie}
+        onClose={() => setAdjustVitrinaCookie(null)}
+        onSaveStock={async (cookieId, newStock) => {
+          await adjustCookieStock(cookieId, newStock);
+        }}
+      />
     </SafeAreaView>
   );
 }

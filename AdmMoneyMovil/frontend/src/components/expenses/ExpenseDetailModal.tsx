@@ -369,8 +369,8 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                     },
                   ]}
                   value={amount}
-                  onChangeText={setAmount}
-                  keyboardType="numeric"
+                  onChangeText={(t) => setAmount(t.replace(',', '.'))}
+                  keyboardType="decimal-pad"
                   placeholder="0.00"
                   placeholderTextColor={colors.textDim}
                 />
@@ -517,9 +517,9 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                                 style={[styles.itemInputQty, { color: isDark ? '#F1F3F7' : '#0F172A' }]}
                                 placeholder="1"
                                 placeholderTextColor={colors.textDim}
-                                keyboardType="numeric"
+                                keyboardType="number-pad"
                                 value={String(item.quantity || 1)}
-                                onChangeText={(txt) => handleUpdateItem(idx, 'quantity', parseInt(txt) || 1)}
+                                onChangeText={(txt) => handleUpdateItem(idx, 'quantity', parseInt(txt.replace(/\D/g, '')) || 1)}
                               />
                             </View>
 
@@ -529,9 +529,9 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                                 style={[styles.itemInputPrice, { color: colors.emeraldLight }]}
                                 placeholder="0.00"
                                 placeholderTextColor={colors.textDim}
-                                keyboardType="numeric"
+                                keyboardType="decimal-pad"
                                 value={item.price > 0 || item.price === 0 ? String(item.price) : ''}
-                                onChangeText={(txt) => handleUpdateItem(idx, 'price', parseFloat(txt) || 0)}
+                                onChangeText={(txt) => handleUpdateItem(idx, 'price', parseFloat(txt.replace(',', '.')) || 0)}
                               />
                             </View>
 

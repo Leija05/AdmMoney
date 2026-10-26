@@ -49,6 +49,7 @@ export default function DashboardScreen() {
     updateExpense,
     deleteExpense,
     addCookieSale,
+    adjustCookieStock,
     theme,
     toggleTheme,
     privacyMode,
@@ -205,6 +206,7 @@ export default function DashboardScreen() {
     sale_price: 35.0,
     recipe_cost: 9.67,
     profit_per_unit: 25.33,
+    stock_vitrina: 0,
   };
 
   const activeStarPromos = promotions.filter((p) => {
@@ -276,6 +278,10 @@ export default function DashboardScreen() {
         ? `${selectedPromo.name} (${quickSaleQty} pzas, desc $${promoDiscount.toFixed(2)})`
         : `Venta Individual (${quickSaleQty} pza${quickSaleQty > 1 ? 's' : ''} a $${starCookie.sale_price.toFixed(2)})`,
     });
+
+    // Descontar piezas de vitrina
+    const currentVitrina = (starCookie as any).stock_vitrina ?? 0;
+    await adjustCookieStock(starCookie.id, Math.max(0, currentVitrina - quickSaleQty));
 
     setIsQuickSaleOpen(false);
     setSelectedPromoId(null);
@@ -843,9 +849,9 @@ export default function DashboardScreen() {
                 style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain }]}
                 placeholder="0.00"
                 placeholderTextColor={colors.textDim}
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
                 value={quickExpAmount}
-                onChangeText={setQuickExpAmount}
+                onChangeText={(t) => setQuickExpAmount(t.replace(',', '.'))}
               />
               <Button
                 title="Guardar Gasto"

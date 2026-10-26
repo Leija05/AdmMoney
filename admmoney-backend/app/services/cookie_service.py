@@ -720,6 +720,12 @@ class CookieService:
 
         db.cookie_sales.insert_one(doc)
         doc.pop("_id", None)
+
+        # Descontar automáticamente del stock disponible en vitrina
+        current_vitrina = float(cookie.get("stock_vitrina", 0.0))
+        new_vitrina = max(0.0, current_vitrina - data.quantity)
+        db.cookie_products.update_one({"id": cookie["id"]}, {"$set": {"stock_vitrina": new_vitrina}})
+
         return doc
 
     @staticmethod

@@ -258,11 +258,11 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
                       color: isDark ? '#F1F3F7' : '#181A1F',
                     },
                   ]}
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   placeholder="Ej. 185.00"
                   placeholderTextColor={colors.textDim}
                   value={packageCost}
-                  onChangeText={setPackageCost}
+                  onChangeText={(t) => setPackageCost(t.replace(',', '.'))}
                 />
               </View>
 
@@ -279,11 +279,11 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
                       color: isDark ? '#F1F3F7' : '#181A1F',
                     },
                   ]}
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   placeholder="1.0"
                   placeholderTextColor={colors.textDim}
                   value={packageQty}
-                  onChangeText={setPackageQty}
+                  onChangeText={(t) => setPackageQty(t.replace(',', '.'))}
                 />
               </View>
             </View>
@@ -302,11 +302,11 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
                       color: isDark ? '#F1F3F7' : '#181A1F',
                     },
                   ]}
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   placeholder="1"
                   placeholderTextColor={colors.textDim}
                   value={stockQty}
-                  onChangeText={setStockQty}
+                  onChangeText={(t) => setStockQty(t.replace(',', '.'))}
                 />
               </View>
 

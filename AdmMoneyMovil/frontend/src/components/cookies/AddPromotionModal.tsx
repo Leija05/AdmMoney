@@ -332,9 +332,9 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
                       color: isDark ? '#F1F3F7' : '#181A1F',
                     },
                   ]}
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   value={discountValue}
-                  onChangeText={setDiscountValue}
+                  onChangeText={(t) => setDiscountValue(t.replace(',', '.'))}
                   editable={promoType !== 'two_for_one'}
                 />
               </View>
@@ -350,9 +350,9 @@ export const AddPromotionModal: React.FC<AddPromotionModalProps> = ({
                       color: isDark ? '#F1F3F7' : '#181A1F',
                     },
                   ]}
-                  keyboardType="numeric"
+                  keyboardType="number-pad"
                   value={minQuantity}
-                  onChangeText={setMinQuantity}
+                  onChangeText={(t) => setMinQuantity(t.replace(/\D/g, ''))}
                 />
               </View>
             </View>

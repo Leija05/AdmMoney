@@ -37,9 +37,9 @@ export interface IngredientPurchasePayload {
 
 export interface RecipeIngredientItem {
   name: string;
-  quantity: number;
+  quantity: number | string;
   unit: string;
-  cost: number;
+  cost: number | string;
   ingredient_id?: number;
   is_subrecipe?: boolean;
 }

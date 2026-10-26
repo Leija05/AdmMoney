@@ -228,8 +228,8 @@ export const EditSaleModal: React.FC<EditSaleModalProps> = ({
                 <TextInput
                   style={[styles.inputField, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.textMain, fontWeight: '800' }]}
                   value={quantity}
-                  onChangeText={setQuantity}
-                  keyboardType="numeric"
+                  onChangeText={(t) => setQuantity(t.replace(/\D/g, ''))}
+                  keyboardType="number-pad"
                   placeholder="1"
                   placeholderTextColor={colors.textDim}
                 />
@@ -240,8 +240,8 @@ export const EditSaleModal: React.FC<EditSaleModalProps> = ({
                 <TextInput
                   style={[styles.inputField, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle, color: colors.amberLight, fontWeight: '800' }]}
                   value={unitPrice}
-                  onChangeText={setUnitPrice}
-                  keyboardType="numeric"
+                  onChangeText={(t) => setUnitPrice(t.replace(',', '.'))}
+                  keyboardType="decimal-pad"
                   placeholder="35.00"
                   placeholderTextColor={colors.textDim}
                 />

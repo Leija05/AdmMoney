@@ -1354,9 +1354,9 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                               color: colors.textMain,
                             },
                           ]}
-                          keyboardType="numeric"
+                          keyboardType="decimal-pad"
                           value={depositAmount}
-                          onChangeText={setDepositAmount}
+                          onChangeText={(t) => setDepositAmount(t.replace(',', '.'))}
                           placeholder="0.00"
                           placeholderTextColor={colors.textDim}
                         />
