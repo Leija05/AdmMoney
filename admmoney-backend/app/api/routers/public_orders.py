@@ -97,10 +97,13 @@ def create_public_order(data: PublicOrderCreate, request: Request):
     delivery_date = data.delivery_date or date.today().isoformat()
 
     # 5. Obtener teléfono de recepción de WhatsApp (Línea activa configurada)
-    # Por defecto busca en la configuración de la app o usa target_phone
     target_wa = "".join(c for c in (data.target_phone or "") if c.isdigit())
     if not target_wa or len(target_wa) < 10:
-        # Fallback a teléfono oficial
+        settings_doc = db.app_settings.find_one({"key": "whatsapp_settings"})
+        if settings_doc:
+            default_line = settings_doc.get("defaultQrPhone", "phone1")
+            target_wa = "".join(c for c in str(settings_doc.get(default_line, "")) if c.isdigit())
+    if not target_wa or len(target_wa) < 10:
         target_wa = "528123456789"
 
     if not target_wa.startswith("52") and len(target_wa) == 10:
@@ -186,6 +189,29 @@ def remove_from_blacklist(phone: str):
     clean = "".join(c for c in phone if c.isdigit())
     db.blacklisted_phones.delete_one({"phone": clean})
     return {"message": f"Número {clean} desbloqueado."}
+
+# ----------------- CONFIGURACIÓN WHATSAPP SYNC ----------------- #
+@router.post("/api/public/settings/whatsapp")
+def save_public_whatsapp_settings(data: Dict[str, Any]):
+    """Guarda en BD los números y línea activa para que el portal web QR siempre sepa a qué chat mandar"""
+    db = get_db()
+    doc = {
+        "key": "whatsapp_settings",
+        "phone1": data.get("phone1", ""),
+        "phone2": data.get("phone2", ""),
+        "label1": data.get("label1", ""),
+        "label2": data.get("label2", ""),
+        "defaultQrPhone": data.get("defaultQrPhone", "phone1"),
+        "updated_at": datetime.utcnow().isoformat()
+    }
+    db.app_settings.update_one({"key": "whatsapp_settings"}, {"$set": doc}, upsert=True)
+    return {"message": "Configuración de WhatsApp guardada en la base de datos.", "settings": doc}
+
+@router.get("/api/public/settings/whatsapp")
+def get_public_whatsapp_settings():
+    db = get_db()
+    doc = db.app_settings.find_one({"key": "whatsapp_settings"}, {"_id": 0})
+    return doc or {}
 
 # ----------------- PÁGINA WEB PÚBLICA PARA CELULARES (/pedir) ----------------- #
 @router.get("/pedir", response_class=HTMLResponse)
@@ -591,9 +617,8 @@ def serve_public_ordering_page(request: Request):
       }
       if (!items.length) { alert('Selecciona al menos una galleta.'); return; }
 
-      const btn = document.getElementById('submitBtn');
-      btn.disabled = true;
-      btn.innerText = 'Generando Folio...';
+      const urlParams = new URLSearchParams(window.location.search);
+      const targetPhone = urlParams.get('phone') || '';
 
       try {
         const res = await fetch('/api/public/orders', {
@@ -605,7 +630,8 @@ def serve_public_ordering_page(request: Request):
             delivery_date: date,
             delivery_time: time,
             items: items,
-            notes: notes
+            notes: notes,
+            target_phone: targetPhone
           })
         });
 

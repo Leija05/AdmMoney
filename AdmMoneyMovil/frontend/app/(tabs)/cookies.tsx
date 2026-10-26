@@ -576,8 +576,8 @@ export default function CookiesScreen() {
               ListEmptyComponent={
                 <View style={styles.emptyBox}>
                   <Ionicons name="nutrition-outline" size={40} color={colors.textDim} />
-                  <Text style={styles.emptyTitle}>Sin Insumos Registrados</Text>
-                  <Text style={styles.emptyText}>Agrega tu primer insumo para calcular costos.</Text>
+                  <Text style={[styles.emptyTitle, { color: colors.textMain }]}>Sin Insumos Registrados</Text>
+                  <Text style={[styles.emptyText, { color: colors.textMuted }]}>Agrega tu primer insumo para calcular costos.</Text>
                 </View>
               }
             />
@@ -655,8 +655,8 @@ export default function CookiesScreen() {
               ListEmptyComponent={
                 <View style={styles.emptyBox}>
                   <Ionicons name="cart-outline" size={40} color={colors.textDim} />
-                  <Text style={styles.emptyTitle}>Sin Ventas Aún</Text>
-                  <Text style={styles.emptyText}>Registra tu primera venta para ver ganancias.</Text>
+                  <Text style={[styles.emptyTitle, { color: colors.textMain }]}>Sin Ventas Aún</Text>
+                  <Text style={[styles.emptyText, { color: colors.textMuted }]}>Registra tu primera venta para ver ganancias.</Text>
                 </View>
               }
             />
@@ -769,8 +769,8 @@ export default function CookiesScreen() {
               ListEmptyComponent={
                 <View style={styles.emptyBox}>
                   <Ionicons name="pricetag-outline" size={40} color={colors.textDim} />
-                  <Text style={styles.emptyTitle}>Sin Promociones</Text>
-                  <Text style={styles.emptyText}>Toca "+ Oferta" para crear combos 3x$90 o 15% OFF.</Text>
+                  <Text style={[styles.emptyTitle, { color: colors.textMain }]}>Sin Promociones</Text>
+                  <Text style={[styles.emptyText, { color: colors.textMuted }]}>Toca "+ Oferta" para crear combos 3x$90 o 15% OFF.</Text>
                 </View>
               }
             />
@@ -1082,7 +1082,11 @@ export default function CookiesScreen() {
             </View>
 
             {selectedCookie && (
-              <ScrollView style={{ padding: 20 }} showsVerticalScrollIndicator={false}>
+              <ScrollView
+                style={{ padding: 20 }}
+                contentContainerStyle={{ paddingBottom: 60 }}
+                showsVerticalScrollIndicator={false}
+              >
                 <Text style={{ fontSize: 16, fontWeight: '800', color: colors.textMain, textAlign: 'center' }}>
                   {selectedCookie.name}
                 </Text>
@@ -1408,7 +1412,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radii.outer,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    maxHeight: '90%',
+    maxHeight: '94%',
   },
   modalHeader: {
     flexDirection: 'row',

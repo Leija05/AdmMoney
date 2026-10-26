@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: spacing.md,
-    paddingBottom: 110,
+    paddingBottom: 175,
   },
   header: {
     marginBottom: 16,

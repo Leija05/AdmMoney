@@ -341,8 +341,8 @@ export default function ExpensesScreen() {
           ListEmptyComponent={
             <View style={styles.emptyBox}>
               <Ionicons name="receipt-outline" size={44} color={colors.textDim} />
-              <Text style={styles.emptyTitle}>Sin Gastos Registrados</Text>
-              <Text style={styles.emptyText}>
+              <Text style={[styles.emptyTitle, { color: colors.textMain }]}>Sin Gastos Registrados</Text>
+              <Text style={[styles.emptyText, { color: colors.textMuted }]}>
                 {searchQuery || selectedCategory !== 'Todas'
                   ? 'No hay egresos que coincidan con tus filtros.'
                   : 'Aún no tienes gastos guardados en el sistema.'}

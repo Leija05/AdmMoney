@@ -476,12 +476,12 @@ class CookieService:
             "name": "Galleta de Oreo y Chispas",
             "category": "Galletas Artesanales",
             "description": "Exquisita masa suave con mantequilla premium, vainilla pura, trozos generosos de galleta Oreo y chispas de chocolate.",
-            "sale_price": 30.0,
+            "sale_price": 35.0,
             "cost_per_cookie": 6.77,
             "packaging_cost": 2.90,
             "recipe_cost": 9.67,
-            "profit_per_unit": 20.33,
-            "profit_margin_pct": 67.8,
+            "profit_per_unit": 25.33,
+            "profit_margin_pct": 72.37,
             "batch_yield": 10,
             "waste_pct": 0.0,
             "base_recipe_weight_g": 75.0,
@@ -494,13 +494,30 @@ class CookieService:
         }
 
         if existing:
-            db.cookie_products.update_one({"id": existing["id"]}, {"$set": doc})
-            doc["id"] = existing["id"]
+            # Si el precio sigue en el preset anterior de $30.00, actualizarlo a $35.00 como solicitó el usuario
+            if float(existing.get("sale_price", 30.0)) == 30.0:
+                cost = float(existing.get("recipe_cost", 9.67))
+                new_profit = round(35.0 - cost, 2)
+                new_margin = round((new_profit / 35.0) * 100, 2) if 35.0 > 0 else 0.0
+                db.cookie_products.update_one(
+                    {"id": existing["id"]},
+                    {"$set": {
+                        "sale_price": 35.0,
+                        "profit_per_unit": new_profit,
+                        "profit_margin_pct": new_margin,
+                    }}
+                )
+                existing["sale_price"] = 35.0
+                existing["profit_per_unit"] = new_profit
+                existing["profit_margin_pct"] = new_margin
+            # NUNCA sobreescribir las ediciones que realice el usuario en los campos
+            existing.pop("_id", None)
+            return existing
         else:
             doc["id"] = get_next_sequence("cookie_products")
             db.cookie_products.insert_one(doc)
-
-        return doc
+            doc.pop("_id", None)
+            return doc
 
     # ------------------ ESCALADOR DE LOTES (BATCH SCALER) ------------------ #
     @staticmethod

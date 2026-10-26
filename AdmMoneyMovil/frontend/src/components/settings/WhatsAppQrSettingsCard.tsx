@@ -35,6 +35,7 @@ export const WhatsAppQrSettingsCard: React.FC = () => {
   const [label1, setLabel1] = useState(whatsappLabel1 || 'Pedidos Línea 1');
   const [label2, setLabel2] = useState(whatsappLabel2 || 'Pedidos Línea 2');
   const [hasSavedFeedback, setHasSavedFeedback] = useState(false);
+  const [qrDestinationMode, setQrDestinationMode] = useState<'web' | 'whatsapp'>('web');
 
   const [customMessage, setCustomMessage] = useState(
     `¡Hola! Me gustaría hacer un pedido en ${businessName || 'Lucky Cookies'}.`
@@ -50,9 +51,18 @@ export const WhatsAppQrSettingsCard: React.FC = () => {
 
   const activePhone = defaultQrPhone === 'phone1' ? phone1 : phone2;
   const activeLabel = defaultQrPhone === 'phone1' ? label1 : label2;
-  const qrUrl = buildWhatsAppLink(activePhone, customMessage);
+  const cleanPhone = activePhone.replace(/\D/g, '');
 
-  const handleSave = () => {
+  // Base URL para el portal web de pedidos en línea
+  const apiHost = process.env.EXPO_PUBLIC_API_URL || 'https://admmoney-backend.onrender.com';
+  const cleanBaseUrl = apiHost.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+  const webOrderUrl = `${cleanBaseUrl}/pedir?phone=${cleanPhone}&line=${defaultQrPhone}`;
+  const directWhatsAppUrl = buildWhatsAppLink(activePhone, customMessage);
+
+  // URL activa que codifica el código QR según el modo seleccionado
+  const activeQrCodeUrl = qrDestinationMode === 'web' ? webOrderUrl : directWhatsAppUrl;
+
+  const handleSave = async () => {
     saveWhatsAppSettings({
       phone1,
       phone2,
@@ -60,6 +70,22 @@ export const WhatsAppQrSettingsCard: React.FC = () => {
       label2,
       defaultQrPhone,
     });
+
+    // Sincronizar también con la base de datos en la nube para el portal web
+    try {
+      fetch(`${cleanBaseUrl}/api/public/settings/whatsapp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone1,
+          phone2,
+          label1,
+          label2,
+          defaultQrPhone,
+        }),
+      }).catch(() => {});
+    } catch {}
+
     setHasSavedFeedback(true);
     setTimeout(() => setHasSavedFeedback(false), 2200);
     Alert.alert(
@@ -79,6 +105,17 @@ export const WhatsAppQrSettingsCard: React.FC = () => {
     });
   };
 
+  const handleOpenWebPage = async () => {
+    try {
+      await Linking.openURL(webOrderUrl);
+    } catch {
+      Alert.alert(
+        'No se pudo abrir el navegador',
+        `No fue posible abrir el enlace:\n${webOrderUrl}`
+      );
+    }
+  };
+
   const handleTestWhatsApp = async () => {
     if (!activePhone.trim()) {
       Alert.alert(
@@ -87,11 +124,10 @@ export const WhatsAppQrSettingsCard: React.FC = () => {
       );
       return;
     }
-    const url = buildWhatsAppLink(activePhone, customMessage);
     try {
-      const canOpen = await Linking.canOpenURL(url);
+      const canOpen = await Linking.canOpenURL(directWhatsAppUrl);
       if (canOpen) {
-        await Linking.openURL(url);
+        await Linking.openURL(directWhatsAppUrl);
       } else {
         Alert.alert(
           'No se pudo abrir WhatsApp',
@@ -104,20 +140,20 @@ export const WhatsAppQrSettingsCard: React.FC = () => {
   };
 
   const handleShareQr = async () => {
-    if (!activePhone.trim()) {
-      Alert.alert(
-        'Teléfono Requerido',
-        'Ingresa al menos un número telefónico para poder compartir tu código de pedidos.'
-      );
-      return;
-    }
     try {
-      await Share.share({
-        title: `Hacer Pedido en ${businessName} por WhatsApp`,
-        message: `¡Haz tu pedido de galletas por WhatsApp en ${businessName}!\n\n• Canal: ${activeLabel}\n• Teléfono: ${formatDisplayPhone(
-          activePhone
-        )}\n\nEnvíanos un mensaje haciendo clic aquí:\n${qrUrl}`,
-      });
+      if (qrDestinationMode === 'web') {
+        await Share.share({
+          title: `Menú en Línea y Pedidos en ${businessName || 'Lucky Cookies'}`,
+          message: `¡Haz tu pedido de galletas en ${businessName || 'Lucky Cookies'}!\n\nConsulta nuestro menú digital y arma tu pedido aquí:\n${webOrderUrl}`,
+        });
+      } else {
+        await Share.share({
+          title: `Hacer Pedido en ${businessName || 'Lucky Cookies'} por WhatsApp`,
+          message: `¡Haz tu pedido de galletas por WhatsApp en ${businessName || 'Lucky Cookies'}!\n\n• Canal: ${activeLabel}\n• Teléfono: ${formatDisplayPhone(
+            activePhone
+          )}\n\nEnvíanos un mensaje haciendo clic aquí:\n${directWhatsAppUrl}`,
+        });
+      }
     } catch {}
   };
 
@@ -133,7 +169,7 @@ export const WhatsAppQrSettingsCard: React.FC = () => {
             Números de WhatsApp & QR de Pedidos
           </Text>
           <Text style={[styles.cardSub, { color: colors.textDim }]}>
-            Configura tus 2 números para recibir pedidos y selecciona cuál activará el código QR y las etiquetas.
+            Configura tus 2 números para recibir pedidos y selecciona cuál activará el código QR y la página web.
           </Text>
         </View>
       </View>
@@ -344,7 +380,7 @@ export const WhatsAppQrSettingsCard: React.FC = () => {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Ionicons name="qr-code" size={17} color={colors.emeraldLight} />
             <Text style={[styles.qrBadgeTitle, { color: colors.textMain }]}>
-              QR Directo • {activeLabel}
+              Código QR de Pedidos
             </Text>
           </View>
           <View style={[styles.phonePillBadge, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : '#D1FAE5' }]}>
@@ -354,60 +390,170 @@ export const WhatsAppQrSettingsCard: React.FC = () => {
           </View>
         </View>
 
+        {/* SELECTOR DE MODO DE DESTINO DEL QR */}
+        <View style={styles.modeTabsRow}>
+          <TouchableOpacity
+            onPress={() => setQrDestinationMode('web')}
+            style={[
+              styles.modeTabBtn,
+              qrDestinationMode === 'web'
+                ? { backgroundColor: colors.brand, borderColor: colors.brand }
+                : { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle },
+            ]}
+          >
+            <Ionicons
+              name="globe-outline"
+              size={14}
+              color={qrDestinationMode === 'web' ? '#FFFFFF' : colors.textDim}
+            />
+            <Text
+              style={[
+                styles.modeTabText,
+                { color: qrDestinationMode === 'web' ? '#FFFFFF' : colors.textMain },
+              ]}
+            >
+              Página Web Menú
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setQrDestinationMode('whatsapp')}
+            style={[
+              styles.modeTabBtn,
+              qrDestinationMode === 'whatsapp'
+                ? { backgroundColor: '#10B981', borderColor: '#10B981' }
+                : { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle },
+            ]}
+          >
+            <Ionicons
+              name="logo-whatsapp"
+              size={14}
+              color={qrDestinationMode === 'whatsapp' ? '#FFFFFF' : colors.textDim}
+            />
+            <Text
+              style={[
+                styles.modeTabText,
+                { color: qrDestinationMode === 'whatsapp' ? '#FFFFFF' : colors.textMain },
+              ]}
+            >
+              WhatsApp Directo
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Lienzo del Código QR */}
         <View style={styles.qrCanvasWrapper}>
           <View style={[styles.qrFrame, { borderColor: colors.borderSubtle, backgroundColor: '#FFFFFF' }]}>
             <VectorQrCode
-              value={qrUrl}
-              size={170}
+              value={activeQrCodeUrl}
+              size={175}
               color="#064E3B"
               backgroundColor="#FFFFFF"
             />
           </View>
         </View>
 
-        <Text style={[styles.qrInstructions, { color: colors.textDim }]}>
-          Tus clientes pueden escanear este código con su cámara y se les abrirá WhatsApp directamente para pedirte galletas a la línea seleccionada.
-        </Text>
-
-        {/* Campo de Mensaje de Bienvenida */}
-        <View style={{ marginTop: 12 }}>
-          <Text style={[styles.tinyLabel, { color: colors.textDim, marginBottom: 5 }]}>
-            Mensaje inicial al abrir WhatsApp:
-          </Text>
-          <TextInput
-            style={[
-              styles.messageInput,
-              { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle, color: colors.textMain },
-            ]}
-            value={customMessage}
-            onChangeText={setCustomMessage}
-            placeholder="Mensaje de bienvenida..."
-            placeholderTextColor={colors.textDim}
-            multiline
-            numberOfLines={2}
+        {/* Indicador de URL Destino */}
+        <View style={[styles.urlBadgeBox, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
+          <Ionicons
+            name={qrDestinationMode === 'web' ? 'globe-outline' : 'chatbubbles-outline'}
+            size={13}
+            color={qrDestinationMode === 'web' ? colors.brandLight : '#10B981'}
           />
+          <Text
+            style={[styles.urlBadgeText, { color: colors.textMuted }]}
+            numberOfLines={1}
+            ellipsizeMode="middle"
+          >
+            {activeQrCodeUrl}
+          </Text>
         </View>
 
-        {/* Botones de Acción */}
-        <View style={styles.qrActionsRow}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleTestWhatsApp}
-            style={[styles.testWaBtn, { backgroundColor: '#10B981' }]}
-          >
-            <Ionicons name="logo-whatsapp" size={17} color="#FFFFFF" />
-            <Text style={styles.testWaBtnText}>Probar en WhatsApp</Text>
-          </TouchableOpacity>
+        <Text style={[styles.qrInstructions, { color: colors.textDim }]}>
+          {qrDestinationMode === 'web'
+            ? 'Tus clientes escanean este código y entran directamente a tu página web de Lucky Cookies (/pedir). Allí eligen galletas, ven fotos, llenan su formulario y al enviar se abre WhatsApp con su folio.'
+            : 'Tus clientes escanean este código y se les abre el chat directo de WhatsApp con la línea configurada.'}
+        </Text>
 
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleShareQr}
-            style={[styles.shareQrBtn, { backgroundColor: colors.brand }]}
-          >
-            <Ionicons name="share-social-outline" size={16} color="#FFFFFF" />
-            <Text style={styles.shareQrBtnText}>Compartir Enlace</Text>
-          </TouchableOpacity>
+        {/* Campo de Mensaje de Bienvenida (Solo visible si está en WhatsApp directo) */}
+        {qrDestinationMode === 'whatsapp' && (
+          <View style={{ marginTop: 12 }}>
+            <Text style={[styles.tinyLabel, { color: colors.textDim, marginBottom: 5 }]}>
+              Mensaje inicial al abrir WhatsApp:
+            </Text>
+            <TextInput
+              style={[
+                styles.messageInput,
+                { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle, color: colors.textMain },
+              ]}
+              value={customMessage}
+              onChangeText={setCustomMessage}
+              placeholder="Mensaje de bienvenida..."
+              placeholderTextColor={colors.textDim}
+              multiline
+              numberOfLines={2}
+            />
+          </View>
+        )}
+
+        {/* Botones de Acción */}
+        <View style={styles.qrActionsCol}>
+          {/* Botón Principal: Abrir Página Web en Navegador */}
+          {qrDestinationMode === 'web' ? (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleOpenWebPage}
+              style={[styles.primaryActionBtn, { backgroundColor: colors.brand }]}
+            >
+              <Ionicons name="open-outline" size={17} color="#FFFFFF" />
+              <Text style={styles.actionBtnText}>Abrir Página Web en Navegador</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleTestWhatsApp}
+              style={[styles.primaryActionBtn, { backgroundColor: '#10B981' }]}
+            >
+              <Ionicons name="logo-whatsapp" size={17} color="#FFFFFF" />
+              <Text style={styles.actionBtnText}>Probar en WhatsApp</Text>
+            </TouchableOpacity>
+          )}
+
+          <View style={styles.secondaryActionsRow}>
+            {qrDestinationMode === 'web' && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleTestWhatsApp}
+                style={[styles.secondaryActionBtn, { backgroundColor: '#10B981' }]}
+              >
+                <Ionicons name="logo-whatsapp" size={16} color="#FFFFFF" />
+                <Text style={styles.actionBtnText}>Probar Chat</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleShareQr}
+              style={[
+                styles.secondaryActionBtn,
+                { backgroundColor: qrDestinationMode === 'web' ? colors.bgCard : colors.brand, borderWidth: qrDestinationMode === 'web' ? 1 : 0, borderColor: colors.borderSubtle },
+              ]}
+            >
+              <Ionicons
+                name="share-social-outline"
+                size={16}
+                color={qrDestinationMode === 'web' ? colors.textMain : '#FFFFFF'}
+              />
+              <Text
+                style={[
+                  styles.actionBtnText,
+                  { color: qrDestinationMode === 'web' ? colors.textMain : '#FFFFFF' },
+                ]}
+              >
+                Compartir Enlace
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </DoubleBezelCard>
@@ -479,83 +625,80 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 8,
-    paddingVertical: 3.5,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   activeBadgeText: {
     color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 0.2,
   },
   selectLineBtn: {
+    borderWidth: 1,
+    borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
   },
   selectLineBtnText: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: '700',
   },
   cardFormRow: {
-    flexDirection: 'row',
     gap: 8,
   },
   labelInputCol: {
-    flex: 1.1,
-  },
-  phoneInputCol: {
-    flex: 1.4,
+    marginBottom: 2,
   },
   tinyLabel: {
     fontSize: 10,
     fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: 4,
-    letterSpacing: 0.2,
   },
   labelInput: {
     height: 38,
     borderRadius: 8,
     borderWidth: 1,
-    paddingHorizontal: 9,
-    fontSize: 12,
+    paddingHorizontal: 10,
+    fontSize: 12.5,
     fontWeight: '600',
   },
+  phoneInputCol: {
+    marginTop: 2,
+  },
   phoneInputWrapper: {
-    height: 38,
-    borderRadius: 8,
-    borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    borderRadius: 8,
+    borderWidth: 1,
+    height: 38,
     overflow: 'hidden',
   },
   prefixPill: {
-    paddingHorizontal: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100%',
+    paddingHorizontal: 10,
     borderRightWidth: 1,
-    borderRightColor: 'rgba(148, 163, 184, 0.2)',
+    borderRightColor: 'rgba(255,255,255,0.08)',
+    justifyContent: 'center',
   },
   prefixText: {
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: '700',
   },
   phoneTextInput: {
     flex: 1,
-    paddingHorizontal: 8,
-    fontSize: 12.5,
+    paddingHorizontal: 10,
+    fontSize: 13,
     fontWeight: '700',
   },
   saveAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
+    gap: 8,
     height: 42,
     borderRadius: 10,
-    marginTop: 10,
+    marginTop: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
@@ -569,15 +712,16 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   qrDisplayCard: {
-    padding: 14,
+    padding: 16,
     borderRadius: 14,
     borderWidth: 1,
+    marginBottom: 8,
   },
   qrBadgeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   qrBadgeTitle: {
     fontSize: 13,
@@ -592,10 +736,29 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: '800',
   },
+  modeTabsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  modeTabBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  modeTabText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
   qrCanvasWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 4,
+    marginVertical: 6,
   },
   qrFrame: {
     padding: 14,
@@ -607,11 +770,26 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 3,
   },
+  urlBadgeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 10,
+  },
+  urlBadgeText: {
+    flex: 1,
+    fontSize: 10.5,
+    fontWeight: '600',
+  },
   qrInstructions: {
     fontSize: 11,
     textAlign: 'center',
     lineHeight: 16,
-    marginTop: 12,
+    marginTop: 10,
     paddingHorizontal: 6,
   },
   messageInput: {
@@ -623,35 +801,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlignVertical: 'top',
   },
-  qrActionsRow: {
+  qrActionsCol: {
+    gap: 8,
+    marginTop: 14,
+  },
+  primaryActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 44,
+    borderRadius: 9,
+  },
+  secondaryActionsRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 12,
   },
-  testWaBtn: {
+  secondaryActionBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    height: 42,
+    height: 40,
     borderRadius: 8,
   },
-  testWaBtnText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  shareQrBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    height: 42,
-    borderRadius: 8,
-  },
-  shareQrBtnText: {
+  actionBtnText: {
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '800',
