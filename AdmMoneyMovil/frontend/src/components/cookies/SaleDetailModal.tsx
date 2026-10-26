@@ -162,8 +162,8 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                     source={require('../../../assets/lucky_cookies_logo.png')}
                     style={styles.brandLogo}
                   />
-                  <Text style={[styles.brandTitle, { color: isDark ? '#F8FAFC' : '#0F172A' }]}>
-                    lucky cookies Galletas y postres
+                  <Text style={[styles.brandTitle, { color: isDark ? '#F8FAFC' : '#0F172A', textAlign: 'center' }]}>
+                    Lucky Cookies{'\n'}Galletas y Postres
                   </Text>
                   <Text style={[styles.receiptSub, { color: isDark ? '#94A3B8' : '#64748B' }]}>
                     Ticket Oficial de Venta

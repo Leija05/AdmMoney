@@ -22,6 +22,7 @@ import { useAppStore } from '../../src/stores/app.store';
 import { WhatsAppQrSettingsCard } from '../../src/components/settings/WhatsAppQrSettingsCard';
 import { GitHubUpdateCard } from '../../src/components/settings/GitHubUpdateCard';
 import { Ionicons } from '@expo/vector-icons';
+import { APP_CONFIG } from '../../src/config/appConfig';
 
 export default function SettingsScreen() {
   const {
@@ -542,7 +543,7 @@ export default function SettingsScreen() {
               <Text style={[styles.cardTitle, { color: colors.textMain }]}>Adm Money Suite Móvil</Text>
             </View>
             <Text style={[styles.cardSub, { color: colors.textDim }]}>
-              Versión 2.3.0 • Sistema Financiero & Control de Repostería
+              Versión {APP_CONFIG.APP_VERSION} • Sistema Financiero & Control de Repostería
             </Text>
             <Text style={[styles.cardSub, { color: colors.textMuted, marginTop: 6 }]}>
               Base de datos en la nube conectada y sincronizada en tiempo real. Todas las funciones operan al 100%.

@@ -89,7 +89,7 @@ def create_sale_ticket_pdf(sale: Dict[str, Any], note: Optional[str] = None) -> 
             pass
             
     # Business Name & Subtitle
-    story.append(Paragraph("Lucky Cookies Galletas y postres", title_style))
+    story.append(Paragraph("Lucky Cookies<br/>Galletas y Postres", title_style))
     story.append(Paragraph("Ticket Oficial de Venta", sub_style))
     story.append(Spacer(1, 3*mm))
     
@@ -182,8 +182,8 @@ def create_sale_ticket_pdf(sale: Dict[str, Any], note: Optional[str] = None) -> 
     story.append(div_table)
     story.append(Spacer(1, 2*mm))
     
-    footer_p1 = Paragraph("¡Gracias por endulzar tu día con nosotros! ❤", sub_style)
-    footer_p2 = Paragraph("Lucky Cookies Galletas y postres", ParagraphStyle('F2', parent=sub_style, fontName='Helvetica-Bold', fontSize=7.5))
+    footer_p1 = Paragraph("¡Gracias por endulzar tu día con nosotros!", sub_style)
+    footer_p2 = Paragraph("Lucky Cookies • Galletas y Postres", ParagraphStyle('F2', parent=sub_style, fontName='Helvetica-Bold', fontSize=7.5))
     story.append(footer_p1)
     story.append(Spacer(1, 1*mm))
     story.append(footer_p2)
@@ -263,7 +263,7 @@ def create_order_ticket_pdf(order: Dict[str, Any], note: Optional[str] = None) -
         except Exception:
             pass
             
-    story.append(Paragraph("lucky cookies Galletas y postres", title_style))
+    story.append(Paragraph("Lucky Cookies<br/>Galletas y Postres", title_style))
     story.append(Paragraph("Comprobante de Pedido Programado", sub_style))
     story.append(Spacer(1, 3*mm))
     
@@ -350,8 +350,8 @@ def create_order_ticket_pdf(order: Dict[str, Any], note: Optional[str] = None) -
     story.append(div_table)
     story.append(Spacer(1, 2*mm))
     
-    footer_p1 = Paragraph("¡Gracias por tu pedido y preferencia! ✨", sub_style)
-    footer_p2 = Paragraph("lucky cookies Galletas y postres", ParagraphStyle('F2', parent=sub_style, fontName='Helvetica-Bold', fontSize=7.5))
+    footer_p1 = Paragraph("¡Gracias por tu pedido y preferencia!", sub_style)
+    footer_p2 = Paragraph("Lucky Cookies • Galletas y Postres", ParagraphStyle('F2', parent=sub_style, fontName='Helvetica-Bold', fontSize=7.5))
     story.append(footer_p1)
     story.append(Spacer(1, 1*mm))
     story.append(footer_p2)

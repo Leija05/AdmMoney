@@ -137,7 +137,7 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
             />
             <div>
               <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#F59E0B', fontWeight: 800, letterSpacing: '0.8px' }}>
-                lucky cookies Galletas y postres
+                Lucky Cookies • Galletas y Postres
               </span>
               <h2 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: 'var(--text-main, #FFFFFF)' }}>
                 Enviar Ticket por WhatsApp
