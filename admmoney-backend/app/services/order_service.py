@@ -39,6 +39,17 @@ class OrderService:
         orders = list(cursor)
         for o in orders:
             ensure_ticket_token(o, "orders")
+            # Auto-reconciliar total_amount si tiene descuento y no se habia restado
+            disc = round(float(o.get("discount_amount") or 0.0), 2)
+            items = o.get("items", [])
+            raw_sub = round(sum(float(it.get("subtotal", 0.0)) for it in items), 2)
+            current_tot = round(float(o.get("total_amount", 0.0)), 2)
+            if disc > 0 and items and current_tot == raw_sub:
+                fixed_tot = max(0.0, round(raw_sub - disc, 2))
+                o["total_amount"] = fixed_tot
+                cost = float(o.get("total_cost", 0.0))
+                o["net_profit"] = round(fixed_tot - cost, 2)
+                db.orders.update_one({"id": o["id"]}, {"$set": {"total_amount": fixed_tot, "net_profit": o["net_profit"]}})
         return orders
 
     @staticmethod
@@ -47,6 +58,16 @@ class OrderService:
         order = db.orders.find_one({"id": order_id}, {"_id": 0})
         if order:
             ensure_ticket_token(order, "orders")
+            disc = round(float(order.get("discount_amount") or 0.0), 2)
+            items = order.get("items", [])
+            raw_sub = round(sum(float(it.get("subtotal", 0.0)) for it in items), 2)
+            current_tot = round(float(order.get("total_amount", 0.0)), 2)
+            if disc > 0 and items and current_tot == raw_sub:
+                fixed_tot = max(0.0, round(raw_sub - disc, 2))
+                order["total_amount"] = fixed_tot
+                cost = float(order.get("total_cost", 0.0))
+                order["net_profit"] = round(fixed_tot - cost, 2)
+                db.orders.update_one({"id": order["id"]}, {"$set": {"total_amount": fixed_tot, "net_profit": order["net_profit"]}})
         return order
 
     @staticmethod
@@ -57,8 +78,15 @@ class OrderService:
         today_str = date.today().isoformat()
 
         items_list = [it.model_dump() if hasattr(it, "model_dump") else dict(it) for it in data.items]
-        total_amount = round(sum(float(it.get("subtotal", 0.0)) for it in items_list), 2)
+        raw_subtotal = round(sum(float(it.get("subtotal", 0.0)) for it in items_list), 2)
         total_cost = round(sum(float(it.get("unit_cost", 0.0)) * int(it.get("quantity", 1)) for it in items_list), 2)
+        discount = round(float(data.discount_amount or 0.0), 2)
+
+        if data.total_amount is not None:
+            total_amount = round(float(data.total_amount), 2)
+        else:
+            total_amount = max(0.0, round(raw_subtotal - discount, 2))
+
         net_profit = round(total_amount - total_cost, 2)
 
         # Generar mensaje de WhatsApp preformateado (1 solo clic)
@@ -85,6 +113,9 @@ class OrderService:
             "total_cost": total_cost,
             "net_profit": net_profit,
             "notes": data.notes or "",
+            "promotion_id": data.promotion_id,
+            "promotion_name": data.promotion_name,
+            "discount_amount": discount,
             "whatsapp_message": whatsapp_message,
             "whatsapp_url": whatsapp_url,
             "stock_deducted": False,
@@ -213,17 +244,41 @@ class OrderService:
         update_dict: Dict[str, Any] = {}
         dumped = data.model_dump(exclude_unset=True)
 
+        # 1. Determinar items actuales
         if "items" in dumped and dumped["items"] is not None:
             items_list = [it.model_dump() if hasattr(it, "model_dump") else dict(it) for it in dumped["items"]]
-            total_amount = round(sum(float(it.get("subtotal", 0.0)) for it in items_list), 2)
-            total_cost = round(sum(float(it.get("unit_cost", 0.0)) * int(it.get("quantity", 1)) for it in items_list), 2)
             update_dict["items"] = items_list
-            update_dict["total_amount"] = total_amount
-            update_dict["total_cost"] = total_cost
-            update_dict["net_profit"] = round(total_amount - total_cost, 2)
+        else:
+            items_list = existing.get("items", [])
+
+        # 2. Calcular subtotal de items y costo
+        raw_subtotal = round(sum(float(it.get("subtotal", 0.0)) for it in items_list), 2)
+        total_cost = round(sum(float(it.get("unit_cost", 0.0)) * int(it.get("quantity", 1)) for it in items_list), 2)
+        update_dict["total_cost"] = total_cost
+
+        # 3. Manejo de promoción y descuento
+        if "discount_amount" in dumped:
+            discount = round(float(dumped["discount_amount"] or 0.0), 2)
+            update_dict["discount_amount"] = discount
+        else:
+            discount = round(float(existing.get("discount_amount", 0.0)), 2)
+
+        if "promotion_id" in dumped:
+            update_dict["promotion_id"] = dumped["promotion_id"]
+        if "promotion_name" in dumped:
+            update_dict["promotion_name"] = dumped["promotion_name"]
+
+        # 4. Total a cobrar y ganancia neta considerando el descuento
+        if "total_amount" in dumped and dumped["total_amount"] is not None:
+            total_amount = round(float(dumped["total_amount"]), 2)
+        else:
+            total_amount = max(0.0, round(raw_subtotal - discount, 2))
+
+        update_dict["total_amount"] = total_amount
+        update_dict["net_profit"] = round(total_amount - total_cost, 2)
 
         for k, v in dumped.items():
-            if k != "items" and v is not None:
+            if k not in ["items", "total_amount", "total_cost", "net_profit", "discount_amount", "promotion_id", "promotion_name"]:
                 update_dict[k] = v
 
         # Actualizar mensaje de WhatsApp si cambió cliente, fecha o items

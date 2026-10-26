@@ -119,8 +119,13 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
     ticketId = order.id;
     ticketType = 'Pedido';
     const totalQty = order.items.reduce((s, i) => s + i.quantity, 0);
+    const rawSubtotal = order.items.reduce((sum, item) => sum + item.subtotal, 0);
+    const discount = Number(order.discount_amount || 0);
+    const effectiveTotal = (discount > 0 && Math.abs(order.total_amount - rawSubtotal) < 0.01)
+      ? Math.max(0, rawSubtotal - discount)
+      : order.total_amount;
     itemsSummary = `${totalQty} galletas (${order.items.map((i) => `${i.quantity}x ${i.product_name}`).join(', ')})`;
-    totalFormatted = `$${order.total_amount.toFixed(2)} MXN`;
+    totalFormatted = `$${effectiveTotal.toFixed(2)} MXN`;
     paymentText = `${order.payment_method} (${order.payment_status})`;
     dateText = `Entrega: ${order.delivery_date}`;
     const encodedNote = customNote ? `?note=${encodeURIComponent(customNote)}` : '';

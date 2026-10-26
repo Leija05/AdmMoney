@@ -214,6 +214,7 @@ class OrderCreate(BaseModel):
     promotion_id: Optional[int] = None
     promotion_name: Optional[str] = None
     discount_amount: Optional[float] = 0.0
+    total_amount: Optional[float] = None
 
 class OrderUpdate(BaseModel):
     customer_name: Optional[str] = None
@@ -228,6 +229,7 @@ class OrderUpdate(BaseModel):
     promotion_id: Optional[int] = None
     promotion_name: Optional[str] = None
     discount_amount: Optional[float] = None
+    total_amount: Optional[float] = None
 
 class OrderResponse(BaseModel):
     id: int

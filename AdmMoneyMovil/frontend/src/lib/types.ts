@@ -115,8 +115,8 @@ export interface Order {
   total_cost: number;
   net_profit: number;
   notes: string;
-  promotion_id?: number;
-  promotion_name?: string;
+  promotion_id?: number | null;
+  promotion_name?: string | null;
   discount_amount?: number;
   whatsapp_message: string;
   whatsapp_url: string;

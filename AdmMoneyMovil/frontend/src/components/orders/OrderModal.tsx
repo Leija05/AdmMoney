@@ -308,7 +308,9 @@ export const OrderModal: React.FC<OrderModalProps> = ({
   const totalCost = items.reduce((sum, item) => sum + (item.unit_cost * item.quantity), 0);
   const totalUnits = items.reduce((sum, item) => sum + item.quantity, 0);
 
-  const selectedPromo = promotions.find((p) => p.id === selectedPromoId && p.is_active);
+  const selectedPromo = selectedPromoId != null
+    ? promotions.find((p) => Number(p.id) === Number(selectedPromoId) && p.is_active !== false)
+    : null;
 
   let discountAmount = 0;
   let promoRequirementMessage = '';
@@ -398,9 +400,9 @@ export const OrderModal: React.FC<OrderModalProps> = ({
         deposit_amount: parseFloat(depositAmount) || 0,
         items,
         total_amount: finalTotal,
-        promotion_id: selectedPromo?.id,
-        promotion_name: selectedPromo?.name,
-        discount_amount: discountAmount,
+        promotion_id: selectedPromo ? selectedPromo.id : null,
+        promotion_name: selectedPromo ? selectedPromo.name : null,
+        discount_amount: selectedPromo ? discountAmount : 0,
         notes: notes.trim(),
       });
     } catch (e: any) {

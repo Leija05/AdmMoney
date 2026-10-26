@@ -58,10 +58,12 @@ export default function OrdersScreen() {
     (o) => o.payment_status !== 'Pagado' && o.status !== 'Cancelado'
   );
   const totalPendingPaymentsCount = pendingPaymentOrders.length;
-  const totalToCollect = pendingPaymentOrders.reduce(
-    (sum, o) => sum + (o.payment_status === 'Anticipo' ? Math.max(0, o.total_amount - (o.deposit_amount || 0)) : o.total_amount),
-    0
-  );
+  const totalToCollect = pendingPaymentOrders.reduce((sum, o) => {
+    const rawSub = o.items.reduce((s, it) => s + it.subtotal, 0);
+    const disc = Number(o.discount_amount || 0);
+    const effTot = disc > 0 && Math.abs(o.total_amount - rawSub) < 0.01 ? Math.max(0, rawSub - disc) : o.total_amount;
+    return sum + (o.payment_status === 'Anticipo' ? Math.max(0, effTot - (o.deposit_amount || 0)) : effTot);
+  }, 0);
 
   const handleOpenAddOrder = () => {
     setEditingOrder(null);

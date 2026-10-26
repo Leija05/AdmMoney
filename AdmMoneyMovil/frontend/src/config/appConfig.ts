@@ -12,8 +12,8 @@
  */
 
 export const APP_CONFIG = {
-  // Versión actual de la aplicación
-  APP_VERSION: '1.0.1',
+  // Versión actual de la aplicación (cámbiala aquí o con el script de release)
+  APP_VERSION: '1.0.0',
 
   // Repositorio oficial en GitHub para actualizaciones automáticas
   GITHUB_OWNER: 'Leija05',
@@ -24,7 +24,7 @@ export const APP_CONFIG = {
   DEFAULT_API_HOST: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000',
 
   // =====================================================================
-  // 💬 MENSAJE PERSONALIZABLE:
+  // MENSAJE PERSONALIZABLE:
   // =====================================================================
   BACKEND_STATUS_MESSAGE_ONLINE: 'Servidor Activo',       // Mensaje cuando el backend está conectado
   BACKEND_STATUS_MESSAGE_OFFLINE: 'Servidor Desconectado', // Mensaje cuando no hay conexión

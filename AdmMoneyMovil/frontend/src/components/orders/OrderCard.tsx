@@ -57,6 +57,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
   const statusStyle = getStatusBadge(order.status);
   const totalUnits = order.items.reduce((sum, item) => sum + item.quantity, 0);
+  const rawSubtotal = order.items.reduce((sum, item) => sum + item.subtotal, 0);
+  const discount = Number(order.discount_amount || 0);
+  const effectiveTotal = (discount > 0 && Math.abs(order.total_amount - rawSubtotal) < 0.01)
+    ? Math.max(0, rawSubtotal - discount)
+    : order.total_amount;
 
   const handleOpenWhatsApp = () => {
     setIsWhatsAppOpen(true);
@@ -219,7 +224,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           <Text style={[styles.totalLabel, { color: colors.textDim }]}>
             {order.payment_status === 'Pagado' ? 'Total Cobrado' : 'Total a Cobrar'}
           </Text>
-          <Text style={[styles.totalAmount, { color: colors.textMain }]}>${order.total_amount.toFixed(2)} MXN</Text>
+          <Text style={[styles.totalAmount, { color: colors.textMain }]}>${effectiveTotal.toFixed(2)} MXN</Text>
           {order.payment_status === 'Pendiente' ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
               <Ionicons name="hourglass-outline" size={12} color={colors.amberLight} />
@@ -230,7 +235,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           ) : order.payment_status === 'Anticipo' ? (
             <View style={{ marginTop: 2 }}>
               <Text style={{ fontSize: 11, fontWeight: '700', color: colors.amberLight }}>
-                Anticipo: +${(order.deposit_amount || 0).toFixed(2)} • Falta: ${Math.max(0, order.total_amount - (order.deposit_amount || 0)).toFixed(2)}
+                Anticipo: +${(order.deposit_amount || 0).toFixed(2)} • Falta: ${Math.max(0, effectiveTotal - (order.deposit_amount || 0)).toFixed(2)}
               </Text>
             </View>
           ) : (
