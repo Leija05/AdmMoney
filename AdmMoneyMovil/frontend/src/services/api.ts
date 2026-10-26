@@ -558,4 +558,29 @@ export class MobileApiService {
       // Silencioso
     }
   }
+
+  // --- LISTA NEGRA ANTI-BROMISTAS (PEDIDOS FALSOS) ---
+  static async getBlacklist(): Promise<{ phone: string; reason?: string; blocked_at?: string }[]> {
+    try {
+      return await this.request('/public/blacklist');
+    } catch {
+      return [];
+    }
+  }
+
+  static async addToBlacklist(phone: string, reason = 'Broma o pedido falso'): Promise<void> {
+    const clean = phone.replace(/\D/g, '');
+    if (!clean) return;
+    await this.request(`/public/blacklist/${clean}?reason=${encodeURIComponent(reason)}`, {
+      method: 'POST',
+    });
+  }
+
+  static async removeFromBlacklist(phone: string): Promise<void> {
+    const clean = phone.replace(/\D/g, '');
+    if (!clean) return;
+    await this.request(`/public/blacklist/${clean}`, {
+      method: 'DELETE',
+    });
+  }
 }

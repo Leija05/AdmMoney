@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -8,13 +8,15 @@ import {
   FlatList,
   TextInput,
   Linking,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors, radii, spacing, gradients } from '../../theme';
+import { useThemeColors, radii, spacing } from '../../theme';
 import { DoubleBezelCard } from '../ui/DoubleBezelCard';
 import { Customer } from '../../lib/types';
 import { useAppStore } from '../../stores/app.store';
 import { confirmAction } from '../../stores/confirmation.store';
+import { MobileApiService } from '../../services/api';
 
 interface CustomersDirectoryModalProps {
   visible: boolean;
@@ -30,6 +32,23 @@ export const CustomersDirectoryModal: React.FC<CustomersDirectoryModalProps> = (
 
   const { customers, deleteCustomer } = useAppStore();
   const [search, setSearch] = useState('');
+  const [blacklistedPhones, setBlacklistedPhones] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (visible) {
+      loadBlacklist();
+    }
+  }, [visible]);
+
+  const loadBlacklist = async () => {
+    try {
+      const list = await MobileApiService.getBlacklist();
+      const phones = list.map((b) => b.phone.replace(/\D/g, '')).filter(Boolean);
+      setBlacklistedPhones(phones);
+    } catch {
+      // Ignorar
+    }
+  };
 
   const filteredCustomers = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -54,6 +73,49 @@ export const CustomersDirectoryModal: React.FC<CustomersDirectoryModalProps> = (
     });
   };
 
+  const handleToggleBlacklist = (customer: Customer, isBlocked: boolean) => {
+    if (!customer.phone) {
+      Alert.alert('Sin Teléfono', 'Este cliente no tiene teléfono registrado para bloquearlo en la lista negra.');
+      return;
+    }
+    const cleanPhone = customer.phone.replace(/\D/g, '');
+    if (!cleanPhone) return;
+
+    if (isBlocked) {
+      confirmAction({
+        title: '¿Desbloquear Cliente?',
+        message: `¿Deseas desbloquear a "${customer.name}" (${customer.phone})? Podrá volver a registrar pedidos desde la página web y QR.`,
+        confirmText: 'Sí, Desbloquear',
+        cancelText: 'Cancelar',
+        type: 'info',
+        onConfirm: async () => {
+          try {
+            await MobileApiService.removeFromBlacklist(cleanPhone);
+            setBlacklistedPhones((prev) => prev.filter((p) => p !== cleanPhone));
+          } catch (err: any) {
+            Alert.alert('Error', err?.message || 'No se pudo desbloquear al cliente.');
+          }
+        },
+      });
+    } else {
+      confirmAction({
+        title: '¿Poner en Lista Negra?',
+        message: `¿Deseas bloquear a "${customer.name}" (${customer.phone}) por pedidos falsos o bromas? Su teléfono será bloqueado automáticamente en la web QR.`,
+        confirmText: 'Sí, Bloquear',
+        cancelText: 'Cancelar',
+        type: 'danger',
+        onConfirm: async () => {
+          try {
+            await MobileApiService.addToBlacklist(cleanPhone, 'Marcado desde el directorio');
+            setBlacklistedPhones((prev) => [...prev, cleanPhone]);
+          } catch (err: any) {
+            Alert.alert('Error', err?.message || 'No se pudo bloquear al cliente.');
+          }
+        },
+      });
+    }
+  };
+
   const handleWhatsApp = (phone?: string) => {
     if (!phone) return;
     const cleanPhone = phone.replace(/[^0-9]/g, '');
@@ -62,6 +124,8 @@ export const CustomersDirectoryModal: React.FC<CustomersDirectoryModalProps> = (
 
   const renderItem = ({ item }: { item: Customer }) => {
     const initial = (item.name || 'C').charAt(0).toUpperCase();
+    const cleanPhone = (item.phone || '').replace(/\D/g, '');
+    const isBlocked = cleanPhone ? blacklistedPhones.includes(cleanPhone) : false;
 
     return (
       <View
@@ -69,19 +133,40 @@ export const CustomersDirectoryModal: React.FC<CustomersDirectoryModalProps> = (
           styles.customerItem,
           {
             backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
-            borderColor: isDark ? '#334155' : '#E2E8F0',
+            borderColor: isBlocked ? '#EF4444' : isDark ? '#334155' : '#E2E8F0',
           },
         ]}
       >
-        <View style={[styles.avatar, { backgroundColor: colors.brandGlow }]}>
-          <Text style={[styles.avatarText, { color: colors.brand }]}>{initial}</Text>
+        <View
+          style={[
+            styles.avatar,
+            { backgroundColor: isBlocked ? '#FEE2E2' : colors.brandGlow },
+          ]}
+        >
+          <Text
+            style={[
+              styles.avatarText,
+              { color: isBlocked ? '#DC2626' : colors.brand },
+            ]}
+          >
+            {initial}
+          </Text>
         </View>
 
         <View style={{ flex: 1, paddingRight: 6 }}>
-          <Text style={[styles.customerName, { color: colors.textMain }]} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <Text style={[styles.customerPhone, { color: colors.textMuted }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <Text style={[styles.customerName, { color: colors.textMain }]} numberOfLines={1}>
+              {item.name}
+            </Text>
+            {isBlocked && (
+              <View style={styles.blacklistPill}>
+                <Ionicons name="ban" size={10} color="#DC2626" />
+                <Text style={styles.blacklistPillText}>Lista Negra</Text>
+              </View>
+            )}
+          </View>
+
+          <Text style={[styles.customerPhone, { color: isBlocked ? '#EF4444' : colors.textMuted }]}>
             {item.phone || 'Sin teléfono registrado'}
           </Text>
           {item.notes ? (
@@ -94,9 +179,28 @@ export const CustomersDirectoryModal: React.FC<CustomersDirectoryModalProps> = (
         <View style={styles.actionButtons}>
           {item.phone ? (
             <TouchableOpacity
+              style={[
+                styles.smallActionBtn,
+                { backgroundColor: isBlocked ? '#FEE2E2' : isDark ? '#1C2638' : '#F1F5F9' },
+              ]}
+              onPress={() => handleToggleBlacklist(item, isBlocked)}
+              activeOpacity={0.7}
+              accessibilityLabel={isBlocked ? 'Desbloquear cliente' : 'Bloquear en lista negra'}
+            >
+              <Ionicons
+                name={isBlocked ? 'shield-checkmark' : 'ban-outline'}
+                size={16}
+                color={isBlocked ? '#DC2626' : colors.textMuted}
+              />
+            </TouchableOpacity>
+          ) : null}
+
+          {item.phone ? (
+            <TouchableOpacity
               style={[styles.smallActionBtn, { backgroundColor: '#D1FAE5' }]}
               onPress={() => handleWhatsApp(item.phone)}
               activeOpacity={0.7}
+              accessibilityLabel="Enviar WhatsApp"
             >
               <Ionicons name="logo-whatsapp" size={16} color="#059669" />
             </TouchableOpacity>
@@ -106,6 +210,7 @@ export const CustomersDirectoryModal: React.FC<CustomersDirectoryModalProps> = (
             style={[styles.smallActionBtn, { backgroundColor: '#FEE2E2' }]}
             onPress={() => handleDelete(item)}
             activeOpacity={0.7}
+            accessibilityLabel="Eliminar cliente"
           >
             <Ionicons name="trash-outline" size={16} color="#DC2626" />
           </TouchableOpacity>
@@ -129,6 +234,7 @@ export const CustomersDirectoryModal: React.FC<CustomersDirectoryModalProps> = (
             styles.modalCard,
             { backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.98)' },
           ]}
+          innerStyle={{ flex: 1 }}
         >
           {/* Header */}
           <View style={styles.header}>
@@ -141,6 +247,7 @@ export const CustomersDirectoryModal: React.FC<CustomersDirectoryModalProps> = (
               </Text>
               <Text style={[styles.subTitle, { color: colors.textMuted }]}>
                 {customers.length} {customers.length === 1 ? 'cliente guardado' : 'clientes guardados'}
+                {blacklistedPhones.length > 0 && ` (${blacklistedPhones.length} en lista negra)`}
               </Text>
             </View>
 
@@ -174,12 +281,16 @@ export const CustomersDirectoryModal: React.FC<CustomersDirectoryModalProps> = (
             ) : null}
           </View>
 
-          {/* List */}
+          {/* List - Scrollable */}
           <FlatList
             data={filteredCustomers}
             keyExtractor={(item) => String(item.id)}
             renderItem={renderItem}
+            style={styles.flatList}
             contentContainerStyle={styles.listContent}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled={true}
+            showsVerticalScrollIndicator={true}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Ionicons name="person-outline" size={36} color={colors.textDim} />
@@ -192,9 +303,9 @@ export const CustomersDirectoryModal: React.FC<CustomersDirectoryModalProps> = (
 
           {/* Footer note */}
           <View style={styles.footerNote}>
-            <Ionicons name="information-circle-outline" size={14} color={colors.textDim} />
+            <Ionicons name="shield-outline" size={14} color={colors.textDim} />
             <Text style={[styles.footerNoteText, { color: colors.textDim }]}>
-              Al eliminar a un cliente, se quita del autocompletado pero sus pedidos pasados conservan el historial.
+              Puedes poner en lista negra con el icono de bloqueo a clientes que manden pedidos falsos para evitar que vuelvan a ordenar.
             </Text>
           </View>
         </DoubleBezelCard>
@@ -216,8 +327,10 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: '100%',
-    maxWidth: 440,
-    maxHeight: '85%',
+    maxWidth: 460,
+    height: '82%',
+    maxHeight: '86%',
+    flex: 1,
     borderRadius: radii.xl,
     padding: spacing.lg,
   },
@@ -260,6 +373,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     padding: 0,
   },
+  flatList: {
+    flex: 1,
+  },
   listContent: {
     paddingBottom: spacing.sm,
   },
@@ -288,6 +404,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 2,
   },
+  blacklistPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  blacklistPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#DC2626',
+  },
   customerPhone: {
     fontSize: 11.5,
   },
@@ -298,6 +430,7 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     gap: 6,
+    alignItems: 'center',
   },
   smallActionBtn: {
     width: 32,

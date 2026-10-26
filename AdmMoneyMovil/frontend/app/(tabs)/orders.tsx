@@ -50,8 +50,14 @@ export default function OrdersScreen() {
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
   // Quick stats
+  const pendingConfirmationOrders = orders.filter(
+    (o) => o.status === 'Pendiente de Confirmación'
+  );
+  const webOrders = orders.filter(
+    (o) => o.origin === 'web_qr' || o.status === 'Pendiente de Confirmación'
+  );
   const pendingOrders = orders.filter(
-    (o) => o.status === 'Pendiente' || o.status === 'En Preparación'
+    (o) => o.status === 'Pendiente' || o.status === 'En Preparación' || o.status === 'Pendiente de Confirmación'
   );
   const readyOrders = orders.filter((o) => o.status === 'Listo');
   const pendingPaymentOrders = orders.filter(
@@ -136,6 +142,9 @@ export default function OrdersScreen() {
 
   const filteredOrders = orders.filter((o) => {
     if (orderStatusFilter === 'Todos') return true;
+    if (orderStatusFilter === 'Pedidos Web') {
+      return o.origin === 'web_qr' || o.status === 'Pendiente de Confirmación';
+    }
     if (orderStatusFilter === 'Pagos Pendientes') {
       return o.payment_status !== 'Pagado' && o.status !== 'Cancelado';
     }
@@ -223,6 +232,54 @@ export default function OrdersScreen() {
                 if (target) handleEditOrder(target);
               }}
             />
+
+            {/* Pending Web Orders Banner */}
+            {pendingConfirmationOrders.length > 0 && (
+              <TouchableOpacity
+                activeOpacity={0.88}
+                onPress={() => setOrderStatusFilter('Pedidos Web')}
+                style={{ marginBottom: 10 }}
+              >
+                <View
+                  style={{
+                    backgroundColor: colors.isDark ? '#1C2638' : '#FEF3C7',
+                    borderColor: colors.isDark ? '#D97706' : '#FDE68A',
+                    borderWidth: 1,
+                    borderRadius: radii.lg,
+                    padding: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                    <View
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: 17,
+                        backgroundColor: colors.isDark ? 'rgba(245, 158, 11, 0.2)' : '#FDE68A',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons name="sparkles" size={17} color={colors.amberLight} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: colors.amberLight }}>
+                        {pendingConfirmationOrders.length === 1
+                          ? '1 Pedido Web nuevo por confirmar'
+                          : `${pendingConfirmationOrders.length} Pedidos Web nuevos por confirmar`}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>
+                        Toca aquí para verlos y mandarlos al horno
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.amberLight} />
+                </View>
+              </TouchableOpacity>
+            )}
 
             {/* Bento Quick Metrics */}
             {/* 1. Hero Card: Dinero Pendiente de Cobro */}
@@ -341,7 +398,7 @@ export default function OrdersScreen() {
               style={{ marginTop: 12 }}
               contentContainerStyle={{ flexDirection: 'row', gap: 8, paddingVertical: 4 }}
             >
-              {['Todos', 'Pagos Pendientes', 'Pendiente', 'En Preparación', 'Listo', 'Completado', 'Cancelado'].map(
+              {['Todos', 'Pedidos Web', 'Pagos Pendientes', 'Pendiente', 'En Preparación', 'Listo', 'Completado', 'Cancelado'].map(
                 (statusChip) => {
                   const isActive = orderStatusFilter === statusChip;
                   return (
@@ -351,8 +408,8 @@ export default function OrdersScreen() {
                       style={[
                         styles.filterChip,
                         {
-                          backgroundColor: isActive ? (statusChip === 'Pagos Pendientes' ? colors.amberBg : colors.brandBg) : colors.bgCard,
-                          borderColor: isActive ? (statusChip === 'Pagos Pendientes' ? colors.amberBorder : colors.brandBorder) : colors.borderSubtle,
+                          backgroundColor: isActive ? (statusChip === 'Pagos Pendientes' || statusChip === 'Pedidos Web' ? colors.amberBg : colors.brandBg) : colors.bgCard,
+                          borderColor: isActive ? (statusChip === 'Pagos Pendientes' || statusChip === 'Pedidos Web' ? colors.amberBorder : colors.brandBorder) : colors.borderSubtle,
                         },
                       ]}
                       activeOpacity={0.7}
@@ -361,12 +418,14 @@ export default function OrdersScreen() {
                         style={[
                           styles.filterChipText,
                           {
-                            color: isActive ? (statusChip === 'Pagos Pendientes' ? colors.amberText : colors.brandText) : colors.textMuted,
+                            color: isActive ? (statusChip === 'Pagos Pendientes' || statusChip === 'Pedidos Web' ? colors.amberText : colors.brandText) : colors.textMuted,
                             fontWeight: isActive ? '800' : '600',
                           },
                         ]}
                       >
-                        {statusChip === 'En Preparación'
+                        {statusChip === 'Pedidos Web' && webOrders.length > 0
+                          ? `Pedidos Web (${webOrders.length})`
+                          : statusChip === 'En Preparación'
                           ? 'En Horno'
                           : statusChip === 'Pagos Pendientes'
                           ? `Pagos Pendientes (${totalPendingPaymentsCount})`

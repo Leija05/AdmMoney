@@ -287,6 +287,9 @@ class PublicOrderCreate(BaseModel):
     items: List[PublicOrderItem]
     notes: Optional[str] = ""
     target_phone: Optional[str] = ""
+    promotion_id: Optional[int] = None
+    promotion_name: Optional[str] = None
+    discount_amount: Optional[float] = 0.0
 
 class PublicOrderResponse(BaseModel):
     folio: str

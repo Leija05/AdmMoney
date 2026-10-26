@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Order } from '../../lib/types';
 import { colors, useThemeColors, radii, spacing } from '../../theme';
 import { DoubleBezelCard } from '../ui/DoubleBezelCard';
 import { WhatsAppTicketModal } from '../ui/WhatsAppTicketModal';
+import { MobileApiService } from '../../services/api';
+import { confirmAction } from '../../stores/confirmation.store';
 
 interface OrderCardProps {
   order: Order;
@@ -26,6 +28,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
   const getStatusBadge = (status: Order['status']) => {
     switch (status) {
+      case 'Pendiente de Confirmación':
+        return { bg: colors.amberBg, text: colors.amberText, border: colors.amberBorder, label: 'Web QR (Por Confirmar)' };
       case 'Completado':
         return { bg: colors.emeraldBg, text: colors.emeraldText, border: colors.emeraldBorder, label: 'Completado' };
       case 'Listo':
@@ -42,6 +46,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
   const getNextStatus = (current: Order['status']): Order['status'] => {
     switch (current) {
+      case 'Pendiente de Confirmación':
+        return 'Pendiente';
       case 'Pendiente':
         return 'En Preparación';
       case 'En Preparación':
@@ -67,6 +73,29 @@ export const OrderCard: React.FC<OrderCardProps> = ({
     setIsWhatsAppOpen(true);
   };
 
+  const handleBlacklistOrder = (ord: Order) => {
+    if (!ord.customer_phone) {
+      Alert.alert('Sin Teléfono', 'Este pedido no tiene número de teléfono para bloquear.');
+      return;
+    }
+    const clean = ord.customer_phone.replace(/\D/g, '');
+    confirmAction({
+      title: '¿Bloquear en Lista Negra?',
+      message: `¿Deseas bloquear al número ${ord.customer_phone} (${ord.customer_name})? Se le prohibirá volver a realizar pedidos desde la web QR.`,
+      confirmText: 'Sí, Bloquear',
+      cancelText: 'Cancelar',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await MobileApiService.addToBlacklist(clean, 'Bloqueado desde tarjeta de pedido');
+          Alert.alert('Bloqueado', `El número ${ord.customer_phone} fue añadido a la lista negra.`);
+        } catch (err: any) {
+          Alert.alert('Error', err?.message || 'No se pudo bloquear el número.');
+        }
+      },
+    });
+  };
+
   return (
     <DoubleBezelCard style={styles.card}>
       {/* Header: Customer Avatar & Status */}
@@ -87,9 +116,24 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           </View>
 
           <View style={{ flex: 1, paddingRight: 6 }}>
-            <Text style={[styles.customerName, { color: colors.textMain }]} numberOfLines={1}>
-              {order.customer_name}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <Text style={[styles.customerName, { color: colors.textMain }]} numberOfLines={1}>
+                {order.customer_name}
+              </Text>
+              {order.folio ? (
+                <View
+                  style={[
+                    styles.folioPill,
+                    {
+                      backgroundColor: colors.isDark ? '#1C2638' : '#FEF3C7',
+                      borderColor: colors.isDark ? '#D97706' : '#FDE68A',
+                    },
+                  ]}
+                >
+                  <Text style={[styles.folioPillText, { color: colors.amberLight }]}>{order.folio}</Text>
+                </View>
+              ) : null}
+            </View>
             {order.customer_phone ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
                 <Ionicons name="call-outline" size={11} color={colors.textMuted} />
@@ -113,6 +157,21 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Quick Confirmation Banner for Web Orders */}
+      {order.status === 'Pendiente de Confirmación' && (
+        <TouchableOpacity
+          style={[styles.confirmWebBanner, { backgroundColor: colors.amber }]}
+          onPress={() => onStatusChange(order.id, 'Pendiente')}
+          activeOpacity={0.8}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="flame" size={14} color="#FFFFFF" />
+            <Text style={styles.confirmWebBannerText}>Confirmar Pedido Web y Hornear</Text>
+          </View>
+          <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
 
       {/* Delivery date & Payment */}
       <View style={[styles.metaRow, { borderBottomColor: colors.borderSubtle }]}>
@@ -254,8 +313,20 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             <TouchableOpacity
               onPress={handleOpenWhatsApp}
               style={[styles.actionBtn, { backgroundColor: colors.whatsappBg, borderColor: colors.whatsapp }]}
+              accessibilityLabel="Enviar ticket por WhatsApp"
             >
               <Ionicons name="logo-whatsapp" size={16} color={colors.whatsappText} />
+            </TouchableOpacity>
+          )}
+
+          {/* Blacklist Button for Fake Orders */}
+          {Boolean(order.customer_phone) && (
+            <TouchableOpacity
+              onPress={() => handleBlacklistOrder(order)}
+              style={[styles.actionBtn, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+              accessibilityLabel="Bloquear en lista negra"
+            >
+              <Ionicons name="ban-outline" size={15} color={colors.textMuted} />
             </TouchableOpacity>
           )}
 
@@ -263,6 +334,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           <TouchableOpacity
             onPress={() => onEdit(order)}
             style={[styles.actionBtn, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+            accessibilityLabel="Editar pedido"
           >
             <Ionicons name="pencil" size={15} color={colors.textMain} />
           </TouchableOpacity>
@@ -672,5 +744,32 @@ const styles = StyleSheet.create({
   paymentModalCancelText: {
     fontSize: 13,
     fontWeight: '700',
+  },
+  folioPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  folioPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  confirmWebBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: radii.md,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  confirmWebBannerText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
 });

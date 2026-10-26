@@ -162,7 +162,7 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
     }
 
     if (includePdf) {
-      msg += `\n• *Descarga tu comprobante oficial en PDF con logo:*\n${pdfUrl}\n`;
+      msg += `\n• *Descarga tu comprobante oficial en PDF:*\n${pdfUrl}\n`;
     }
 
     msg += `\n"${ticketFooterText}"`;
@@ -330,15 +330,15 @@ export const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
                       ? 'rgba(16, 185, 129, 0.12)'
                       : '#ECFDF5'
                     : isDark
-                    ? '#242936'
-                    : '#F8F9FA',
+                      ? '#242936'
+                      : '#F8F9FA',
                   borderColor: includePdf
                     ? isDark
                       ? 'rgba(16, 185, 129, 0.35)'
                       : '#A7F3D0'
                     : isDark
-                    ? '#2E384D'
-                    : '#E2E8F0',
+                      ? '#2E384D'
+                      : '#E2E8F0',
                 },
               ]}
             >
