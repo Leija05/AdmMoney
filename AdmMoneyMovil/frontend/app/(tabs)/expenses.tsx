@@ -181,7 +181,7 @@ export default function ExpensesScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]} edges={['top']}>
       <AmbientBackdrop variant="emerald" />
       <SwipeTabWrapper currentRoute="/expenses">
         <View style={styles.container}>
@@ -409,7 +409,7 @@ export default function ExpensesScreen() {
               </View>
             </View>
 
-            <ScrollView style={{ padding: 20 }}>
+            <ScrollView style={{ padding: 20 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
               <Text style={[styles.formLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
                 Concepto del Gasto
               </Text>
@@ -708,6 +708,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radii.outer,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
+    maxHeight: '90%',
   },
   dragHandleContainer: {
     width: '100%',

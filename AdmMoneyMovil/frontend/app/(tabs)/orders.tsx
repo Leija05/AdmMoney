@@ -75,12 +75,20 @@ export default function OrdersScreen() {
 
   const handleSaveOrder = async (orderPayload: Partial<Order>) => {
     try {
+      setIsOrderModalOpen(false);
+      const isEdit = !!editingOrder;
+      const clientName = orderPayload.customer_name || 'Cliente';
       if (editingOrder) {
         await updateOrder(editingOrder.id, orderPayload);
       } else {
         await addOrder(orderPayload);
       }
-      setIsOrderModalOpen(false);
+      Alert.alert(
+        '¡Pedido Guardado!',
+        isEdit
+          ? `El pedido de "${clientName}" se actualizó con éxito.`
+          : `El pedido de "${clientName}" se guardó con éxito.`
+      );
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'No se pudo guardar el pedido');
     }
@@ -359,7 +367,7 @@ export default function OrdersScreen() {
                         {statusChip === 'En Preparación'
                           ? 'En Horno'
                           : statusChip === 'Pagos Pendientes'
-                          ? `⏳ Pagos Pendientes (${totalPendingPaymentsCount})`
+                          ? `Pagos Pendientes (${totalPendingPaymentsCount})`
                           : statusChip}
                       </Text>
                     </TouchableOpacity>

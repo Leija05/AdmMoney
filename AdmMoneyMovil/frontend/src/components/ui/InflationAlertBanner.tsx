@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Modal,
+  ScrollView,
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -158,32 +159,34 @@ export const InflationAlertBanner: React.FC = () => {
               Detectamos que el costo de <Text style={{ fontWeight: '800' }}>{inflationAnalysis.ingredientName}</Text> aumentó en tus gastos recientes. Aquí te sugerimos los precios optimizados para que tu ganancia no baje:
             </Text>
 
-            <View style={styles.cookieList}>
-              {inflationAnalysis.affectedCookies.map((item) => (
-                <View
-                  key={item.cookie.id}
-                  style={[styles.cookieRow, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.cookieRowName, { color: colors.textMain }]}>
-                      {item.cookie.name}
-                    </Text>
-                    <Text style={{ fontSize: 10.5, color: colors.textDim, marginTop: 1 }}>
-                      Costo: ${item.currentCost.toFixed(2)} → ${item.newCost.toFixed(2)}
-                    </Text>
-                  </View>
+            <ScrollView style={{ maxHeight: 240 }} showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 6 }}>
+              <View style={styles.cookieList}>
+                {inflationAnalysis.affectedCookies.map((item) => (
+                  <View
+                    key={item.cookie.id}
+                    style={[styles.cookieRow, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.cookieRowName, { color: colors.textMain }]}>
+                        {item.cookie.name}
+                      </Text>
+                      <Text style={{ fontSize: 10.5, color: colors.textDim, marginTop: 1 }}>
+                        Costo: ${item.currentCost.toFixed(2)} → ${item.newCost.toFixed(2)}
+                      </Text>
+                    </View>
 
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={{ fontSize: 11, color: colors.textDim, textDecorationLine: 'line-through' }}>
-                      ${item.currentPrice.toFixed(0)} MXN
-                    </Text>
-                    <Text style={{ fontSize: 15, fontWeight: '900', color: colors.emeraldLight }}>
-                      ${item.suggestedPrice.toFixed(0)} MXN
-                    </Text>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ fontSize: 11, color: colors.textDim, textDecorationLine: 'line-through' }}>
+                        ${item.currentPrice.toFixed(0)} MXN
+                      </Text>
+                      <Text style={{ fontSize: 15, fontWeight: '900', color: colors.emeraldLight }}>
+                        ${item.suggestedPrice.toFixed(0)} MXN
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              ))}
-            </View>
+                ))}
+              </View>
+            </ScrollView>
 
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -255,6 +258,7 @@ const styles = StyleSheet.create({
   modalBox: {
     width: '100%',
     maxWidth: 420,
+    maxHeight: '88%',
     borderRadius: radii.outer,
     borderWidth: 1,
     padding: 18,

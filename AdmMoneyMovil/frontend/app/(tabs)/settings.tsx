@@ -118,7 +118,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]} edges={['top']}>
       <AmbientBackdrop variant="brand" />
       <SwipeTabWrapper currentRoute="/settings" enabled={swipeEnabled}>
         <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>

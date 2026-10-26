@@ -295,7 +295,7 @@ export default function DashboardScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]} edges={['top']}>
       <AmbientBackdrop variant="amber" />
       <SwipeTabWrapper currentRoute="/">
         <ScrollView
@@ -681,8 +681,9 @@ export default function DashboardScreen() {
 
               <View style={{ flex: 1, marginHorizontal: 10 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                  <Ionicons name="star" size={11} color={colors.amberLight} />
                   <Text style={{ fontSize: 10, fontWeight: '800', color: colors.amberLight, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    ⭐ Joya de la Casa
+                    Joya de la Casa
                   </Text>
                   <Badge label="Top 1" variant="amber" />
                 </View>

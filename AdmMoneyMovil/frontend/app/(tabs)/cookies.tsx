@@ -242,7 +242,7 @@ export default function CookiesScreen() {
 
       await loadAllData();
       Alert.alert(
-        '¡Venta Cobrada con Éxito! 🍪',
+        '¡Venta Cobrada con Éxito!',
         `Cobraste $${data.totalRevenue.toFixed(2)} MXN (${data.paymentMethod})\nGanancia neta: +$${data.netProfit.toFixed(2)} MXN (${(data.marginPct ?? 0).toFixed(1)}% margen)\nPiezas descontadas de vitrina: ${data.totalQuantity}`
       );
     } catch {
@@ -364,7 +364,7 @@ export default function CookiesScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bgPrimary }]} edges={['top']}>
       <AmbientBackdrop variant="amber" />
       <SwipeTabWrapper currentRoute="/cookies">
         <View style={styles.container}>
@@ -493,29 +493,44 @@ export default function CookiesScreen() {
         {subTab === 'catalog' && (
           <View style={{ flex: 1 }}>
             <View style={styles.subtabActionBar}>
-              <View style={{ flex: 1, marginRight: 8 }}>
+              <View style={{ flex: 1, paddingRight: 6 }}>
                 <Text style={[styles.subtabTitle, { color: colors.textMain }]} numberOfLines={1}>
                   Catálogo & Vitrina
                 </Text>
               </View>
               <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-                <Button
-                  title="⚡ Venta Rápida"
-                  variant="emerald"
-                  icon={<Ionicons name="flash" size={14} color="#fff" />}
+                <TouchableOpacity
                   onPress={() => {
                     setCounterSaleInitialCookie(null);
                     setIsCounterSaleOpen(true);
                   }}
-                  style={{ paddingVertical: 6, paddingHorizontal: 10 }}
-                />
-                <Button
-                  title="+ Receta"
-                  variant="amber"
-                  icon={<Ionicons name="add" size={14} color="#fff" />}
+                  activeOpacity={0.8}
+                  style={[
+                    styles.subtabPillBtn,
+                    {
+                      backgroundColor: colors.emeraldBg,
+                      borderColor: colors.emeraldBorder,
+                    },
+                  ]}
+                >
+                  <Ionicons name="flash" size={13} color={colors.emeraldLight} />
+                  <Text style={[styles.subtabPillBtnText, { color: colors.emeraldLight }]}>Venta Rápida</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
                   onPress={() => setIsAddCookieOpen(true)}
-                  style={{ paddingVertical: 6, paddingHorizontal: 10 }}
-                />
+                  activeOpacity={0.8}
+                  style={[
+                    styles.subtabPillBtn,
+                    {
+                      backgroundColor: colors.amberBg,
+                      borderColor: colors.amberBorder,
+                    },
+                  ]}
+                >
+                  <Ionicons name="add" size={14} color={colors.amberLight} />
+                  <Text style={[styles.subtabPillBtnText, { color: colors.amberLight }]}>Receta</Text>
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -1466,6 +1481,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     color: colors.textMain,
+  },
+  subtabPillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 5.5,
+    paddingHorizontal: 9,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+  },
+  subtabPillBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
   emptyBox: {
     alignItems: 'center',

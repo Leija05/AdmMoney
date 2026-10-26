@@ -146,7 +146,7 @@ export const CookieCard: React.FC<CookieCardProps> = ({
       const added = res?.units_added || batchYield;
       const newTotal = res?.new_stock_vitrina ?? ((cookie.stock_vitrina || 0) + added);
       Alert.alert(
-        '¡Tanda Horneada! 🥣',
+        '¡Tanda Horneada!',
         `Se hornearon +${added} piezas de "${cookie.name}".\n\nStock actual en vitrina: ${newTotal} piezas listas para venta.\nLos insumos necesarios se descontaron automáticamente del almacén.`
       );
     } catch {

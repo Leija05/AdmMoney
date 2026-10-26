@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -73,10 +73,32 @@ export const OrderModal: React.FC<OrderModalProps> = ({
 
   // Scroll ref to reset scroll to top on step transition
   const scrollViewRef = useRef<ScrollView>(null);
+  const prevVisibleRef = useRef(false);
+  const prevEditingOrderIdRef = useRef<number | null | undefined>(undefined);
 
-  // Initialize or reset form
+  // Deduplicate customers to never show repeated chips
+  const uniqueCustomers = useMemo(() => {
+    const seen = new Set<string>();
+    const list: Customer[] = [];
+    for (const c of customers) {
+      const key = (c.name || '').trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      list.push(c);
+    }
+    return list;
+  }, [customers]);
+
+  // Initialize or reset form ONLY on open or order change
   useEffect(() => {
+    const isOpening = visible && !prevVisibleRef.current;
+    const isEditingOrderChanged = visible && editingOrder?.id !== prevEditingOrderIdRef.current;
+
+    prevVisibleRef.current = visible;
+    prevEditingOrderIdRef.current = editingOrder?.id;
+
     if (!visible) return;
+    if (!isOpening && !isEditingOrderChanged) return;
 
     translateY.setValue(0);
     setCurrentStep(1);
@@ -129,27 +151,26 @@ export const OrderModal: React.FC<OrderModalProps> = ({
         setItems([]);
       }
     }
-  }, [editingOrder, visible, cookies, tomorrowStr, customers]);
+  }, [editingOrder, visible, cookies, tomorrowStr]);
 
-  // Swipe-Down-To-Dismiss PanResponder (Ultra smooth & responsive)
+  // Swipe-Down-To-Dismiss PanResponder (Strictly on drag handle, no accidental closure)
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_evt, gestureState) => {
-        // Activates immediately on downward swipe
-        return gestureState.dy > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.1;
+        // Only activates on intentional downward drag on the handle bar
+        return gestureState.dy > 14 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.5;
       },
       onPanResponderMove: (_evt, gestureState) => {
         if (gestureState.dy > 0) {
           translateY.setValue(gestureState.dy);
         } else {
-          // Slight elastic resistance when pulled up
-          translateY.setValue(gestureState.dy * 0.12);
+          translateY.setValue(gestureState.dy * 0.1);
         }
       },
       onPanResponderRelease: (_evt, gestureState) => {
-        // If dragged more than 55px or flicked down rapidly
-        if (gestureState.dy > 55 || (gestureState.dy > 15 && gestureState.vy > 0.22)) {
+        // Solid intentional swipe down required
+        if (gestureState.dy > 120 || (gestureState.dy > 60 && gestureState.vy > 0.8)) {
           Animated.timing(translateY, {
             toValue: screenHeight,
             duration: 170,
@@ -367,6 +388,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
         });
       }
 
+      onClose();
       await onSave({
         customer_name: customerName.trim(),
         customer_phone: customerPhone.trim(),
@@ -381,7 +403,6 @@ export const OrderModal: React.FC<OrderModalProps> = ({
         discount_amount: discountAmount,
         notes: notes.trim(),
       });
-      onClose();
     } catch (e: any) {
       Alert.alert('Error', e?.message || 'No se pudo guardar el pedido.');
     } finally {
@@ -415,10 +436,10 @@ export const OrderModal: React.FC<OrderModalProps> = ({
             },
           ]}
         >
-          {/* Header & Stepper with PanResponder for Swipe-down to close */}
-          <View {...panResponder.panHandlers} style={{ backgroundColor: colors.bgCard }}>
-            {/* Generous touch handle bar */}
-            <View style={styles.dragHandleContainer}>
+          {/* Header & Stepper */}
+          <View style={{ backgroundColor: colors.bgCard }}>
+            {/* Generous touch handle bar with PanResponder */}
+            <View {...panResponder.panHandlers} style={styles.dragHandleContainer}>
               <View
                 style={[
                   styles.dragHandleBar,
@@ -447,7 +468,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
 
               <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 6 }}>
                 <View style={styles.luckyBadgeRow}>
-                  <Ionicons name="nutrition" size={11} color={colors.amberLight} />
+                  <Ionicons name="sparkles" size={11} color={colors.amberLight} />
                   <Text style={[styles.luckyBadgeText, { color: colors.amberLight }]}>
                     LUCKY COOKIES
                   </Text>
@@ -666,7 +687,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                     </View>
 
                     {/* Registered customers quick horizontal selector */}
-                    {customers.length > 0 && (
+                    {uniqueCustomers.length > 0 && (
                       <View style={{ marginBottom: 14 }}>
                         <Text style={[styles.fieldSubLabel, { color: colors.textMuted }]}>
                           Clientes Registrados (Toca para autocompletar):
@@ -677,7 +698,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                           showsHorizontalScrollIndicator={false}
                           contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
                         >
-                          {customers.map((c) => {
+                          {uniqueCustomers.map((c) => {
                             const isSelected =
                               selectedCustomerId === c.id ||
                               (!isNewCustomerMode && customerName.trim().toLowerCase() === c.name.trim().toLowerCase());
@@ -886,7 +907,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                       },
                     ]}
                   >
-                    <Text style={styles.wizardNextBtnText}>Siguiente: Elegir Galletas</Text>
+                    <Text style={styles.wizardNextBtnText}>Siguiente</Text>
                     <Ionicons name="arrow-forward" size={17} color="#FFFFFF" />
                   </TouchableOpacity>
                 </View>
@@ -1189,7 +1210,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                       activeOpacity={0.85}
                       style={[styles.wizardNextBtnFlex, { backgroundColor: colors.amber }]}
                     >
-                      <Text style={styles.wizardNextBtnText}>Siguiente: Pago & Resumen</Text>
+                      <Text style={styles.wizardNextBtnText}>Siguiente</Text>
                       <Ionicons name="arrow-forward" size={17} color="#FFFFFF" />
                     </TouchableOpacity>
                   </View>
@@ -1538,7 +1559,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                       style={[styles.wizardBackBtn, { borderColor: isDark ? '#2D3748' : '#CBD5E1' }]}
                     >
                       <Ionicons name="arrow-back" size={16} color={colors.textMain} />
-                      <Text style={[styles.wizardBackBtnText, { color: colors.textMain }]}>Galletas</Text>
+                      <Text style={[styles.wizardBackBtnText, { color: colors.textMain }]}>Atrás</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -1555,7 +1576,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                     >
                       <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
                       <Text style={styles.wizardNextBtnText}>
-                        {isSubmitting ? 'Guardando...' : editingOrder ? 'Actualizar Pedido' : 'Confirmar y Guardar Pedido'}
+                        {isSubmitting ? 'Guardando...' : editingOrder ? 'Actualizar' : 'Guardar Pedido'}
                       </Text>
                     </TouchableOpacity>
                   </View>

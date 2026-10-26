@@ -134,17 +134,17 @@ export async function checkAndSendOrderDeliveryNotification(
     }
 
     try {
-      let title = '⏰ Recordatorio de Entrega de Pedido';
+      let title = 'Recordatorio de Entrega de Pedido';
       let body = '';
 
       if (item.urgency === 'today') {
-        title = '🚨 ¡Pedido para entregar HOY!';
+        title = '¡Pedido para entregar HOY!';
         body = `El pedido de ${item.order.customer_name} ($${item.order.total_amount.toFixed(2)}) debe entregarse hoy.`;
       } else if (item.urgency === 'tomorrow') {
-        title = '🧁 Pedido agendado para MAÑANA';
+        title = 'Pedido agendado para MAÑANA';
         body = `Recuerda preparar el pedido de ${item.order.customer_name} para entregar mañana.`;
       } else {
-        title = '⚠️ Pedido pendiente con entrega atrasada';
+        title = 'Pedido pendiente con entrega atrasada';
         body = `El pedido de ${item.order.customer_name} tenía fecha de entrega vencida.`;
       }
 

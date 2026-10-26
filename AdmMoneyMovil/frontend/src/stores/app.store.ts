@@ -356,7 +356,7 @@ export const useAppStore = create<AppState>()(
     const created = await MobileApiService.registerSale(data);
     set((state) => ({ sales: [created, ...state.sales] }));
     get().loadAllData();
-    triggerSaleCelebration(created.total_revenue, '¡Venta Registrada! 🍪', `${data.quantity} galletas cobradas exitosamente`);
+    triggerSaleCelebration(created.total_revenue, '¡Venta Registrada!', `${data.quantity} galletas cobradas exitosamente`);
     return created;
   },
 
@@ -493,7 +493,7 @@ export const useAppStore = create<AppState>()(
     set((state) => ({ orders: [created, ...state.orders] }));
     await get().loadAllData();
     if (data.payment_status === 'Pagado') {
-      triggerSaleCelebration(created.total_amount, '¡Pedido Pagado! 💵', `Cobraste el pedido de ${created.customer_name}`);
+      triggerSaleCelebration(created.total_amount, '¡Pedido Pagado!', `Cobraste el pedido de ${created.customer_name}`);
     }
     return created;
   },
@@ -505,7 +505,7 @@ export const useAppStore = create<AppState>()(
     }));
     await get().loadAllData();
     if (data.payment_status === 'Pagado') {
-      triggerSaleCelebration(updated.total_amount, '¡Pedido Pagado! 💵', `Cobraste el pedido de ${updated.customer_name}`);
+      triggerSaleCelebration(updated.total_amount, '¡Pedido Pagado!', `Cobraste el pedido de ${updated.customer_name}`);
     }
     return updated;
   },
