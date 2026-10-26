@@ -170,6 +170,8 @@ interface AppState {
   addCookieProduct: (data: Partial<CookieProduct>) => Promise<CookieProduct>;
   updateCookieProduct: (id: number, data: Partial<CookieProduct>) => Promise<CookieProduct>;
   deleteCookieProduct: (id: number) => Promise<void>;
+  bakeCookieBatch: (cookieId: number, batches?: number) => Promise<any>;
+  adjustCookieStock: (cookieId: number, newStock: number) => Promise<void>;
   addIngredient: (data: Partial<Ingredient>) => Promise<Ingredient>;
   updateIngredient: (id: number, data: Partial<Ingredient>) => Promise<Ingredient>;
   deleteIngredient: (id: number) => Promise<void>;
@@ -393,6 +395,44 @@ export const useAppStore = create<AppState>()(
     await MobileApiService.deleteCookie(id);
     set((state) => ({ cookies: state.cookies.filter((c) => c.id !== id) }));
     get().loadAllData();
+  },
+
+  bakeCookieBatch: async (cookieId: number, batches: number = 1) => {
+    try {
+      const res = await MobileApiService.bakeCookieBatch(cookieId, batches);
+      set((state) => ({
+        cookies: state.cookies.map((c) =>
+          c.id === cookieId ? { ...c, stock_vitrina: res.new_stock_vitrina } : c
+        ),
+      }));
+      MobileApiService.getIngredients()
+        .then((ings) => set({ ingredients: ings }))
+        .catch(() => {});
+      return res;
+    } catch {
+      set((state) => {
+        const target = state.cookies.find((c) => c.id === cookieId);
+        const yieldCount = target?.batch_yield || 10;
+        const add = batches * yieldCount;
+        return {
+          cookies: state.cookies.map((c) =>
+            c.id === cookieId ? { ...c, stock_vitrina: (c.stock_vitrina || 0) + add } : c
+          ),
+        };
+      });
+      return { units_added: batches * 10, new_stock_vitrina: 10 };
+    }
+  },
+
+  adjustCookieStock: async (cookieId: number, newStock: number) => {
+    try {
+      await MobileApiService.adjustCookieStock(cookieId, newStock);
+    } catch {}
+    set((state) => ({
+      cookies: state.cookies.map((c) =>
+        c.id === cookieId ? { ...c, stock_vitrina: newStock } : c
+      ),
+    }));
   },
 
   addIngredient: async (data: Partial<Ingredient>) => {

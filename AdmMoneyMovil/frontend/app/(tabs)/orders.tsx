@@ -15,6 +15,7 @@ import { OrderCard } from '../../src/components/orders/OrderCard';
 import { OrderModal } from '../../src/components/orders/OrderModal';
 import { OrderDeliveryReminderBanner } from '../../src/components/orders/OrderDeliveryReminderBanner';
 import { BakingProductionModal } from '../../src/components/orders/BakingProductionModal';
+import { CustomersDirectoryModal } from '../../src/components/orders/CustomersDirectoryModal';
 import { Button } from '../../src/components/ui/Button';
 import { BackendHeartbeat } from '../../src/components/ui/BackendHeartbeat';
 import { DoubleBezelCard } from '../../src/components/ui/DoubleBezelCard';
@@ -45,6 +46,7 @@ export default function OrdersScreen() {
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('Todos');
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isProductionModalOpen, setIsProductionModalOpen] = useState(false);
+  const [isCustomersModalOpen, setIsCustomersModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
   // Quick stats
@@ -155,6 +157,15 @@ export default function OrdersScreen() {
           </View>
 
           <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+            <TouchableOpacity
+              onPress={() => setIsCustomersModalOpen(true)}
+              activeOpacity={0.85}
+              style={[styles.planBtn, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}
+            >
+              <Ionicons name="people" size={14} color={colors.brandLight} />
+              <Text style={[styles.planBtnText, { color: colors.textMain }]}>Clientes</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               onPress={() => setIsProductionModalOpen(true)}
               activeOpacity={0.85}
@@ -391,6 +402,12 @@ export default function OrdersScreen() {
         orders={orders}
         cookies={cookies}
         ingredients={ingredients}
+      />
+
+      {/* Customers Directory Modal */}
+      <CustomersDirectoryModal
+        visible={isCustomersModalOpen}
+        onClose={() => setIsCustomersModalOpen(false)}
       />
     </SafeAreaView>
   );

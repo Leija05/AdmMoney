@@ -371,6 +371,137 @@ class CookieService:
         res = db.cookie_products.update_one({"id": cookie_id}, {"$set": {"is_active": False}})
         return res.matched_count > 0
 
+    # ------------------ CONTROL DE HORNEADO & STOCK DE VITRINA ------------------ #
+    @staticmethod
+    def bake_batch(cookie_id: int, batches: int = 1) -> Dict[str, Any]:
+        """
+        Hornea N tandas de una galleta:
+        - Suma N * batch_yield piezas al inventario vivo de vitrina.
+        - Descuenta de forma automática los insumos crudos del inventario del almacén.
+        - Preserva la fórmula fija de la receta sin alteraciones.
+        """
+        db = get_db()
+        cookie = db.cookie_products.find_one({"id": cookie_id})
+        if not cookie:
+            raise ValueError("Galleta no encontrada")
+
+        yield_count = int(cookie.get("batch_yield") or 10)
+        units_added = batches * yield_count
+        deducted_ingredients = []
+
+        is_unit_recipe = cookie.get("is_unit_recipe", True)
+        for ing in cookie.get("ingredients", []):
+            ing_name = ing.get("name", "")
+            unit_in_recipe = ing.get("unit", "g")
+            raw_qty = float(ing.get("quantity", 0.0))
+            ing_id = ing.get("ingredient_id")
+
+            if is_unit_recipe:
+                qty_to_deduct = round(raw_qty * units_added, 2)
+            else:
+                qty_to_deduct = round(raw_qty * batches, 2)
+
+            if ing_id:
+                db.cookie_ingredients.update_one(
+                    {"id": ing_id},
+                    {"$inc": {"stock_quantity": -qty_to_deduct}}
+                )
+            else:
+                db.cookie_ingredients.update_one(
+                    {"name": {"$regex": f"^{ing_name}$", "$options": "i"}},
+                    {"$inc": {"stock_quantity": -qty_to_deduct}}
+                )
+
+            deducted_ingredients.append({
+                "name": ing_name,
+                "amount_deducted": qty_to_deduct,
+                "unit": unit_in_recipe
+            })
+
+        db.cookie_products.update_one(
+            {"id": cookie_id},
+            {"$inc": {"stock_vitrina": units_added}}
+        )
+
+        updated_cookie = db.cookie_products.find_one({"id": cookie_id}, {"_id": 0})
+        new_stock = float(updated_cookie.get("stock_vitrina", units_added))
+
+        return {
+            "cookie_id": cookie_id,
+            "cookie_name": cookie.get("name", "Galleta"),
+            "batches_baked": batches,
+            "units_added": units_added,
+            "new_stock_vitrina": new_stock,
+            "deducted_ingredients": deducted_ingredients,
+            "message": f"Se hornearon {batches} tanda(s) (+{units_added} pzas). Stock actual en vitrina: {new_stock} piezas."
+        }
+
+    @staticmethod
+    def adjust_stock(cookie_id: int, new_stock: float) -> Optional[Dict[str, Any]]:
+        db = get_db()
+        db.cookie_products.update_one(
+            {"id": cookie_id},
+            {"$set": {"stock_vitrina": float(new_stock)}}
+        )
+        return CookieService.get_cookie_by_id(cookie_id)
+
+    @staticmethod
+    def ensure_oreo_master_recipe():
+        """
+        Garantiza que exista en la base de datos la receta oficial calibrada del PDF:
+        - Galleta de Oreo y Chispas
+        - Costo unitario real: $9.67 MXN ($6.77 masa cruda + $2.90 empaque)
+        - Tanda de 10 piezas: $108.38 MXN
+        - Precio de venta recomendado: $30.00 MXN (Margen: 67.8%)
+        """
+        db = get_db()
+        existing = db.cookie_products.find_one({"name": {"$regex": "oreo", "$options": "i"}})
+        
+        oreo_ingredients = [
+            {"name": "Mantequilla de primera", "quantity": 15.0, "unit": "g", "cost": 2.63},
+            {"name": "Azúcar mascabado", "quantity": 10.0, "unit": "g", "cost": 0.38},
+            {"name": "Azúcar estándar", "quantity": 7.0, "unit": "g", "cost": 0.13},
+            {"name": "Huevo fresco", "quantity": 0.1, "unit": "pza", "cost": 0.15},
+            {"name": "Extracto de Vainilla", "quantity": 1.0, "unit": "ml", "cost": 0.31},
+            {"name": "Harina de trigo premium", "quantity": 30.0, "unit": "g", "cost": 0.47},
+            {"name": "Polvo para hornear", "quantity": 1.0, "unit": "g", "cost": 0.09},
+            {"name": "Bicarbonato de sodio", "quantity": 1.0, "unit": "g", "cost": 0.05},
+            {"name": "Maizena (almidón)", "quantity": 2.0, "unit": "g", "cost": 0.38},
+            {"name": "Sal refinada", "quantity": 1.0, "unit": "g", "cost": 0.01},
+            {"name": "Galletas Oreo auténticas", "quantity": 1.0, "unit": "pza", "cost": 1.25},
+            {"name": "Chispas de chocolate", "quantity": 10.0, "unit": "g", "cost": 0.93},
+        ]
+
+        doc = {
+            "name": "Galleta de Oreo y Chispas",
+            "category": "Galletas Artesanales",
+            "description": "Exquisita masa suave con mantequilla premium, vainilla pura, trozos generosos de galleta Oreo y chispas de chocolate.",
+            "sale_price": 30.0,
+            "cost_per_cookie": 6.77,
+            "packaging_cost": 2.90,
+            "recipe_cost": 9.67,
+            "profit_per_unit": 20.33,
+            "profit_margin_pct": 67.8,
+            "batch_yield": 10,
+            "waste_pct": 0.0,
+            "base_recipe_weight_g": 75.0,
+            "stock_vitrina": 12.0,
+            "ingredients": oreo_ingredients,
+            "image_url": "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=600&q=80",
+            "is_active": True,
+            "is_unit_recipe": True,
+            "created_at": datetime.utcnow().isoformat()
+        }
+
+        if existing:
+            db.cookie_products.update_one({"id": existing["id"]}, {"$set": doc})
+            doc["id"] = existing["id"]
+        else:
+            doc["id"] = get_next_sequence("cookie_products")
+            db.cookie_products.insert_one(doc)
+
+        return doc
+
     # ------------------ ESCALADOR DE LOTES (BATCH SCALER) ------------------ #
     @staticmethod
     def scale_batch(cookie_id: int, target_units: int, custom_waste_pct: Optional[float] = None) -> Optional[Dict[str, Any]]:

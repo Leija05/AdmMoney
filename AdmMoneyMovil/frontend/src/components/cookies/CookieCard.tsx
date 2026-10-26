@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Animated, Alert, ActivityIndicator } from 'react-native';
 import { DoubleBezelCard } from '../ui/DoubleBezelCard';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -27,6 +27,8 @@ export const CookieCard: React.FC<CookieCardProps> = ({
   const colors = useThemeColors();
   const isDark = colors.isDark;
   const promotions = useAppStore((state) => state.promotions);
+  const bakeCookieBatch = useAppStore((state) => state.bakeCookieBatch);
+  const [isBaking, setIsBaking] = useState(false);
 
   const batchYield = cookie.batch_yield || 16;
   const unitCost = cookie.recipe_cost || 0;
@@ -131,6 +133,24 @@ export const CookieCard: React.FC<CookieCardProps> = ({
     }
   };
 
+  const handleBakeBatch = async () => {
+    if (isBaking) return;
+    try {
+      setIsBaking(true);
+      const res = await bakeCookieBatch(cookie.id, 1);
+      const added = res?.units_added || batchYield;
+      const newTotal = res?.new_stock_vitrina ?? ((cookie.stock_vitrina || 0) + added);
+      Alert.alert(
+        '¡Tanda Horneada! 🥣',
+        `Se hornearon +${added} piezas de "${cookie.name}".\n\nStock actual en vitrina: ${newTotal} piezas listas para venta.\nLos insumos necesarios se descontaron automáticamente del almacén.`
+      );
+    } catch {
+      Alert.alert('Error', 'No se pudo registrar la tanda de horneado.');
+    } finally {
+      setIsBaking(false);
+    }
+  };
+
   return (
     <>
       <DoubleBezelCard style={styles.cardWrapper}>
@@ -209,14 +229,38 @@ export const CookieCard: React.FC<CookieCardProps> = ({
           </View>
 
           {/* Action Row on Back Face */}
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+          <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }}>
+            <TouchableOpacity
+              onPress={handleBakeBatch}
+              disabled={isBaking}
+              style={[
+                styles.backActionBtn,
+                {
+                  backgroundColor: colors.emeraldBg,
+                  borderColor: colors.emeraldBorder,
+                  opacity: isBaking ? 0.6 : 1,
+                },
+              ]}
+            >
+              {isBaking ? (
+                <ActivityIndicator size="small" color={colors.emeraldLight} />
+              ) : (
+                <>
+                  <Ionicons name="flame" size={13} color={colors.emeraldLight} />
+                  <Text style={[styles.backActionBtnText, { color: colors.emeraldLight }]}>
+                    +1 Tanda (+{batchYield})
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+
             <TouchableOpacity
               onPress={() => setIsStickerModalOpen(true)}
               style={[styles.backActionBtn, { backgroundColor: colors.brandBg, borderColor: colors.brandBorder }]}
             >
-              <Ionicons name="pricetag" size={14} color={colors.brandText} />
+              <Ionicons name="pricetag" size={13} color={colors.brandText} />
               <Text style={[styles.backActionBtnText, { color: colors.brandText }]}>
-                Generar Sticker QR
+                Sticker QR
               </Text>
             </TouchableOpacity>
 
@@ -224,9 +268,9 @@ export const CookieCard: React.FC<CookieCardProps> = ({
               onPress={toggleFlip}
               style={[styles.backActionBtn, { backgroundColor: colors.amberBg, borderColor: colors.amberBorder }]}
             >
-              <Ionicons name="refresh" size={14} color={colors.amberLight} />
+              <Ionicons name="refresh" size={13} color={colors.amberLight} />
               <Text style={[styles.backActionBtnText, { color: colors.amberLight }]}>
-                Volver a la Galleta
+                Volver
               </Text>
             </TouchableOpacity>
           </View>
@@ -296,6 +340,43 @@ export const CookieCard: React.FC<CookieCardProps> = ({
                   <Ionicons name="sparkles" size={10} color={marginPct >= 60 ? colors.emeraldLight : colors.amberLight} />
                   <Text style={[styles.marginBadgeText, { color: marginPct >= 60 ? colors.emeraldLight : colors.amberLight }]}>
                     {privacyMode ? '•••% Margen' : `${marginPct.toFixed(1)}% Margen`}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.vitrinaBadge,
+                    {
+                      backgroundColor:
+                        (cookie.stock_vitrina ?? 0) > 0
+                          ? isDark
+                            ? 'rgba(56, 189, 248, 0.14)'
+                            : '#E0F2FE'
+                          : isDark
+                          ? 'rgba(239, 68, 68, 0.14)'
+                          : '#FEE2E2',
+                      borderColor:
+                        (cookie.stock_vitrina ?? 0) > 0
+                          ? isDark
+                            ? 'rgba(56, 189, 248, 0.35)'
+                            : '#BAE6FD'
+                          : isDark
+                          ? 'rgba(239, 68, 68, 0.35)'
+                          : '#FECACA',
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="storefront"
+                    size={10}
+                    color={(cookie.stock_vitrina ?? 0) > 0 ? colors.brand : colors.roseLight}
+                  />
+                  <Text
+                    style={[
+                      styles.vitrinaBadgeText,
+                      { color: (cookie.stock_vitrina ?? 0) > 0 ? colors.brand : colors.roseLight },
+                    ]}
+                  >
+                    Vitrina: {cookie.stock_vitrina ?? 0} pzas
                   </Text>
                 </View>
                 <Text style={[styles.batchText, { color: colors.textDim }]}>
@@ -381,6 +462,54 @@ export const CookieCard: React.FC<CookieCardProps> = ({
               </Text>
             </View>
           )}
+
+          {/* BARRA DE HORNEADO & STOCK VITRINA */}
+          <View
+            style={[
+              styles.bakeBanner,
+              {
+                backgroundColor: isDark ? 'rgba(245, 158, 11, 0.08)' : '#FFFBEB',
+                borderColor: isDark ? 'rgba(245, 158, 11, 0.28)' : '#FDE68A',
+              },
+            ]}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1, paddingRight: 6 }}>
+              <Ionicons name="storefront-outline" size={15} color={colors.amberLight} />
+              <View>
+                <Text style={{ fontSize: 11.5, fontWeight: '800', color: colors.textMain }}>
+                  Vitrina: {cookie.stock_vitrina ?? 0} pzas listas
+                </Text>
+                <Text style={{ fontSize: 9.5, color: colors.textMuted }}>
+                  {(cookie.stock_vitrina ?? 0) > 0 ? 'Disponible para entrega inmediata' : 'Agotada en mostrador'}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              onPress={handleBakeBatch}
+              disabled={isBaking}
+              activeOpacity={0.8}
+              style={[
+                styles.bakeBtn,
+                {
+                  backgroundColor: colors.amberBg,
+                  borderColor: colors.amberBorder,
+                  opacity: isBaking ? 0.6 : 1,
+                },
+              ]}
+            >
+              {isBaking ? (
+                <ActivityIndicator size="small" color={colors.amberLight} />
+              ) : (
+                <>
+                  <Ionicons name="flame" size={13} color={colors.amberLight} />
+                  <Text style={[styles.bakeBtnText, { color: colors.amberLight }]}>
+                    + Hornear (+{batchYield})
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
 
           {/* BOTONES DE ACCIÓN */}
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
@@ -485,6 +614,42 @@ const styles = StyleSheet.create({
   },
   marginBadgeText: {
     fontSize: 10,
+    fontWeight: '800',
+  },
+  vitrinaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+  },
+  vitrinaBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  bakeBanner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: radii.sm,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+  },
+  bakeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+  },
+  bakeBtnText: {
+    fontSize: 11,
     fontWeight: '800',
   },
   batchText: {

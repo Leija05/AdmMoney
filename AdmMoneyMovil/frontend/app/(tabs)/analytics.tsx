@@ -25,6 +25,7 @@ type ActiveReportView = 'cookies' | 'categories' | 'payments';
 export default function AnalyticsScreen() {
   const router = useRouter();
   const colors = useThemeColors();
+  const isDark = colors.isDark;
   const { summary, expenses, sales, orders, loadAllData, isLoading, theme, toggleTheme } = useAppStore();
 
   const [period, setPeriod] = useState<PeriodFilter>('all');
@@ -119,12 +120,23 @@ export default function AnalyticsScreen() {
 
   const maxUnits = Math.max(...performance.map((p) => p.units_sold), 1);
 
-  // Group expenses by category
+  // Group expenses by category and 3 financial axes
   const catTotals: Record<string, number> = {};
   filteredExpenses.forEach((e) => {
     catTotals[e.category] = (catTotals[e.category] || 0) + e.amount;
   });
   const totalExp = Object.values(catTotals).reduce((a, b) => a + b, 0) || 1;
+
+  const insumosExp = filteredExpenses
+    .filter((e) => e.category === 'Insumos Galletas' || e.expense_type === 'direct')
+    .reduce((acc, curr) => acc + curr.amount, 0);
+
+  const operativosExp = filteredExpenses
+    .filter((e) => e.category !== 'Insumos Galletas' && e.expense_type !== 'direct')
+    .reduce((acc, curr) => acc + curr.amount, 0);
+
+  const insumosPct = totalExpenses > 0 ? (insumosExp / totalExpenses) * 100 : 0;
+  const operativosPct = totalExpenses > 0 ? (operativosExp / totalExpenses) * 100 : 0;
 
   // Group sales by payment method
   const payTotals: Record<string, number> = {};
@@ -501,10 +513,69 @@ export default function AnalyticsScreen() {
           {activeReport === 'categories' && (
             <DoubleBezelCard style={styles.sectionCard}>
               <View style={styles.cardTitleRow}>
-                <Text style={[styles.cardTitle, { color: colors.textMain }]}>Distribución de Gastos</Text>
+                <Text style={[styles.cardTitle, { color: colors.textMain }]}>Ejes Financieros & Gastos</Text>
                 <Ionicons name="pie-chart" size={18} color={colors.cyan} />
               </View>
-              <Text style={[styles.cardSub, { color: colors.textMuted }]}>Porcentaje destinado a cada rubro operativo</Text>
+              <Text style={[styles.cardSub, { color: colors.textMuted }]}>
+                Separación entre insumos de repostería y gastos generales operativos
+              </Text>
+
+              {/* 3 EJES FINANCIEROS CLAVE */}
+              <View style={{ flexDirection: 'row', gap: 6, marginTop: 14 }}>
+                <View style={{ flex: 1, padding: 8, borderRadius: radii.sm, backgroundColor: colors.amberBg, borderWidth: 1, borderColor: colors.amberBorder }}>
+                  <Text style={{ fontSize: 9.5, fontWeight: '800', color: colors.amberLight, textTransform: 'uppercase' }}>
+                    Total Insumos
+                  </Text>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: colors.amberLight, marginTop: 2 }}>
+                    -${insumosExp.toFixed(2)}
+                  </Text>
+                  <Text style={{ fontSize: 9, color: colors.amberLight, marginTop: 1 }}>
+                    {insumosPct.toFixed(1)}% del gasto
+                  </Text>
+                </View>
+
+                <View style={{ flex: 1, padding: 8, borderRadius: radii.sm, backgroundColor: colors.purpleBg, borderWidth: 1, borderColor: colors.purpleBorder }}>
+                  <Text style={{ fontSize: 9.5, fontWeight: '800', color: colors.purpleText, textTransform: 'uppercase' }}>
+                    Gastos Grales.
+                  </Text>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: colors.purpleText, marginTop: 2 }}>
+                    -${operativosExp.toFixed(2)}
+                  </Text>
+                  <Text style={{ fontSize: 9, color: colors.purpleText, marginTop: 1 }}>
+                    {operativosPct.toFixed(1)}% del gasto
+                  </Text>
+                </View>
+
+                <View style={{ flex: 1, padding: 8, borderRadius: radii.sm, backgroundColor: isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEE2E2', borderWidth: 1, borderColor: colors.roseBorder }}>
+                  <Text style={{ fontSize: 9.5, fontWeight: '800', color: colors.roseLight, textTransform: 'uppercase' }}>
+                    Total con Insumo
+                  </Text>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: colors.roseLight, marginTop: 2 }}>
+                    -${totalExpenses.toFixed(2)}
+                  </Text>
+                  <Text style={{ fontSize: 9, color: colors.roseLight, marginTop: 1 }}>
+                    100% consolidado
+                  </Text>
+                </View>
+              </View>
+
+              {/* BARRA VISUAL COMPARATIVA DE LOS 2 EJES */}
+              {totalExpenses > 0 && (
+                <View style={{ marginTop: 12 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: colors.amberLight }}>
+                      Cocina ({insumosPct.toFixed(0)}%)
+                    </Text>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: colors.purpleText }}>
+                      Operativo ({operativosPct.toFixed(0)}%)
+                    </Text>
+                  </View>
+                  <View style={{ height: 8, borderRadius: 4, flexDirection: 'row', overflow: 'hidden', backgroundColor: colors.borderSubtle }}>
+                    <View style={{ width: `${insumosPct}%`, backgroundColor: colors.amberLight }} />
+                    <View style={{ width: `${operativosPct}%`, backgroundColor: colors.purpleText }} />
+                  </View>
+                </View>
+              )}
 
               {Object.keys(catTotals).length === 0 ? (
                 <View style={styles.emptyReportBox}>
@@ -514,15 +585,26 @@ export default function AnalyticsScreen() {
                 </View>
               ) : (
                 <View style={{ marginTop: 14, gap: 10 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: colors.textMuted, textTransform: 'uppercase' }}>
+                    Desglose Detallado por Rubro:
+                  </Text>
                   {Object.entries(catTotals).map(([cat, amt]) => {
                     const pct = ((amt / totalExp) * 100).toFixed(2);
+                    const isBaking = cat === 'Insumos Galletas';
                     return (
                       <View key={cat} style={[styles.catRow, { borderBottomColor: colors.borderSubtle }]}>
                         <View style={{ flex: 1 }}>
-                          <Text style={[styles.catName, { color: colors.textMain }]}>{cat}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                            <Ionicons
+                              name={isBaking ? "nutrition" : "business"}
+                              size={13}
+                              color={isBaking ? colors.amberLight : colors.purpleText}
+                            />
+                            <Text style={[styles.catName, { color: colors.textMain }]}>{cat}</Text>
+                          </View>
                           <Text style={[styles.catAmount, { color: colors.textDim }]}>${amt.toFixed(2)} MXN</Text>
                         </View>
-                        <Badge label={`${pct}%`} variant="gray" />
+                        <Badge label={`${pct}%`} variant={isBaking ? "amber" : "gray"} />
                       </View>
                     );
                   })}

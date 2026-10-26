@@ -20,6 +20,7 @@ import { SwipeTabWrapper } from '../../src/components/ui/SwipeTabWrapper';
 import { AmbientBackdrop } from '../../src/components/ui/AmbientBackdrop';
 import { useAppStore } from '../../src/stores/app.store';
 import { WhatsAppQrSettingsCard } from '../../src/components/settings/WhatsAppQrSettingsCard';
+import { GitHubUpdateCard } from '../../src/components/settings/GitHubUpdateCard';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function SettingsScreen() {
@@ -206,7 +207,10 @@ export default function SettingsScreen() {
           {/* 2. CANALES DE WHATSAPP & CÓDIGO QR DIRECTO */}
           <WhatsAppQrSettingsCard />
 
-          {/* 3. APARIENCIA & MONEDA DEL SISTEMA */}
+          {/* 3. ACTUALIZACIONES DESDE GITHUB (SIN PASAR APKS) */}
+          <GitHubUpdateCard />
+
+          {/* 4. APARIENCIA & MONEDA DEL SISTEMA */}
           <DoubleBezelCard style={styles.sectionCard}>
             <View style={styles.statusRow}>
               <View style={{ flex: 1, paddingRight: 12 }}>

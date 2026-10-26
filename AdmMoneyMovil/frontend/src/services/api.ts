@@ -371,6 +371,32 @@ export class MobileApiService {
     await this.request(`/cookies/products/${id}`, { method: 'DELETE' });
   }
 
+  static async bakeCookieBatch(cookieId: number, batches: number = 1): Promise<{
+    cookie_id: number;
+    cookie_name: string;
+    batches_baked: number;
+    units_added: number;
+    new_stock_vitrina: number;
+    message: string;
+  }> {
+    return this.request(`/cookies/products/${cookieId}/bake`, {
+      method: 'POST',
+      body: JSON.stringify({ batches }),
+    });
+  }
+
+  static async adjustCookieStock(cookieId: number, newStock: number): Promise<CookieProduct> {
+    return this.request<CookieProduct>(`/cookies/products/${cookieId}/stock?new_stock=${newStock}`, {
+      method: 'PATCH',
+    });
+  }
+
+  static async blacklistPhone(phone: string, reason?: string): Promise<void> {
+    await this.request(`/public/blacklist/${phone}?reason=${encodeURIComponent(reason || 'Pedido falso / broma')}`, {
+      method: 'POST',
+    });
+  }
+
   static async getSales(): Promise<CookieSale[]> {
     return this.request<CookieSale[]>('/cookies/sales');
   }

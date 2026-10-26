@@ -4,7 +4,8 @@ from ...models.schemas import (
     IngredientCreate, IngredientUpdate, IngredientPurchaseCreate, IngredientResponse,
     CookieProductCreate, CookieProductUpdate, CookieProductResponse,
     CookieSaleCreate, CookieSaleUpdate, CookieSaleResponse,
-    BatchScaleResponse, ProductionCapacityResponse
+    BatchScaleResponse, ProductionCapacityResponse,
+    BakeBatchRequest, BakeBatchResponse
 )
 from ...services.cookie_service import CookieService
 
@@ -73,6 +74,20 @@ def delete_cookie_product(cookie_id: int):
     if not deleted:
         raise HTTPException(status_code=404, detail="Galleta no encontrada")
     return {"message": "Galleta desactivada"}
+
+@router.post("/products/{cookie_id}/bake", response_model=BakeBatchResponse)
+def bake_cookie_batch(cookie_id: int, data: BakeBatchRequest):
+    try:
+        return CookieService.bake_batch(cookie_id, batches=data.batches)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@router.patch("/products/{cookie_id}/stock", response_model=CookieProductResponse)
+def adjust_cookie_stock(cookie_id: int, new_stock: float = Query(..., ge=0)):
+    updated = CookieService.adjust_stock(cookie_id, new_stock=new_stock)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Galleta no encontrada")
+    return updated
 
 # ----------------- HERRAMIENTAS: BATCH SCALER & CAPACIDAD ----------------- #
 @router.get("/batch-scaler", response_model=BatchScaleResponse)

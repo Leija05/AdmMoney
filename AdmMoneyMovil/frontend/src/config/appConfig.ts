@@ -12,12 +12,20 @@
  */
 
 export const APP_CONFIG = {
+  // Versión actual de la aplicación
+  APP_VERSION: '1.0.0',
+
+  // Repositorio oficial en GitHub para actualizaciones automáticas
+  GITHUB_OWNER: 'Leija05',
+  GITHUB_REPO: 'AdmMoney',
+  GITHUB_RELEASES_URL: 'https://api.github.com/repos/Leija05/AdmMoney/releases/latest',
+
   // Host por defecto del backend FastAPI (lee .env EXPO_PUBLIC_API_URL o usa localhost:8000)
   DEFAULT_API_HOST: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000',
 
   // =====================================================================
-  // 💬 MENSAJE PERSONALIZABLE (Cámbialo cuando quieras):
+  // 💬 MENSAJE PERSONALIZABLE:
   // =====================================================================
-  BACKEND_STATUS_MESSAGE_ONLINE: 'Servidor Activo',       // 👈 Mensaje cuando el backend está conectado
-  BACKEND_STATUS_MESSAGE_OFFLINE: 'Servidor Desconectado', // 👈 Mensaje cuando no hay conexión
+  BACKEND_STATUS_MESSAGE_ONLINE: 'Servidor Activo',       // Mensaje cuando el backend está conectado
+  BACKEND_STATUS_MESSAGE_OFFLINE: 'Servidor Desconectado', // Mensaje cuando no hay conexión
 };

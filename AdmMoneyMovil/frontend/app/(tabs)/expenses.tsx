@@ -132,6 +132,14 @@ export default function ExpensesScreen() {
 
   const totalSum = filtered.reduce((acc, curr) => acc + curr.amount, 0);
 
+  const insumosSum = filtered
+    .filter((e) => e.category === 'Insumos Galletas' || e.expense_type === 'direct')
+    .reduce((acc, curr) => acc + curr.amount, 0);
+
+  const operativosSum = filtered
+    .filter((e) => e.category !== 'Insumos Galletas' && e.expense_type !== 'direct')
+    .reduce((acc, curr) => acc + curr.amount, 0);
+
   const handleDuplicateExpense = async (exp: Expense) => {
     try {
       await addExpense({
@@ -231,6 +239,27 @@ export default function ExpensesScreen() {
                 onPress={() => setIsModalOpen(true)}
                 style={{ paddingVertical: 8, paddingHorizontal: 16 }}
               />
+            </View>
+
+            {/* 3 Ejes Financieros: Insumos vs Gastos Generales */}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.borderSubtle }}>
+              <View style={{ flex: 1, padding: 8, borderRadius: 10, backgroundColor: isDark ? 'rgba(217, 119, 6, 0.12)' : colors.amberBg }}>
+                <Text style={{ fontSize: 9.5, fontWeight: '700', color: colors.amberLight, textTransform: 'uppercase' }}>
+                  Insumos Cocina
+                </Text>
+                <Text style={{ fontSize: 13.5, fontWeight: '800', color: colors.amberText, marginTop: 2 }}>
+                  -${insumosSum.toFixed(2)}
+                </Text>
+              </View>
+
+              <View style={{ flex: 1, padding: 8, borderRadius: 10, backgroundColor: isDark ? 'rgba(124, 58, 237, 0.12)' : colors.purpleBg }}>
+                <Text style={{ fontSize: 9.5, fontWeight: '700', color: colors.purpleText, textTransform: 'uppercase' }}>
+                  Gastos Generales
+                </Text>
+                <Text style={{ fontSize: 13.5, fontWeight: '800', color: colors.purpleText, marginTop: 2 }}>
+                  -${operativosSum.toFixed(2)}
+                </Text>
+              </View>
             </View>
           </DoubleBezelCard>
 

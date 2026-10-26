@@ -91,7 +91,7 @@ export const BakingProductionModal: React.FC<BakingProductionModalProps> = ({
 
   const targetOrders = useMemo(() => {
     return orders.filter((o) => {
-      if (o.status === 'Cancelado' || o.status === 'Completado') return false;
+      if (o.status === 'Cancelado' || o.status === 'Completado' || o.status === 'Pendiente de Confirmación') return false;
       if (dateFilter === 'today_tomorrow') {
         return o.delivery_date === todayStr || o.delivery_date === tomorrowStr;
       }
@@ -107,8 +107,6 @@ export const BakingProductionModal: React.FC<BakingProductionModalProps> = ({
         cookie: CookieProduct;
         orderedUnits: number;
         batchYield: number;
-        batchesNeeded: number;
-        surplusUnits: number;
         customers: string[];
       }
     >();
@@ -120,17 +118,16 @@ export const BakingProductionModal: React.FC<BakingProductionModalProps> = ({
           name: item.product_name,
           sale_price: item.unit_price,
           recipe_cost: item.unit_cost || 10,
-          batch_yield: 16,
+          batch_yield: 10,
           cost_per_cookie: 8,
           packaging_cost: 2,
+          stock_vitrina: 0,
         } as CookieProduct;
 
         const current = map.get(cookie.id) || {
           cookie,
           orderedUnits: 0,
-          batchYield: cookie.batch_yield || 16,
-          batchesNeeded: 0,
-          surplusUnits: 0,
+          batchYield: cookie.batch_yield || 10,
           customers: [],
         };
 
@@ -144,13 +141,24 @@ export const BakingProductionModal: React.FC<BakingProductionModalProps> = ({
     });
 
     const items = Array.from(map.values()).map((p) => {
-      const yieldSize = p.batchYield > 0 ? p.batchYield : 16;
-      const batches = Math.ceil(p.orderedUnits / yieldSize);
-      const surplus = batches * yieldSize - p.orderedUnits;
+      const yieldSize = p.batchYield > 0 ? p.batchYield : 10;
+      const currentVitrina = p.cookie.stock_vitrina || 0;
+      // Faltantes para pedidos tras descontar lo que ya hay listo en vitrina
+      const missingUnits = Math.max(0, p.orderedUnits - currentVitrina);
+      // Tandas requeridas para hornear lo faltante
+      const batches = missingUnits > 0 ? Math.ceil(missingUnits / yieldSize) : 0;
+      // Disponibilidad total tras hornear tandas
+      const totalAvailable = currentVitrina + (batches * yieldSize);
+      // Sobrante para mostrador tras entregar pedidos
+      const remainingVitrina = totalAvailable - p.orderedUnits;
+
       return {
         ...p,
-        batchesNeeded: Math.max(1, batches),
-        surplusUnits: surplus,
+        batchYield: yieldSize,
+        currentVitrina,
+        missingUnits,
+        batchesNeeded: batches,
+        surplusUnits: Math.max(0, remainingVitrina),
       };
     });
 
@@ -163,14 +171,14 @@ export const BakingProductionModal: React.FC<BakingProductionModalProps> = ({
 
   // Calculate estimated ingredients for all tandas
   const estimatedIngredients = useMemo(() => {
-    // Standard artisanal bakery ratios per tanda of ~16 cookies (approx 800g dough)
+    // Standard artisanal bakery ratios per tanda of ~10 cookies (~650g total dough)
     return [
-      { name: 'Mantequilla sin sal', amount: `${(totalTandas * 225).toFixed(0)} g`, note: 'A temperatura ambiente' },
-      { name: 'Harina de trigo todo uso', amount: `${(totalTandas * 320).toFixed(0)} g`, note: 'Tamizada' },
-      { name: 'Azúcar mascabado / morena', amount: `${(totalTandas * 180).toFixed(0)} g`, note: 'Compacta' },
-      { name: 'Azúcar estándar / blanca', amount: `${(totalTandas * 90).toFixed(0)} g`, note: 'Fina' },
-      { name: 'Huevos enteros', amount: `${totalTandas * 2} pzas`, note: 'Grado A' },
-      { name: 'Chispas / Trozos de Chocolate', amount: `${(totalTandas * 240).toFixed(0)} g`, note: 'Semi-amargo / con leche' },
+      { name: 'Mantequilla sin sal', amount: `${(totalTandas * 140).toFixed(0)} g`, note: 'A temperatura ambiente' },
+      { name: 'Harina de trigo todo uso', amount: `${(totalTandas * 210).toFixed(0)} g`, note: 'Tamizada con pizca de sal' },
+      { name: 'Azúcar mascabado / morena', amount: `${(totalTandas * 120).toFixed(0)} g`, note: 'Aporta humedad y textura' },
+      { name: 'Azúcar estándar / refinada', amount: `${(totalTandas * 60).toFixed(0)} g`, note: 'Fina' },
+      { name: 'Huevos enteros', amount: `${Math.max(1, totalTandas)} pza(s)`, note: 'Grado A a temp ambiente' },
+      { name: 'Chispas de Chocolate / Oreo', amount: `${(totalTandas * 160).toFixed(0)} g`, note: 'Trozos generosos' },
     ];
   }, [totalTandas]);
 
@@ -381,81 +389,129 @@ export const BakingProductionModal: React.FC<BakingProductionModalProps> = ({
                         </Text>
                       </View>
 
-                      <View style={[styles.tandaBadge, { backgroundColor: colors.amberBg, borderColor: colors.amberBorder }]}>
-                        <Text style={[styles.tandaBadgeText, { color: colors.amberLight }]}>
-                          {planItem.batchesNeeded} {planItem.batchesNeeded === 1 ? 'Tanda' : 'Tandas'}
+                      <View
+                        style={[
+                          styles.tandaBadge,
+                          planItem.batchesNeeded === 0
+                            ? { backgroundColor: colors.emeraldBg, borderColor: colors.emeraldBorder }
+                            : { backgroundColor: colors.amberBg, borderColor: colors.amberBorder },
+                        ]}
+                      >
+                        <Ionicons
+                          name={planItem.batchesNeeded === 0 ? 'checkmark-circle' : 'flame'}
+                          size={12}
+                          color={planItem.batchesNeeded === 0 ? colors.emeraldLight : colors.amberLight}
+                        />
+                        <Text
+                          style={[
+                            styles.tandaBadgeText,
+                            { color: planItem.batchesNeeded === 0 ? colors.emeraldLight : colors.amberLight },
+                          ]}
+                        >
+                          {planItem.batchesNeeded === 0
+                            ? 'Cubierto en Vitrina'
+                            : `${planItem.batchesNeeded} ${planItem.batchesNeeded === 1 ? 'Tanda' : 'Tandas'}`}
                         </Text>
                       </View>
                     </View>
 
-                    {/* Breakdown Math */}
+                    {/* Breakdown Math: 4-Column Accounting */}
                     <View style={[styles.breakdownBox, { backgroundColor: colors.bgTertiary }]}>
                       <View style={styles.breakdownCol}>
-                        <Text style={[styles.breakdownVal, { color: colors.textMain }]}>
-                          {planItem.orderedUnits} pzas
+                        <Text style={[styles.breakdownVal, { color: colors.brand }]}>
+                          {planItem.currentVitrina}
                         </Text>
-                        <Text style={[styles.breakdownLbl, { color: colors.textDim }]}>Para pedidos</Text>
+                        <Text style={[styles.breakdownLbl, { color: colors.textDim }]}>En Vitrina</Text>
+                      </View>
+                      <View style={[styles.breakdownDivider, { backgroundColor: colors.borderSubtle }]} />
+                      <View style={styles.breakdownCol}>
+                        <Text style={[styles.breakdownVal, { color: colors.textMain }]}>
+                          {planItem.orderedUnits}
+                        </Text>
+                        <Text style={[styles.breakdownLbl, { color: colors.textDim }]}>Pedidos</Text>
+                      </View>
+                      <View style={[styles.breakdownDivider, { backgroundColor: colors.borderSubtle }]} />
+                      <View style={styles.breakdownCol}>
+                        <Text style={[styles.breakdownVal, { color: planItem.missingUnits > 0 ? colors.amberLight : colors.emeraldLight }]}>
+                          {planItem.missingUnits}
+                        </Text>
+                        <Text style={[styles.breakdownLbl, { color: colors.textDim }]}>Faltan</Text>
                       </View>
                       <View style={[styles.breakdownDivider, { backgroundColor: colors.borderSubtle }]} />
                       <View style={styles.breakdownCol}>
                         <Text style={[styles.breakdownVal, { color: colors.emeraldLight }]}>
-                          +{planItem.surplusUnits} pzas
+                          +{planItem.surplusUnits}
                         </Text>
                         <Text style={[styles.breakdownLbl, { color: colors.emeraldLight }]}>
-                          Libres mostrador
+                          Mostrador
                         </Text>
-                      </View>
-                      <View style={[styles.breakdownDivider, { backgroundColor: colors.borderSubtle }]} />
-                      <View style={styles.breakdownCol}>
-                        <Text style={[styles.breakdownVal, { color: colors.amberLight }]}>
-                          {planItem.batchYield} pzas/tanda
-                        </Text>
-                        <Text style={[styles.breakdownLbl, { color: colors.textDim }]}>Rendimiento</Text>
                       </View>
                     </View>
 
-                    {/* Interactive Batch Checkboxes */}
-                    <View style={styles.batchCheckboxesRow}>
-                      {Array.from({ length: planItem.batchesNeeded }).map((_, idx) => {
-                        const batchNum = idx + 1;
-                        const isDone = Boolean(checkedBatches[`${planItem.cookie.id}_${batchNum}`]);
-                        return (
-                          <TouchableOpacity
-                            key={batchNum}
-                            activeOpacity={0.75}
-                            onPress={() => toggleBatchChecked(planItem.cookie.id, batchNum)}
-                            style={[
-                              styles.batchCheckBtn,
-                              {
-                                backgroundColor: isDone
-                                  ? colors.emeraldBg
-                                  : isDark
-                                  ? '#141A28'
-                                  : '#FFFFFF',
-                                borderColor: isDone ? colors.emerald : colors.borderSubtle,
-                              },
-                            ]}
-                          >
-                            <Ionicons
-                              name={isDone ? 'checkmark-circle' : 'ellipse-outline'}
-                              size={15}
-                              color={isDone ? colors.emeraldLight : colors.textDim}
-                            />
-                            <Text
+                    {/* Interactive Batch Checkboxes or Covered Notice */}
+                    {planItem.batchesNeeded === 0 ? (
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          backgroundColor: isDark ? 'rgba(16, 185, 129, 0.1)' : '#ECFDF5',
+                          borderColor: colors.emeraldBorder,
+                          borderWidth: 1,
+                          borderRadius: radii.sm,
+                          paddingVertical: 7,
+                          paddingHorizontal: 10,
+                          marginTop: 6,
+                        }}
+                      >
+                        <Ionicons name="checkmark-done" size={14} color={colors.emeraldLight} />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: colors.emeraldLight, flex: 1 }}>
+                          ¡Stock suficiente! Los pedidos se surten con las {planItem.currentVitrina} pzas de tu vitrina actual.
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={styles.batchCheckboxesRow}>
+                        {Array.from({ length: planItem.batchesNeeded }).map((_, idx) => {
+                          const batchNum = idx + 1;
+                          const isDone = Boolean(checkedBatches[`${planItem.cookie.id}_${batchNum}`]);
+                          return (
+                            <TouchableOpacity
+                              key={batchNum}
+                              activeOpacity={0.75}
+                              onPress={() => toggleBatchChecked(planItem.cookie.id, batchNum)}
                               style={[
-                                styles.batchCheckText,
+                                styles.batchCheckBtn,
                                 {
-                                  color: isDone ? colors.emeraldLight : colors.textMain,
-                                  fontWeight: isDone ? '800' : '600',
+                                  backgroundColor: isDone
+                                    ? colors.emeraldBg
+                                    : isDark
+                                    ? '#141A28'
+                                    : '#FFFFFF',
+                                  borderColor: isDone ? colors.emerald : colors.borderSubtle,
                                 },
                               ]}
                             >
-                              Tanda #{batchNum} • {isDone ? 'Lista' : 'Pendiente'}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
+                              <Ionicons
+                                name={isDone ? 'checkmark-circle' : 'ellipse-outline'}
+                                size={15}
+                                color={isDone ? colors.emeraldLight : colors.textDim}
+                              />
+                              <Text
+                                style={[
+                                  styles.batchCheckText,
+                                  {
+                                    color: isDone ? colors.emeraldLight : colors.textMain,
+                                    fontWeight: isDone ? '800' : '600',
+                                  },
+                                ]}
+                              >
+                                Tanda #{batchNum} (+{planItem.batchYield} pzas) • {isDone ? 'Lista' : 'Pendiente'}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    )}
                   </DoubleBezelCard>
                 ))}
 

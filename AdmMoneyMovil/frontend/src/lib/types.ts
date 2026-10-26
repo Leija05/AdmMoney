@@ -62,6 +62,7 @@ export interface CookieProduct {
   image_url: string;
   is_active: boolean;
   is_unit_recipe?: boolean;
+  stock_vitrina?: number;
   created_at?: string;
 }
 
@@ -99,11 +100,13 @@ export interface OrderItem {
 
 export interface Order {
   id: number;
+  folio?: string;
+  origin?: 'app' | 'web_qr';
   customer_name: string;
   customer_phone: string;
   delivery_date: string;
   order_date: string;
-  status: 'Pendiente' | 'En Preparación' | 'Listo' | 'Completado' | 'Cancelado';
+  status: 'Pendiente de Confirmación' | 'Pendiente' | 'En Preparación' | 'Listo' | 'Completado' | 'Cancelado';
   payment_method: string;
   payment_status: 'Pagado' | 'Pendiente' | 'Anticipo';
   deposit_amount: number;
@@ -120,6 +123,7 @@ export interface Order {
   stock_deducted: boolean;
   sale_registered?: boolean;
   ticket_token?: string;
+  expires_at?: string;
   created_at?: string;
 }
 

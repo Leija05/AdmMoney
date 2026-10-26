@@ -127,6 +127,7 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
   const backendUrl = useAppStore((state) => state.backendUrl);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [expenseTarget, setExpenseTarget] = useState<'baking' | 'operational'>('baking');
   const [merchant, setMerchant] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
@@ -202,12 +203,26 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
       }
       setAmount(initialAmount);
 
+      const isOperationalCat =
+        scanResult.suggested_category &&
+        !scanResult.suggested_category.includes('Galletas') &&
+        !scanResult.suggested_category.includes('Empaques');
+
+      if (isOperationalCat) {
+        setExpenseTarget('operational');
+        setCategory(scanResult.suggested_category || 'Servicios y Luz');
+      } else {
+        setExpenseTarget('baking');
+        setCategory(CATEGORIES[0]);
+      }
+
       setNotes(`Ticket escaneado (${parsedItems.length} artículos)`);
       setShowRawText(false);
       setShowAddProduct(false);
     } else {
       setMerchant('Ticket de Compra');
       setAmount('0.00');
+      setExpenseTarget('baking');
       setCategory(CATEGORIES[0]);
       setPaymentMethod('Efectivo');
       setItems([]);
@@ -358,34 +373,37 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
       let updatedStockCount = 0;
       let newRegisteredCount = 0;
 
-      // 1. Update stock for registered ingredients
-      for (const match of matchedExisting) {
-        if (match.selectedToUpdateStock) {
-          const addQty = Number(match.quantity) || 1;
-          const newStock = Number((match.matchedIngredient.stock_quantity + addQty).toFixed(2));
-          await updateIngredient(match.matchedIngredient.id, {
-            stock_quantity: newStock,
-          });
-          updatedStockCount++;
+      // Solo actualizar inventario de almacén si el usuario seleccionó "Insumos de Galletas"
+      if (expenseTarget === 'baking') {
+        // 1. Update stock for registered ingredients
+        for (const match of matchedExisting) {
+          if (match.selectedToUpdateStock) {
+            const addQty = Number(match.quantity) || 1;
+            const newStock = Number((match.matchedIngredient.stock_quantity + addQty).toFixed(2));
+            await updateIngredient(match.matchedIngredient.id, {
+              stock_quantity: newStock,
+            });
+            updatedStockCount++;
+          }
         }
-      }
 
-      // 2. Add newly selected ingredients into inventory
-      for (const newItem of newDetected) {
-        if (newItem.selectedToRegister && newItem.name.trim()) {
-          const qty = Number(newItem.quantity) || 1;
-          const cost = Number(newItem.price) || 0;
-          await addIngredient({
-            name: newItem.name.trim(),
-            stock_quantity: qty,
-            package_quantity: qty,
-            package_cost: cost,
-            cost_per_unit: Number((cost / qty).toFixed(2)),
-            unit: newItem.unit,
-            supplier: merchant.trim() || 'Proveedor',
-            type: newItem.type,
-          });
-          newRegisteredCount++;
+        // 2. Add newly selected ingredients into inventory
+        for (const newItem of newDetected) {
+          if (newItem.selectedToRegister && newItem.name.trim()) {
+            const qty = Number(newItem.quantity) || 1;
+            const cost = Number(newItem.price) || 0;
+            await addIngredient({
+              name: newItem.name.trim(),
+              stock_quantity: qty,
+              package_quantity: qty,
+              package_cost: cost,
+              cost_per_unit: Number((cost / qty).toFixed(2)),
+              unit: newItem.unit,
+              supplier: merchant.trim() || 'Proveedor',
+              type: newItem.type,
+            });
+            newRegisteredCount++;
+          }
         }
       }
 
@@ -408,11 +426,17 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
           ? imageUri
           : scanResult?.image_url || imageUri || '';
 
+      const finalCategory =
+        expenseTarget === 'baking'
+          ? (category === 'Otros Gastos' || category === 'Servicios y Luz' ? 'Insumos Galletas' : category)
+          : (category === 'Insumos Galletas' ? 'Otros Gastos' : category);
+
       // 3. Save Expense record
       await onConfirm({
         title: `Compra ${merchant.trim() || 'Comercio'}`,
         amount: val,
-        category,
+        category: finalCategory,
+        expense_type: expenseTarget === 'baking' ? 'direct' : 'operational',
         date: scanResult?.date || new Date().toISOString().split('T')[0],
         payment_method: paymentMethod,
         notes: notes.trim(),
@@ -423,6 +447,7 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
           date: scanResult?.date || new Date().toISOString().split('T')[0],
           payment_method: paymentMethod,
           items: finalItems,
+          expense_target: expenseTarget,
           matched_stock_updated: updatedStockCount,
           new_ingredients_added: newRegisteredCount,
           raw_text: scanResult?.raw_text || '',
@@ -432,8 +457,12 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
       });
 
       let summaryMsg = `Ticket de $${val.toFixed(2)} MXN registrado correctamente.`;
-      if (updatedStockCount > 0 || newRegisteredCount > 0) {
-        summaryMsg += `\n\nInventario Almacén:\n• ${updatedStockCount} insumo(s) existente(s) sumados a su stock.\n• ${newRegisteredCount} nuevo(s) insumo(s) registrados con éxito.`;
+      if (expenseTarget === 'baking') {
+        if (updatedStockCount > 0 || newRegisteredCount > 0) {
+          summaryMsg += `\n\nInventario Almacén:\n• ${updatedStockCount} insumo(s) existente(s) sumados a su stock.\n• ${newRegisteredCount} nuevo(s) insumo(s) registrados con éxito.`;
+        }
+      } else {
+        summaryMsg += '\n\nComprobante y productos digitalizados con éxito. Almacén de repostería sin cambios (Gasto Operativo General).';
       }
       Alert.alert('¡Ticket Procesado!', summaryMsg);
       onClose();
@@ -515,6 +544,95 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
               </View>
             )}
 
+            {/* SELECTOR EXPLÍCITO: ¿PARA GALLETAS O GASTO GENERAL? */}
+            <View style={[styles.targetSelectorCard, { backgroundColor: colors.bgTertiary, borderColor: colors.borderSubtle }]}>
+              <Text style={[styles.targetSelectorTitle, { color: colors.textMain }]}>
+                ¿Para qué es este ticket?
+              </Text>
+              <Text style={[styles.targetSelectorSub, { color: colors.textMuted }]}>
+                Elige si compraste insumos de galletas o solo registras un gasto operativo/general.
+              </Text>
+
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    setExpenseTarget('baking');
+                    setCategory('Insumos Galletas');
+                  }}
+                  style={[
+                    styles.targetOptionBtn,
+                    {
+                      backgroundColor:
+                        expenseTarget === 'baking'
+                          ? (isDark ? 'rgba(245, 158, 11, 0.16)' : '#FEF3C7')
+                          : (isDark ? '#141A28' : '#FFFFFF'),
+                      borderColor: expenseTarget === 'baking' ? colors.amberBorder : colors.borderSubtle,
+                    },
+                  ]}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons
+                      name="nutrition"
+                      size={15}
+                      color={expenseTarget === 'baking' ? colors.amberLight : colors.textDim}
+                    />
+                    <Text
+                      style={[
+                        styles.targetOptionHeading,
+                        { color: expenseTarget === 'baking' ? colors.amberLight : colors.textMain },
+                      ]}
+                    >
+                      Insumos Galletas
+                    </Text>
+                  </View>
+                  <Text style={[styles.targetOptionDesc, { color: colors.textMuted }]}>
+                    Actualiza almacén y recetas de repostería
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    setExpenseTarget('operational');
+                    setCategory('Servicios y Luz');
+                  }}
+                  style={[
+                    styles.targetOptionBtn,
+                    {
+                      backgroundColor:
+                        expenseTarget === 'operational'
+                          ? (isDark ? 'rgba(124, 58, 237, 0.16)' : '#F3E8FF')
+                          : (isDark ? '#141A28' : '#FFFFFF'),
+                      borderColor:
+                        expenseTarget === 'operational'
+                          ? (isDark ? 'rgba(124, 58, 237, 0.4)' : '#D8B4FE')
+                          : colors.borderSubtle,
+                    },
+                  ]}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons
+                      name="receipt-outline"
+                      size={15}
+                      color={expenseTarget === 'operational' ? colors.purpleText : colors.textDim}
+                    />
+                    <Text
+                      style={[
+                        styles.targetOptionHeading,
+                        { color: expenseTarget === 'operational' ? colors.purpleText : colors.textMain },
+                      ]}
+                    >
+                      Gasto General
+                    </Text>
+                  </View>
+                  <Text style={[styles.targetOptionDesc, { color: colors.textMuted }]}>
+                    Digitaliza ticket sin alterar insumos de repostería
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
             {/* Editable Merchant & Amount */}
             <View style={styles.editSection}>
               <Text style={[styles.formLabel, { color: colors.textMuted }]}>Nombre del Comercio / Tienda</Text>
@@ -580,24 +698,75 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
               </View>
             </View>
 
-            {/* MINI STATUS SUMMARY BAR */}
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-              <View style={[styles.statusSummaryPill, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.14)' : '#ECFDF5', borderColor: colors.emeraldBorder }]}>
-                <Ionicons name="cube" size={13} color={colors.emeraldLight} />
-                <Text style={{ fontSize: 11, fontWeight: '800', color: colors.emeraldLight }}>
-                  {matchedExisting.length} Insumos Registrados
-                </Text>
-              </View>
-              <View style={[styles.statusSummaryPill, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.14)' : '#FEF3C7', borderColor: colors.amberBorder }]}>
-                <Ionicons name="sparkles" size={13} color={colors.amberLight} />
-                <Text style={{ fontSize: 11, fontWeight: '800', color: colors.amberLight }}>
-                  {newDetected.length} Insumos Nuevos
-                </Text>
-              </View>
-            </View>
+            {/* VISTA SEGÚN DESTINO: INSUMOS VS GASTO GENERAL */}
+            {expenseTarget === 'operational' ? (
+              <View
+                style={[
+                  styles.operationalContainer,
+                  {
+                    backgroundColor: isDark ? 'rgba(124, 58, 237, 0.08)' : '#F5F3FF',
+                    borderColor: isDark ? 'rgba(124, 58, 237, 0.3)' : '#DDD6FE',
+                  },
+                ]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+                  <Ionicons name="receipt" size={17} color={colors.purpleText} />
+                  <Text style={[styles.sectionTitle, { color: colors.purpleText }]}>
+                    PRODUCTOS DIGITALIZADOS ({matchedExisting.length + newDetected.length})
+                  </Text>
+                </View>
 
-            {/* SECCIÓN 1: INSUMOS YA REGISTRADOS EN ALMACÉN (SE SUMARÁN AL STOCK) */}
-            <View style={[styles.sectionContainer, { backgroundColor: isDark ? '#14201E' : '#F0FDF4', borderColor: isDark ? 'rgba(16, 185, 129, 0.35)' : '#BBF7D0' }]}>
+                <Text style={{ fontSize: 11.5, color: colors.textMain, lineHeight: 16, marginBottom: 12 }}>
+                  Los siguientes artículos se registrarán en tu comprobante digital y en las estadísticas de gastos generales, <Text style={{ fontWeight: '800' }}>sin alterar los insumos ni recetas de galletas</Text>:
+                </Text>
+
+                <View style={{ gap: 7 }}>
+                  {[...matchedExisting, ...newDetected].map((item, idx) => (
+                    <View
+                      key={item.id || idx}
+                      style={[
+                        styles.opItemRow,
+                        {
+                          backgroundColor: isDark ? '#141824' : '#FFFFFF',
+                          borderColor: colors.borderSubtle,
+                        },
+                      ]}
+                    >
+                      <View style={{ flex: 1, paddingRight: 8 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMain }}>
+                          {item.name}
+                        </Text>
+                        <Text style={{ fontSize: 10.5, color: colors.textDim }}>
+                          Cantidad: {item.quantity || 1}
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 13.5, fontWeight: '800', color: colors.emeraldLight }}>
+                        ${(Number(item.price) || 0).toFixed(2)}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : (
+              <>
+                {/* MINI STATUS SUMMARY BAR */}
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                  <View style={[styles.statusSummaryPill, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.14)' : '#ECFDF5', borderColor: colors.emeraldBorder }]}>
+                    <Ionicons name="cube" size={13} color={colors.emeraldLight} />
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: colors.emeraldLight }}>
+                      {matchedExisting.length} Insumos Registrados
+                    </Text>
+                  </View>
+                  <View style={[styles.statusSummaryPill, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.14)' : '#FEF3C7', borderColor: colors.amberBorder }]}>
+                    <Ionicons name="sparkles" size={13} color={colors.amberLight} />
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: colors.amberLight }}>
+                      {newDetected.length} Insumos Nuevos
+                    </Text>
+                  </View>
+                </View>
+
+                {/* SECCIÓN 1: INSUMOS YA REGISTRADOS EN ALMACÉN (SE SUMARÁN AL STOCK) */}
+                <View style={[styles.sectionContainer, { backgroundColor: isDark ? '#14201E' : '#F0FDF4', borderColor: isDark ? 'rgba(16, 185, 129, 0.35)' : '#BBF7D0' }]}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 8 }}>
                   <Ionicons name="cube" size={16} color={colors.emeraldLight} />
@@ -965,6 +1134,8 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
                 </View>
               )}
             </View>
+            </>
+            )}
 
             {/* MANUAL PRODUCT ADD BUTTON & FORM */}
             <View style={{ marginTop: 12 }}>
@@ -1087,7 +1258,13 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
               style={{ flex: 1 }}
             />
             <Button
-              title={isSaving ? "Guardando..." : `Confirmar $${displayTotal.toFixed(2)}`}
+              title={
+                isSaving
+                  ? "Guardando..."
+                  : expenseTarget === 'baking'
+                  ? `Confirmar Insumos ($${displayTotal.toFixed(2)})`
+                  : `Guardar Gasto General ($${displayTotal.toFixed(2)})`
+              }
               variant="primary"
               disabled={isSaving}
               onPress={handleConfirm}
@@ -1462,6 +1639,50 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingVertical: 10,
     paddingHorizontal: 12,
+  },
+  targetSelectorCard: {
+    borderWidth: 1,
+    borderRadius: radii.md,
+    padding: 12,
+    marginBottom: 14,
+  },
+  targetSelectorTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  targetSelectorSub: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  targetOptionBtn: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderRadius: radii.sm,
+    padding: 10,
+  },
+  targetOptionHeading: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  targetOptionDesc: {
+    fontSize: 9.5,
+    lineHeight: 13,
+    marginTop: 4,
+  },
+  operationalContainer: {
+    borderWidth: 1,
+    borderRadius: radii.md,
+    padding: 12,
+    marginBottom: 14,
+  },
+  opItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: radii.sm,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
   },
   totalCardBar: {
     flexDirection: 'row',

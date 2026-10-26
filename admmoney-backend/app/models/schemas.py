@@ -100,6 +100,7 @@ class CookieProductBase(BaseModel):
     profit_per_unit: Optional[float] = None
     profit_margin_pct: Optional[float] = None
     is_unit_recipe: Optional[bool] = True
+    stock_vitrina: Optional[float] = 0.0
 
 class CookieProductCreate(CookieProductBase):
     pass
@@ -121,6 +122,7 @@ class CookieProductUpdate(BaseModel):
     profit_per_unit: Optional[float] = None
     profit_margin_pct: Optional[float] = None
     is_unit_recipe: Optional[bool] = None
+    stock_vitrina: Optional[float] = None
 
 class CookieProductResponse(BaseModel):
     id: int
@@ -141,6 +143,7 @@ class CookieProductResponse(BaseModel):
     packaging_cost: Optional[float] = 0.0
     cost_per_cookie: Optional[float] = None
     is_unit_recipe: Optional[bool] = True
+    stock_vitrina: Optional[float] = 0.0
 
     class Config:
         from_attributes = True
@@ -249,9 +252,50 @@ class OrderResponse(BaseModel):
     promotion_name: Optional[str] = None
     discount_amount: Optional[float] = 0.0
     ticket_token: Optional[str] = None
+    folio: Optional[str] = None
+    origin: Optional[str] = "app"
+    expires_at: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+# ----------------- Horneado de Tandas (Bake Batch & Stock) ----------------- #
+class BakeBatchRequest(BaseModel):
+    batches: int = Field(default=1, ge=1, le=100)
+
+class BakeBatchResponse(BaseModel):
+    cookie_id: int
+    cookie_name: str
+    batches_baked: int
+    units_added: int
+    new_stock_vitrina: float
+    deducted_ingredients: List[Dict[str, Any]]
+    message: str
+
+# ----------------- Pedidos Públicos Web QR ----------------- #
+class PublicOrderItem(BaseModel):
+    product_id: int
+    quantity: int = Field(..., ge=1)
+
+class PublicOrderCreate(BaseModel):
+    customer_name: str
+    customer_phone: str
+    delivery_date: Optional[str] = None
+    delivery_time: Optional[str] = "Tarde (4:00 PM - 7:00 PM)"
+    items: List[PublicOrderItem]
+    notes: Optional[str] = ""
+    target_phone: Optional[str] = ""
+
+class PublicOrderResponse(BaseModel):
+    folio: str
+    order_id: int
+    customer_name: str
+    total_amount: float
+    status: str
+    whatsapp_url: str
+    whatsapp_message: str
+    expires_at: str
+    message: str
 
 # ----------------- Consolidado de Horneado (Baking Sheet) ----------------- #
 class BakingSheetDayRow(BaseModel):

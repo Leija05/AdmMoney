@@ -72,3 +72,10 @@ def init_db():
         last_doc = coll.find_one(sort=[("id", -1)])
         max_id = int(last_doc["id"]) if last_doc and "id" in last_doc else 0
         sync_counter(name, max_id)
+
+    # Asegurar receta maestra calibrada de Galleta Oreo y Chispas ($9.67 unitario)
+    try:
+        from ..services.cookie_service import CookieService
+        CookieService.ensure_oreo_master_recipe()
+    except Exception as e:
+        print("[Mongo Init] Receta maestra Oreo:", e)
