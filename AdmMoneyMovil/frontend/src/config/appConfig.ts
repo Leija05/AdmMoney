@@ -13,7 +13,7 @@
 
 export const APP_CONFIG = {
   // Versión actual de la aplicación (cámbiala aquí o con el script de release)
-  APP_VERSION: '1.0.0',
+  APP_VERSION: '1.0.1',
 
   // Repositorio oficial en GitHub para actualizaciones automáticas
   GITHUB_OWNER: 'Leija05',
