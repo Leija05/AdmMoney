@@ -322,3 +322,31 @@ export interface ScannedTicket {
   scanResult?: ReceiptScanResult;
 }
 
+export interface DailySummaryProduct {
+  name: string;
+  quantity: number;
+  revenue: number;
+  profit: number;
+}
+
+export interface DailySummary {
+  has_sales: boolean;
+  date: string;
+  sales_count: number;
+  total_units_sold: number;
+  total_revenue: number;
+  total_cost: number;
+  net_profit: number;
+  profit_margin_pct: number;
+  average_ticket: number;
+  cash_total: number;
+  transfer_total: number;
+  expenses_total: number;
+  expenses_cash: number;
+  cash_balance: number;
+  net_balance_day: number;
+  products: DailySummaryProduct[];
+  sales?: CookieSale[];
+}
+
+

@@ -92,6 +92,11 @@ def get_cookie_sale_ticket_pdf_alias(sale_id: int, note: Optional[str] = None):
     from .api.routers.cookies import get_cookie_sale_ticket_pdf
     return get_cookie_sale_ticket_pdf(sale_id=sale_id, note=note)
 
+@app.get("/analytics/daily-summary/pdf", tags=["Analytics"])
+def get_daily_summary_pdf_alias(date: Optional[str] = None):
+    from .api.routers.analytics import get_daily_summary_pdf
+    return get_daily_summary_pdf(date=date)
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))

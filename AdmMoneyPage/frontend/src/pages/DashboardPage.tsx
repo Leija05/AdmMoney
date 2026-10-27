@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { OverallSummary, Expense, CookieSale } from '../lib/types';
 import { RomanticDedicationCard } from '../components/ui/RomanticDedicationCard';
+import { DailySummaryCard } from '../components/dashboard/DailySummaryCard';
 
 interface DashboardPageProps {
   summary: OverallSummary | null;
@@ -112,6 +113,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* Resumen del Día (Solo si hay ventas) */}
+      <DailySummaryCard sales={sales} expenses={expenses} />
 
       {/* V2.0 ARCHITECTURE: 4 Core Financial Separation Cards (Pastel Editorial Architecture) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>

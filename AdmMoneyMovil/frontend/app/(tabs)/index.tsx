@@ -28,6 +28,7 @@ import { AmbientBackdrop } from '../../src/components/ui/AmbientBackdrop';
 import { StatSparkline } from '../../src/components/ui/StatSparkline';
 import { OrderDeliveryReminderBanner } from '../../src/components/orders/OrderDeliveryReminderBanner';
 import { MonthlyGoalCard } from '../../src/components/dashboard/MonthlyGoalCard';
+import { DailySummaryCard } from '../../src/components/dashboard/DailySummaryCard';
 import { InflationAlertBanner } from '../../src/components/ui/InflationAlertBanner';
 import { useAppStore } from '../../src/stores/app.store';
 import { Expense, CookieProduct } from '../../src/lib/types';
@@ -358,6 +359,9 @@ export default function DashboardScreen() {
 
         {/* AI Margin & Inflation Alert Banner */}
         <InflationAlertBanner />
+
+        {/* Resumen del Día Inteligente (Solo si hay ventas) */}
+        <DailySummaryCard />
 
         {/* Global Net Balance Vault Holographic Card */}
         <FadeSlideIn delay={40}>

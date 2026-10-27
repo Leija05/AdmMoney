@@ -1,4 +1,5 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+from datetime import date
 from ..core.database import get_db
 from .cookie_service import CookieService
 
@@ -157,4 +158,100 @@ class AnalyticsService:
             "category_breakdown": category_breakdown,
             "daily_trend": trend,
             "cookie_performance": cookie_analytics.get("performance_by_cookie", [])
+        }
+
+    @staticmethod
+    def get_daily_summary(date_str: Optional[str] = None) -> Dict[str, Any]:
+        db = get_db()
+        if not date_str:
+            date_str = date.today().isoformat()
+
+        sales = list(db.cookie_sales.find({"sale_date": date_str}, {"_id": 0}).sort("id", -1))
+        expenses = list(db.expenses.find({"date": date_str}, {"_id": 0}))
+
+        if not sales:
+            return {
+                "has_sales": False,
+                "date": date_str,
+                "sales_count": 0,
+                "total_units_sold": 0,
+                "total_revenue": 0.0,
+                "total_cost": 0.0,
+                "net_profit": 0.0,
+                "profit_margin_pct": 0.0,
+                "average_ticket": 0.0,
+                "cash_total": 0.0,
+                "transfer_total": 0.0,
+                "expenses_total": round(sum(float(e.get("amount", 0.0)) for e in expenses), 2),
+                "expenses_cash": round(sum(float(e.get("amount", 0.0)) for e in expenses if "efectivo" in str(e.get("payment_method", "")).lower()), 2),
+                "cash_balance": 0.0,
+                "net_balance_day": 0.0,
+                "products": [],
+                "sales": []
+            }
+
+        total_units = sum(int(s.get("quantity", 0)) for s in sales)
+        total_rev = round(sum(float(s.get("total_revenue", 0.0)) for s in sales), 2)
+        total_cost = round(sum(float(s.get("total_cost", 0.0)) for s in sales), 2)
+        net_prof = round(sum(float(s.get("net_profit", 0.0)) for s in sales), 2)
+        margin_pct = round((net_prof / total_rev * 100), 2) if total_rev > 0 else 0.0
+        sales_cnt = len(sales)
+        avg_ticket = round(total_rev / sales_cnt, 2) if sales_cnt > 0 else 0.0
+
+        cash_total = round(sum(
+            float(s.get("total_revenue", 0.0))
+            for s in sales
+            if "efectivo" in str(s.get("payment_method", "")).lower()
+        ), 2)
+
+        transfer_total = round(sum(
+            float(s.get("total_revenue", 0.0))
+            for s in sales
+            if "efectivo" not in str(s.get("payment_method", "")).lower()
+        ), 2)
+
+        expenses_total = round(sum(float(e.get("amount", 0.0)) for e in expenses), 2)
+        expenses_cash = round(sum(
+            float(e.get("amount", 0.0))
+            for e in expenses
+            if "efectivo" in str(e.get("payment_method", "")).lower()
+        ), 2)
+
+        cash_balance = round(cash_total - expenses_cash, 2)
+        net_balance_day = round(total_rev - expenses_total, 2)
+
+        prod_map: Dict[str, Dict[str, Any]] = {}
+        for s in sales:
+            cname = s.get("cookie_name", "Galleta")
+            if cname not in prod_map:
+                prod_map[cname] = {
+                    "name": cname,
+                    "quantity": 0,
+                    "revenue": 0.0,
+                    "profit": 0.0
+                }
+            prod_map[cname]["quantity"] += int(s.get("quantity", 0))
+            prod_map[cname]["revenue"] = round(prod_map[cname]["revenue"] + float(s.get("total_revenue", 0.0)), 2)
+            prod_map[cname]["profit"] = round(prod_map[cname]["profit"] + float(s.get("net_profit", 0.0)), 2)
+
+        products_list = sorted(list(prod_map.values()), key=lambda x: x["quantity"], reverse=True)
+
+        return {
+            "has_sales": True,
+            "date": date_str,
+            "sales_count": sales_cnt,
+            "total_units_sold": total_units,
+            "total_revenue": total_rev,
+            "total_cost": total_cost,
+            "net_profit": net_prof,
+            "profit_margin_pct": margin_pct,
+            "average_ticket": avg_ticket,
+            "cash_total": cash_total,
+            "transfer_total": transfer_total,
+            "expenses_total": expenses_total,
+            "expenses_cash": expenses_cash,
+            "cash_balance": cash_balance,
+            "net_balance_day": net_balance_day,
+            "products": products_list,
+            "sales": sales
         }

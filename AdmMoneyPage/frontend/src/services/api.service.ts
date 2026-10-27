@@ -12,7 +12,8 @@ import {
   OverallSummary,
   Promotion,
   PromoCalculationRequest,
-  PromoCalculationResult
+  PromoCalculationResult,
+  DailySummary
 } from "../lib/types";
 import { APP_CONFIG, isMockDataEnabled, setMockDataEnabled } from "../config/appConfig";
 import { mockRepository } from "./mockData";
@@ -452,7 +453,19 @@ class ApiService {
     }
     return this.request<OverallSummary>("/analytics/summary");
   }
+
+  // --- RESUMEN DEL DÍA (SOLO SI HAY VENTAS) ---
+  static async getDailySummary(date?: string): Promise<DailySummary> {
+    const query = date ? `?date=${encodeURIComponent(date)}` : '';
+    return this.request<DailySummary>(`/analytics/daily-summary${query}`);
+  }
+
+  static getDailySummaryPdfUrl(date?: string): string {
+    const query = date ? `?date=${encodeURIComponent(date)}` : '';
+    return `${this.apiBase}/analytics/daily-summary/pdf${query}`;
+  }
 }
 
 export { ApiService };
 export default ApiService;
+

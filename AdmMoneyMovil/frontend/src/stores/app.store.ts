@@ -11,7 +11,9 @@ import {
   Promotion,
   OverallSummary,
   Customer,
-  ScannedTicket
+  ScannedTicket,
+  DailySummary,
+  DailySummaryProduct
 } from '../lib/types';
 import { MobileApiService, setApiHost } from '../services/api';
 import { APP_CONFIG } from '../config/appConfig';
@@ -187,6 +189,8 @@ interface AppState {
   addScannedTicket: (ticket: ScannedTicket) => void;
   deleteScannedTicket: (id: string | number) => void;
   updateScannedTicket: (id: string | number, data: Partial<ScannedTicket>) => void;
+  computeDailySummary: (dateStr?: string) => DailySummary;
+  fetchDailySummary: (dateStr?: string) => Promise<DailySummary>;
 }
 
 export const useAppStore = create<AppState>()(
@@ -575,6 +579,108 @@ export const useAppStore = create<AppState>()(
         String(t.id) === sId || `exp-${t.id}` === sId ? { ...t, ...data } : t
       ),
     }));
+  },
+
+  computeDailySummary: (dateStr?: string) => {
+    const targetDate = dateStr || new Date().toISOString().split('T')[0];
+    const { sales, expenses } = get();
+
+    const daySales = sales.filter((s) => s.sale_date === targetDate);
+    const dayExpenses = expenses.filter((e) => e.date === targetDate);
+
+    if (daySales.length === 0) {
+      const expensesTotal = dayExpenses.reduce((acc, e) => acc + (e.amount || 0), 0);
+      const expensesCash = dayExpenses
+        .filter((e) => (e.payment_method || '').toLowerCase().includes('efectivo'))
+        .reduce((acc, e) => acc + (e.amount || 0), 0);
+
+      return {
+        has_sales: false,
+        date: targetDate,
+        sales_count: 0,
+        total_units_sold: 0,
+        total_revenue: 0,
+        total_cost: 0,
+        net_profit: 0,
+        profit_margin_pct: 0,
+        average_ticket: 0,
+        cash_total: 0,
+        transfer_total: 0,
+        expenses_total: Math.round(expensesTotal * 100) / 100,
+        expenses_cash: Math.round(expensesCash * 100) / 100,
+        cash_balance: 0,
+        net_balance_day: 0,
+        products: [],
+        sales: [],
+      };
+    }
+
+    const totalUnitsSold = daySales.reduce((acc, s) => acc + (s.quantity || 0), 0);
+    const totalRevenue = daySales.reduce((acc, s) => acc + (s.total_revenue || 0), 0);
+    const totalCost = daySales.reduce((acc, s) => acc + (s.total_cost || 0), 0);
+    const netProfit = daySales.reduce((acc, s) => acc + (s.net_profit || 0), 0);
+    const profitMarginPct = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+    const averageTicket = daySales.length > 0 ? totalRevenue / daySales.length : 0;
+
+    const cashTotal = daySales
+      .filter((s) => (s.payment_method || '').toLowerCase().includes('efectivo'))
+      .reduce((acc, s) => acc + (s.total_revenue || 0), 0);
+
+    const transferTotal = daySales
+      .filter((s) => !(s.payment_method || '').toLowerCase().includes('efectivo'))
+      .reduce((acc, s) => acc + (s.total_revenue || 0), 0);
+
+    const expensesTotal = dayExpenses.reduce((acc, e) => acc + (e.amount || 0), 0);
+    const expensesCash = dayExpenses
+      .filter((e) => (e.payment_method || '').toLowerCase().includes('efectivo'))
+      .reduce((acc, e) => acc + (e.amount || 0), 0);
+
+    const cashBalance = cashTotal - expensesCash;
+    const netBalanceDay = totalRevenue - expensesTotal;
+
+    const prodMap: Record<string, DailySummaryProduct> = {};
+    for (const s of daySales) {
+      const name = s.cookie_name || 'Galleta';
+      if (!prodMap[name]) {
+        prodMap[name] = { name, quantity: 0, revenue: 0, profit: 0 };
+      }
+      prodMap[name].quantity += s.quantity || 0;
+      prodMap[name].revenue += s.total_revenue || 0;
+      prodMap[name].profit += s.net_profit || 0;
+    }
+
+    const products = Object.values(prodMap).sort((a, b) => b.quantity - a.quantity);
+
+    return {
+      has_sales: true,
+      date: targetDate,
+      sales_count: daySales.length,
+      total_units_sold: totalUnitsSold,
+      total_revenue: Math.round(totalRevenue * 100) / 100,
+      total_cost: Math.round(totalCost * 100) / 100,
+      net_profit: Math.round(netProfit * 100) / 100,
+      profit_margin_pct: Math.round(profitMarginPct * 10) / 10,
+      average_ticket: Math.round(averageTicket * 100) / 100,
+      cash_total: Math.round(cashTotal * 100) / 100,
+      transfer_total: Math.round(transferTotal * 100) / 100,
+      expenses_total: Math.round(expensesTotal * 100) / 100,
+      expenses_cash: Math.round(expensesCash * 100) / 100,
+      cash_balance: Math.round(cashBalance * 100) / 100,
+      net_balance_day: Math.round(netBalanceDay * 100) / 100,
+      products,
+      sales: daySales,
+    };
+  },
+
+  fetchDailySummary: async (dateStr?: string) => {
+    try {
+      if (get().isOnline) {
+        return await MobileApiService.getDailySummary(dateStr);
+      }
+    } catch (e) {
+      console.warn('Failed to fetch remote daily summary, falling back to local computation:', e);
+    }
+    return get().computeDailySummary(dateStr);
   },
     }),
     {

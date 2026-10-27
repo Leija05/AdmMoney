@@ -360,3 +360,193 @@ def create_order_ticket_pdf(order: Dict[str, Any], note: Optional[str] = None) -
     pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes
+
+
+def create_daily_summary_pdf(summary: Dict[str, Any], business_name: str = "Lucky Cookies") -> bytes:
+    buffer = BytesIO()
+    page_width = 80 * mm
+    page_height = 260 * mm
+    
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=(page_width, page_height),
+        leftMargin=5 * mm,
+        rightMargin=5 * mm,
+        topMargin=8 * mm,
+        bottomMargin=8 * mm
+    )
+    
+    styles = getSampleStyleSheet()
+    
+    title_style = ParagraphStyle(
+        'DSTitle',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=12,
+        leading=14,
+        alignment=1,
+        textColor=colors.HexColor('#0F172A')
+    )
+    
+    sub_style = ParagraphStyle(
+        'DSSub',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=8.5,
+        leading=11,
+        alignment=1,
+        textColor=colors.HexColor('#475569')
+    )
+    
+    meta_style = ParagraphStyle(
+        'DSMeta',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=8,
+        leading=11,
+        textColor=colors.HexColor('#334155')
+    )
+    
+    meta_bold = ParagraphStyle(
+        'DSMetaBold',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=8,
+        leading=11,
+        textColor=colors.HexColor('#0F172A')
+    )
+    
+    header_section = ParagraphStyle(
+        'DSSectionHeader',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=8.5,
+        leading=11,
+        textColor=colors.HexColor('#0F172A')
+    )
+    
+    item_title = ParagraphStyle(
+        'DSItemTitle',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=8,
+        leading=10,
+        textColor=colors.HexColor('#1E293B')
+    )
+    
+    story = []
+    
+    if os.path.exists(LOGO_PATH):
+        try:
+            img = Image(LOGO_PATH, width=24*mm, height=24*mm)
+            img.hAlign = 'CENTER'
+            story.append(img)
+            story.append(Spacer(1, 2*mm))
+        except Exception:
+            pass
+            
+    bname = business_name or "Lucky Cookies"
+    story.append(Paragraph(bname.upper(), title_style))
+    story.append(Paragraph("RESUMEN DEL DÍA", sub_style))
+    story.append(Spacer(1, 2*mm))
+    
+    date_val = summary.get("date", "")
+    story.append(Paragraph(f"Fecha: {date_val}", ParagraphStyle('DSDate', parent=styles['Normal'], fontName='Helvetica', fontSize=8, alignment=1, textColor=colors.HexColor('#64748B'))))
+    story.append(Spacer(1, 2.5*mm))
+    
+    div_table = Table([["-------------------------------------------------"]], colWidths=[70*mm])
+    div_table.setStyle(TableStyle([
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('TEXTCOLOR', (0,0), (-1,-1), colors.HexColor('#CBD5E1')),
+        ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
+        ('FONTSIZE', (0,0), (-1,-1), 7),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+        ('TOPPADDING', (0,0), (-1,-1), 0),
+    ]))
+    story.append(div_table)
+    story.append(Spacer(1, 2*mm))
+    
+    rev = float(summary.get("total_revenue", 0.0))
+    net_prof = float(summary.get("net_profit", 0.0))
+    margin_pct = float(summary.get("profit_margin_pct", 0.0))
+    units_sold = int(summary.get("total_units_sold", 0))
+    sales_cnt = int(summary.get("sales_count", 0))
+    avg_ticket = float(summary.get("average_ticket", 0.0))
+    
+    metrics_data = [
+        [Paragraph("Ventas Totales:", meta_style), Paragraph(f"${rev:.2f} MXN", meta_bold)],
+        [Paragraph("Ganancia Neta:", meta_style), Paragraph(f"${net_prof:.2f} MXN", meta_bold)],
+        [Paragraph("Margen de Ganancia:", meta_style), Paragraph(f"{margin_pct:.1f}%", meta_bold)],
+        [Paragraph("Piezas Vendidas:", meta_style), Paragraph(f"{units_sold} piezas", meta_bold)],
+        [Paragraph("Tickets Cobrados:", meta_style), Paragraph(f"{sales_cnt}", meta_bold)],
+        [Paragraph("Ticket Promedio:", meta_style), Paragraph(f"${avg_ticket:.2f} MXN", meta_bold)],
+    ]
+    t_metrics = Table(metrics_data, colWidths=[42*mm, 28*mm])
+    t_metrics.setStyle(TableStyle([
+        ('ALIGN', (1,0), (1,-1), 'RIGHT'),
+        ('TOPPADDING', (0,0), (-1,-1), 1),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1),
+    ]))
+    story.append(t_metrics)
+    story.append(Spacer(1, 2.5*mm))
+    story.append(div_table)
+    story.append(Spacer(1, 2*mm))
+    
+    story.append(Paragraph("MÉTODOS DE PAGO", header_section))
+    story.append(Spacer(1, 1.5*mm))
+    
+    cash_val = float(summary.get("cash_total", 0.0))
+    trans_val = float(summary.get("transfer_total", 0.0))
+    exp_cash = float(summary.get("expenses_cash", 0.0))
+    cash_bal = float(summary.get("cash_balance", cash_val - exp_cash))
+    
+    pay_data = [
+        [Paragraph("• Efectivo:", meta_style), Paragraph(f"${cash_val:.2f}", meta_bold)],
+        [Paragraph("• Transferencia:", meta_style), Paragraph(f"${trans_val:.2f}", meta_bold)],
+    ]
+    if exp_cash > 0:
+        pay_data.append([Paragraph("• Gastos en efectivo:", meta_style), Paragraph(f"-${exp_cash:.2f}", meta_bold)])
+        pay_data.append([Paragraph("• Balance en efectivo:", meta_bold), Paragraph(f"${cash_bal:.2f}", meta_bold)])
+        
+    t_pay = Table(pay_data, colWidths=[42*mm, 28*mm])
+    t_pay.setStyle(TableStyle([
+        ('ALIGN', (1,0), (1,-1), 'RIGHT'),
+        ('TOPPADDING', (0,0), (-1,-1), 1),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1),
+    ]))
+    story.append(t_pay)
+    story.append(Spacer(1, 2.5*mm))
+    story.append(div_table)
+    story.append(Spacer(1, 2*mm))
+    
+    products = summary.get("products", [])
+    if products:
+        story.append(Paragraph("PRODUCTOS VENDIDOS", header_section))
+        story.append(Spacer(1, 1.5*mm))
+        prod_rows = []
+        for p in products:
+            qty = p.get("quantity", 0)
+            pname = p.get("name", "Galleta")
+            prev = float(p.get("revenue", 0.0))
+            prod_rows.append([
+                Paragraph(f"{qty}x {pname}", item_title),
+                Paragraph(f"${prev:.2f}", meta_bold)
+            ])
+        t_prods = Table(prod_rows, colWidths=[48*mm, 22*mm])
+        t_prods.setStyle(TableStyle([
+            ('ALIGN', (1,0), (1,-1), 'RIGHT'),
+            ('TOPPADDING', (0,0), (-1,-1), 1),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 1),
+        ]))
+        story.append(t_prods)
+        story.append(Spacer(1, 2*mm))
+        story.append(div_table)
+        story.append(Spacer(1, 2*mm))
+        
+    footer_text = Paragraph("Resumen generado con Adm Money", ParagraphStyle('DSFoot', parent=styles['Normal'], fontName='Helvetica', fontSize=7, alignment=1, textColor=colors.HexColor('#64748B')))
+    story.append(footer_text)
+    
+    doc.build(story)
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+    return pdf_bytes

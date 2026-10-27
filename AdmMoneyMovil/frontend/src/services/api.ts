@@ -11,7 +11,8 @@ import {
   PromoCalculationResult,
   ReceiptScanResult,
   OverallSummary,
-  Customer
+  Customer,
+  DailySummary
 } from '../lib/types';
 
 // Default backend host (supports Render URL, local network IP, or localhost)
@@ -583,4 +584,16 @@ export class MobileApiService {
       method: 'DELETE',
     });
   }
+
+  // --- RESUMEN DEL DÍA (SOLO SI HAY VENTAS) ---
+  static async getDailySummary(date?: string): Promise<DailySummary> {
+    const query = date ? `?date=${encodeURIComponent(date)}` : '';
+    return this.request<DailySummary>(`/analytics/daily-summary${query}`);
+  }
+
+  static getDailySummaryPdfUrl(date?: string): string {
+    const query = date ? `?date=${encodeURIComponent(date)}` : '';
+    return `${API_HOST}/analytics/daily-summary/pdf${query}`;
+  }
 }
+
